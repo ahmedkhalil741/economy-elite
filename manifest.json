@@ -1,0 +1,10 @@
+{
+  "name": "EconomyElite Rides",
+  "short_name": "EconomyElite",
+  "description": "Private Tesla Model Y rides in New Jersey — fixed per-mile pricing.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#14171A",
+  "theme_color": "#14171A",
+  "icons": []
+}
