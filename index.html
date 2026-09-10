@@ -843,8 +843,9 @@
       return;
     }
 
-    // Fire-and-forget: notify the owner by email and add to their calendar.
-    // Don't block the customer's flow on these — if either fails, the booking still proceeds.
+    // Fire-and-forget: notify the owner by email, add to their calendar, and log
+    // the booking to a Google Sheet for record-keeping. Don't block the customer's
+    // flow on these — if any of them fail, the booking still proceeds.
     fetch('/.netlify/functions/send-booking-notification', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -855,6 +856,12 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pickup, dropoff, dateTime, phone, notes, fareText: priceText })
+    }).catch(() => {});
+
+    fetch('/.netlify/functions/log-booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pickup, dropoff, dateTime, phone, notes, fareText: priceText, payMethod: selectedPay })
     }).catch(() => {});
 
     if(selectedPay === 'Pay in car (card or cash)'){
