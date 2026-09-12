@@ -1,10 +1,10 @@
 {
-  "name": "EconomyElite Rides",
+  "name": "EconomyElite — Private Chauffeur",
   "short_name": "EconomyElite",
-  "description": "Private Tesla Model Y rides in New Jersey — fixed per-mile pricing.",
+  "description": "Private chauffeur transportation in New Jersey — a trusted local driver, on request.",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#14171A",
-  "theme_color": "#14171A",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0A0A0A",
   "icons": []
 }
