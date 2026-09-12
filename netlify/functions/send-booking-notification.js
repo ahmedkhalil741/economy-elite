@@ -3,7 +3,7 @@
 //
 // Setup required in Netlify dashboard (Site settings → Environment variables):
 //   RESEND_API_KEY   = your API key from resend.com (free tier: 100 emails/day)
-//   OWNER_EMAIL      = economyelite_NJ@yahoo.com  (where booking alerts go)
+//   OWNER_EMAIL      = thestandard.nj@yahoo.com  (where booking alerts go)
 //   FROM_EMAIL       = onboarding@resend.dev  (works immediately with no setup;
 //                       switch to a verified economyelite.com address later)
 

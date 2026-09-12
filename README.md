@@ -13,7 +13,7 @@ Still in progress. Online prepayment (Stripe) is on hold for now since the site 
 
 Every web booking now does three things automatically (see `netlify/functions/`):
 
-1. **Emails the owner** (`send-booking-notification.js`) — sends a booking alert to `economyelite_NJ@yahoo.com` via Resend.
+1. **Emails the owner** (`send-booking-notification.js`) — sends a booking alert to `thestandard.nj@yahoo.com` via Resend.
 2. **Adds it to Google Calendar** (`add-to-calendar.js`) — using a Google Service Account.
 3. **Logs it to a Google Sheet** (`log-booking.js`) — one running spreadsheet of every reservation (route, passengers, car seats, elderly assistance, flight, drink preference, payment method, notes), so it can all be pulled together at year-end for taxes/analysis (opens in Excel, or loads into Python/pandas or SQL later).
 
@@ -27,7 +27,7 @@ For bookings taken by **phone or email** (not through the website), add a row to
 
 **Email notifications (Resend):**
 - `RESEND_API_KEY` — from resend.com (free tier: 100 emails/day)
-- `OWNER_EMAIL` = `economyelite_NJ@yahoo.com`
+- `OWNER_EMAIL` = `thestandard.nj@yahoo.com`
 - `FROM_EMAIL` = `onboarding@resend.dev` (works immediately; switch to a verified domain address later, once the new domain is set up)
 
 **Calendar + Sheet logging (Google Service Account — shared by both):**
