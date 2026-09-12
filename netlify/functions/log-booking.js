@@ -1,7 +1,7 @@
 // Logs every booking to a Google Sheet so all reservations (web bookings
-// automatically, plus phone/email bookings you add by hand) live in one
-// place you can open in Excel, or pull into Python/SQL later for
-// year-end totals and tax reporting.
+// automatically, plus phone/text/email bookings entered through the private
+// quick-entry page at admin-booking.html) live in one place you can open in
+// Excel, or pull into Python/SQL later for year-end totals and tax reporting.
 //
 // Reuses the SAME Google Service Account already set up for
 // add-to-calendar.js -- no new Google Cloud setup needed there, just two
@@ -13,22 +13,26 @@
 //    "Google Sheets API" -> Enable).
 // 2. Create a new Google Sheet (sheets.new). In row 1, add these headers,
 //    in this exact order:
-//    Timestamp | Requested Date/Time | Pickup | Drop-off | Phone | Passengers | Car Seats | Elderly Assistance | Flight | Drink Preference | Cabin Temperature | Text 15min Before | Payment Method | Notes | Source
+//    Timestamp | Requested Date/Time | Pickup | Drop-off | Name | Phone | Passengers | Car Seats | Elderly Assistance | Flight | Drink Preference | Cabin Temperature | Text 15min Before | Payment Method | Notes | Source
 // 3. Click Share on that Sheet and add the service account's email
 //    (the same "client_email" from the JSON key file you used for
 //    Calendar -- looks like economyelite-calendar@your-project.iam.gserviceaccount.com)
 //    with "Editor" access.
 // 4. Copy the Sheet's ID out of its URL:
 //    https://docs.google.com/spreadsheets/d/THIS_PART_IS_THE_ID/edit
+// 5. Also add a second tab named "Customers" — see get-customer.js and
+//    save-customer.js for its headers and what it's for (remembering each
+//    customer's preferences across visits).
 //
 // ---- Netlify environment variables required ----
 //   GOOGLE_SERVICE_ACCOUNT_EMAIL = same value already used for Calendar
 //   GOOGLE_SERVICE_ACCOUNT_KEY   = same value already used for Calendar
 //   GOOGLE_SHEET_ID              = the Sheet ID from step 4 above
 //
-// For phone or email bookings, just add a new row yourself at the bottom
-// of the same sheet (Source = "Phone" or "Email") so everything lands in
-// one place by year end.
+// Phone, text, and email bookings should go through the private quick-entry
+// page (admin-booking.html) rather than being typed directly into the
+// sheet, so they end up in the exact same format as web bookings and also
+// update the customer's saved profile.
 
 const { google } = require('googleapis');
 
@@ -50,8 +54,8 @@ exports.handler = async function (event) {
 
   try {
     const {
-      pickup, dropoff, dateTime, phone, notes, payMethod,
-      passengers, carSeats, flight, drink, temp, elderly, contact15,
+      name, pickup, dropoff, dateTime, phone, notes, payMethod,
+      passengers, carSeats, flight, drink, temp, elderly, contact15, source,
     } = JSON.parse(event.body);
 
     if (!pickup || !dropoff) {
@@ -61,7 +65,7 @@ exports.handler = async function (event) {
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'A:O',
+      range: 'A:P',
       valueInputOption: 'USER_ENTERED',
       insertDataOption: 'INSERT_ROWS',
       requestBody: {
@@ -70,6 +74,7 @@ exports.handler = async function (event) {
           dateTime || '',
           pickup,
           dropoff,
+          name || '',
           phone || '',
           passengers || '',
           (carSeats && carSeats !== '0') ? carSeats : 'None',
@@ -80,7 +85,7 @@ exports.handler = async function (event) {
           contact15 ? 'Yes' : 'No',
           payMethod || '',
           notes || '',
-          'Web',
+          source || 'Web',
         ]],
       },
     });

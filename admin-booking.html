@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Quick Booking Entry — The Standard (internal)</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Uses the same Google Maps key as the main site, for address autocomplete. -->
+<script async defer
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAFcPKlHXll8vckF96E977LDdYm0SnOnYI&libraries=places&callback=initGoogleMaps">
+</script>
+<style>
+  :root{
+    --bg:#0B0A08; --bg-raised:#161310; --panel:#1C1815; --line:#332D26;
+    --ink:#F2EDE3; --ink-dim:#B5ADA0; --steel:#8A8272; --teal:#F2EDE3;
+    --amber:#E8E1D2; --display:'Fraunces', serif; --body:'Inter', sans-serif; --mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--body); line-height:1.5;
+    -webkit-font-smoothing:antialiased; padding:28px 16px 60px;
+  }
+  .wrap{max-width:640px; margin:0 auto;}
+  .eyebrow{font-family:var(--mono); font-size:0.74rem; color:var(--steel); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px;}
+  h1{font-family:var(--display); font-weight:700; font-size:1.7rem; margin-bottom:6px;}
+  .sub{color:var(--ink-dim); font-size:0.9rem; margin-bottom:24px;}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:24px;}
+  .row{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  @media (max-width:520px){ .row{grid-template-columns:1fr;} }
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:0.78rem; color:var(--steel); margin-bottom:6px;}
+  .field input, .field select, .field textarea{
+    width:100%; background:var(--bg-raised); border:1px solid var(--line); color:var(--ink);
+    padding:12px 14px; border-radius:10px; font-size:0.95rem; font-family:var(--body); resize:vertical;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--teal);}
+  .field-check{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .field-check input{width:17px; height:17px; accent-color:var(--teal); cursor:pointer;}
+  .field-check label{font-size:0.88rem; color:var(--ink-dim); cursor:pointer;}
+  .pay-options{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;}
+  .pay-chip{
+    border:1px solid var(--line); background:var(--bg-raised); color:var(--ink-dim);
+    padding:9px 14px; border-radius:100px; font-size:0.82rem;
+  }
+  .pay-chip.active{border-color:var(--teal); color:var(--teal); background:rgba(242,237,227,0.08);}
+  .btn-primary{
+    background:var(--teal); color:#0B0A08; font-weight:600; font-size:0.96rem;
+    padding:14px 26px; border-radius:100px; border:none; width:100%; margin-top:6px;
+  }
+  .btn-primary:hover{background:#E3DCC9;}
+  .form-msg{margin-top:14px; font-size:0.9rem; min-height:1.2em;}
+  #gate{max-width:340px; margin:80px auto; text-align:center;}
+  #gate input{text-align:center; font-size:1.1rem; letter-spacing:0.1em;}
+  #gate button{margin-top:14px;}
+  [hidden]{display:none !important;}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="eyebrow">The Standard — internal</div>
+  <h1 style="font-size:1.3rem;">Enter PIN</h1>
+  <p class="sub">This page is for logging phone, text, and email bookings only. Not for customers.</p>
+  <div class="field"><input type="password" id="pinInput" placeholder="PIN" inputmode="numeric"></div>
+  <button class="btn-primary" id="pinSubmit" type="button">Unlock</button>
+  <p class="form-msg" id="pinMsg"></p>
+</div>
+
+<div class="wrap" id="formWrap" hidden>
+  <div class="eyebrow">The Standard — internal, not for customers</div>
+  <h1>Quick booking entry</h1>
+  <p class="sub">Use this whenever a booking comes in by phone, text, or email. It saves to the exact same sheet as web bookings, and updates the customer's saved preferences.</p>
+
+  <form class="panel" id="bookForm">
+    <div class="field">
+      <label for="a-source">How did this booking come in?</label>
+      <select id="a-source">
+        <option value="Phone">Phone call</option>
+        <option value="Text">Text message</option>
+        <option value="Email">Email</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="a-name">Customer name</label>
+      <input type="text" id="a-name" placeholder="First and last name" required>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="a-phone">Phone number</label>
+        <input type="tel" id="a-phone" placeholder="(555) 000-0000" required>
+      </div>
+      <div class="field">
+        <label for="a-date">Date &amp; time</label>
+        <input type="datetime-local" id="a-date" required>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="a-pickup">Pickup</label>
+        <input type="text" id="a-pickup" placeholder="Address or landmark" required>
+      </div>
+      <div class="field">
+        <label for="a-dropoff">Drop-off</label>
+        <input type="text" id="a-dropoff" placeholder="Address or landmark" required>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="a-passengers">Passengers</label>
+        <select id="a-passengers">
+          <option value="1">1</option><option value="2">2</option>
+          <option value="3">3</option><option value="4" selected>4</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="a-carseats">Car seats needed</label>
+        <select id="a-carseats">
+          <option value="0" selected>None needed</option>
+          <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="a-flight">Flight number (optional)</label>
+      <input type="text" id="a-flight" placeholder="e.g. UA 1234, if airport pickup/drop-off">
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="a-drink">Drink preference (optional)</label>
+        <input type="text" id="a-drink" placeholder="e.g. water, none">
+      </div>
+      <div class="field">
+        <label for="a-temp">Cabin temperature</label>
+        <select id="a-temp">
+          <option value="No preference" selected>No preference</option>
+          <option value="Cool (68°F)">Cool (68°F)</option>
+          <option value="Comfortable (72°F)">Comfortable (72°F)</option>
+          <option value="Warm (76°F)">Warm (76°F)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-check">
+      <input type="checkbox" id="a-elderly">
+      <label for="a-elderly">A passenger needs elderly assistance</label>
+    </div>
+    <div class="field-check">
+      <input type="checkbox" id="a-contact15" checked>
+      <label for="a-contact15">Text/call the customer 15 minutes before pickup</label>
+    </div>
+
+    <div class="field">
+      <label for="a-notes">Anything the driver should know? (optional)</label>
+      <textarea id="a-notes" placeholder="Additional stops, special requests, things they mentioned liking, etc."></textarea>
+    </div>
+
+    <div class="field">
+      <label>Payment method</label>
+      <div class="pay-options" id="payOptions">
+        <button type="button" class="pay-chip active" data-pay="Pay in car (card or cash)">Pay in car (card or cash)</button>
+        <button type="button" class="pay-chip" data-pay="Zelle / Cash App / Venmo">Zelle / Cash App / Venmo</button>
+      </div>
+    </div>
+
+    <button type="submit" class="btn-primary">Save booking</button>
+    <div class="form-msg" id="formMsg"></div>
+  </form>
+</div>
+
+<script>
+  // ---- Simple PIN gate ----
+  // This is NOT real security — it's just a deterrent against someone
+  // stumbling onto the link. Anyone with the PIN (or a look at this file's
+  // source) can get in. Change ADMIN_PIN below to whatever you like.
+  const ADMIN_PIN = '2468';
+  function tryUnlock(){
+    if(document.getElementById('pinInput').value === ADMIN_PIN){
+      document.getElementById('gate').hidden = true;
+      document.getElementById('formWrap').hidden = false;
+    } else {
+      document.getElementById('pinMsg').textContent = 'Incorrect PIN.';
+      document.getElementById('pinMsg').style.color = '#E8998A';
+    }
+  }
+  document.getElementById('pinSubmit').addEventListener('click', tryUnlock);
+  document.getElementById('pinInput').addEventListener('keydown', e => { if(e.key === 'Enter') tryUnlock(); });
+
+  // ---- Address autocomplete (same as main site) ----
+  function initGoogleMaps(){
+    if(!window.google) return;
+    new google.maps.places.Autocomplete(document.getElementById('a-pickup'), { fields: ['formatted_address'] });
+    new google.maps.places.Autocomplete(document.getElementById('a-dropoff'), { fields: ['formatted_address'] });
+  }
+
+  // ---- Payment chip selection ----
+  let selectedPay = 'Pay in car (card or cash)';
+  document.getElementById('payOptions').addEventListener('click', e => {
+    const chip = e.target.closest('.pay-chip');
+    if(!chip) return;
+    document.querySelectorAll('.pay-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    selectedPay = chip.dataset.pay;
+  });
+
+  // ---- Phone lookup: prefill known preferences for a returning customer ----
+  let lookupTimer = null;
+  document.getElementById('a-phone').addEventListener('input', function(e){
+    clearTimeout(lookupTimer);
+    const digits = e.target.value.replace(/\D/g, '');
+    if(digits.length < 10) return;
+    lookupTimer = setTimeout(() => {
+      fetch('/.netlify/functions/get-customer?phone=' + encodeURIComponent(digits))
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if(!data || !data.found) return;
+          const nameField = document.getElementById('a-name');
+          if(!nameField.value && data.name) nameField.value = data.name;
+          if(data.drink) document.getElementById('a-drink').value = data.drink;
+          if(data.temp) document.getElementById('a-temp').value = data.temp;
+          if(data.carSeats) document.getElementById('a-carseats').value = data.carSeats;
+          if(data.elderly === 'Yes') document.getElementById('a-elderly').checked = true;
+          const msg = document.getElementById('formMsg');
+          msg.textContent = 'Found a returning customer' + (data.name ? ': ' + data.name : '') + ' — preferences filled in.';
+          msg.style.color = 'var(--teal)';
+        })
+        .catch(() => {});
+    }, 500);
+  });
+
+  // ---- Submit: same four functions the main site calls, with Source set
+  // to whatever was picked above instead of always "Web". ----
+  document.getElementById('bookForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    const msg = document.getElementById('formMsg');
+
+    const payload = {
+      source: document.getElementById('a-source').value,
+      name: document.getElementById('a-name').value,
+      phone: document.getElementById('a-phone').value,
+      dateTime: document.getElementById('a-date').value,
+      pickup: document.getElementById('a-pickup').value,
+      dropoff: document.getElementById('a-dropoff').value,
+      passengers: document.getElementById('a-passengers').value,
+      carSeats: document.getElementById('a-carseats').value,
+      flight: document.getElementById('a-flight').value,
+      drink: document.getElementById('a-drink').value,
+      temp: document.getElementById('a-temp').value,
+      elderly: document.getElementById('a-elderly').checked,
+      contact15: document.getElementById('a-contact15').checked,
+      notes: document.getElementById('a-notes').value,
+      payMethod: selectedPay,
+    };
+
+    if(!payload.name.trim() || !payload.phone.trim() || !payload.pickup.trim() || !payload.dropoff.trim() || !payload.dateTime){
+      msg.textContent = 'Please fill in name, phone, pickup, drop-off, and date & time.';
+      msg.style.color = '#E8998A';
+      return;
+    }
+
+    const endpoints = ['send-booking-notification', 'add-to-calendar', 'log-booking', 'save-customer'];
+    Promise.all(endpoints.map(fn =>
+      fetch('/.netlify/functions/' + fn, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(() => {})
+    )).then(() => {
+      msg.textContent = 'Saved — ' + payload.name + ', ' + payload.pickup + ' → ' + payload.dropoff + '.';
+      msg.style.color = 'var(--teal)';
+      e.target.reset();
+      document.getElementById('a-contact15').checked = true;
+      document.querySelectorAll('.pay-chip').forEach(c => c.classList.remove('active'));
+      document.getElementById('payOptions').firstElementChild.classList.add('active');
+      selectedPay = 'Pay in car (card or cash)';
+    });
+  });
+</script>
+</body>
+</html>

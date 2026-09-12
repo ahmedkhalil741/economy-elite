@@ -11,17 +11,24 @@ Still in progress. Online prepayment (Stripe) is on hold for now since the site 
 
 ## Booking notifications & record-keeping
 
-Every web booking now does three things automatically (see `netlify/functions/`):
+Every web booking now does four things automatically (see `netlify/functions/`):
 
 1. **Emails the owner** (`send-booking-notification.js`) — sends a booking alert to `thestandard.nj@yahoo.com` via Resend.
 2. **Adds it to Google Calendar** (`add-to-calendar.js`) — using a Google Service Account.
-3. **Logs it to a Google Sheet** (`log-booking.js`) — one running spreadsheet of every reservation (route, passengers, car seats, elderly assistance, flight, drink preference, payment method, notes), so it can all be pulled together at year-end for taxes/analysis (opens in Excel, or loads into Python/pandas or SQL later).
+3. **Logs it to a Google Sheet** (`log-booking.js`) — one running spreadsheet of every reservation (name, route, passengers, car seats, elderly assistance, flight, drink preference, payment method, notes), so it can all be pulled together at year-end for taxes/analysis (opens in Excel, or loads into Python/pandas or SQL later).
+4. **Saves/updates the customer's profile** (`save-customer.js`) — a separate "Customers" tab that remembers each customer's name and preferences (drink, cabin temperature, car seats, elderly assistance) across visits, so returning customers get recognized automatically the next time they book (see `get-customer.js`, which reads this back to prefill the booking form).
 
-For bookings taken by **phone or email** (not through the website), add a row to that same Google Sheet by hand so everything ends up in one place. Use these columns, in this order:
+For bookings taken by **phone, text, or email** (not through the website), use the private quick-entry page at `admin-booking.html` instead of typing directly into the sheet. It has the exact same fields as the real booking form, plus a dropdown for how the booking came in (Phone / Text / Email), and it calls the same four functions above — so it lands in the sheet in the exact same format as a web booking, and updates the customer's saved profile the same way. It's gated by a simple PIN (see `ADMIN_PIN` near the bottom of that file to change it) — this is only a deterrent against a stumbled-on link, not real security, since the PIN lives in the page's own source code.
 
-`Timestamp | Requested Date/Time | Pickup | Drop-off | Phone | Passengers | Car Seats | Elderly Assistance | Flight | Drink Preference | Cabin Temperature | Text 15min Before | Payment Method | Notes | Source`
+**Bookings sheet columns**, in order:
 
-(Set `Source` to `Phone` or `Email` for those rows, so you can filter web vs. phone vs. email bookings later.)
+`Timestamp | Requested Date/Time | Pickup | Drop-off | Name | Phone | Passengers | Car Seats | Elderly Assistance | Flight | Drink Preference | Cabin Temperature | Text 15min Before | Payment Method | Notes | Source`
+
+**Customers sheet** — a second tab in the same spreadsheet, named exactly `Customers`, with these columns:
+
+`Phone | Name | Drink Preference | Cabin Temperature | Car Seats Needed | Elderly Assistance | Notes | Total Rides | First Ride | Last Ride`
+
+Both tabs live in the one Google Sheet already set up for `GOOGLE_SHEET_ID` — no new environment variables needed for the Customers tab, it reuses the same service account.
 
 ### One-time setup required (Netlify dashboard → Site settings → Environment variables)
 

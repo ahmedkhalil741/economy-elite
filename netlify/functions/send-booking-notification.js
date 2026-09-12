@@ -14,7 +14,7 @@ exports.handler = async function (event) {
 
   try {
     const {
-      pickup, dropoff, dateTime, phone, notes, payMethod,
+      name, pickup, dropoff, dateTime, phone, notes, payMethod,
       passengers, carSeats, flight, drink, temp, elderly, contact15,
     } = JSON.parse(event.body);
 
@@ -24,6 +24,7 @@ exports.handler = async function (event) {
 
     const emailBody = `
       <h2>New booking request — The Standard</h2>
+      <p><strong>Customer name:</strong> ${name || 'N/A'}</p>
       <p><strong>Pickup:</strong> ${pickup}</p>
       <p><strong>Drop-off:</strong> ${dropoff}</p>
       <p><strong>Requested time:</strong> ${dateTime || 'Not specified'}</p>

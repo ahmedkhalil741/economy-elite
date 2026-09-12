@@ -44,7 +44,7 @@ exports.handler = async function (event) {
 
   try {
     const {
-      pickup, dropoff, dateTime, phone, notes,
+      name, pickup, dropoff, dateTime, phone, notes,
       passengers, carSeats, flight, drink, temp, elderly, contact15,
     } = JSON.parse(event.body);
 
@@ -56,6 +56,7 @@ exports.handler = async function (event) {
     const end = new Date(start.getTime() + 45 * 60000); // default 45-minute block
 
     const descLines = [
+      `Customer name: ${name || 'N/A'}`,
       `Customer phone: ${phone}`,
       `Passengers: ${passengers || 'N/A'}`,
       `Car seats needed: ${carSeats && carSeats !== '0' ? carSeats : 'None'}`,
@@ -71,7 +72,7 @@ exports.handler = async function (event) {
     await calendar.events.insert({
       calendarId: process.env.GOOGLE_CALENDAR_ID,
       requestBody: {
-        summary: `The Standard ride: ${pickup} → ${dropoff}`,
+        summary: `The Standard ride for ${name || 'customer'}: ${pickup} → ${dropoff}`,
         description: descLines.join('\n'),
         start: { dateTime: start.toISOString() },
         end: { dateTime: end.toISOString() },
