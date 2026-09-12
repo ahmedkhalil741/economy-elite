@@ -30,7 +30,7 @@ exports.handler = async function (event) {
   }
 
   try {
-    const { phone, name, drink, temp, carSeats, elderly, notes } = JSON.parse(event.body);
+    const { phone, name, temp, carSeats, elderly, notes } = JSON.parse(event.body);
     const target = normalizePhone(phone);
     if (!target) {
       return { statusCode: 200, body: JSON.stringify({ success: false }) };
@@ -39,7 +39,7 @@ exports.handler = async function (event) {
     const sheets = await getSheetsClient();
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'Customers!A:J',
+      range: 'Customers!A:I',
     });
 
     const rows = res.data.values || [];
@@ -51,12 +51,12 @@ exports.handler = async function (event) {
       // New customer — add a row.
       await sheets.spreadsheets.values.append({
         spreadsheetId: process.env.GOOGLE_SHEET_ID,
-        range: 'Customers!A:J',
+        range: 'Customers!A:I',
         valueInputOption: 'USER_ENTERED',
         insertDataOption: 'INSERT_ROWS',
         requestBody: {
           values: [[
-            phone || '', name || '', drink || '', temp || '', carSeats || '',
+            phone || '', name || '', temp || '', carSeats || '',
             elderlyText, notes || '', 1, today, today,
           ]],
         },
@@ -68,21 +68,20 @@ exports.handler = async function (event) {
       // else with what they just told us since preferences can change.
       const existing = rows[rowIndex + 1];
       const sheetRow = rowIndex + 2; // +1 for header row, +1 for 1-indexing
-      const totalRides = (parseInt(existing[7], 10) || 0) + 1;
-      const firstRide = existing[8] || today;
+      const totalRides = (parseInt(existing[6], 10) || 0) + 1;
+      const firstRide = existing[7] || today;
       await sheets.spreadsheets.values.update({
         spreadsheetId: process.env.GOOGLE_SHEET_ID,
-        range: `Customers!A${sheetRow}:J${sheetRow}`,
+        range: `Customers!A${sheetRow}:I${sheetRow}`,
         valueInputOption: 'USER_ENTERED',
         requestBody: {
           values: [[
             phone || existing[0] || '',
             name || existing[1] || '',
-            drink || existing[2] || '',
-            temp || existing[3] || '',
-            carSeats || existing[4] || '',
+            temp || existing[2] || '',
+            carSeats || existing[3] || '',
             elderlyText,
-            notes || existing[6] || '',
+            notes || existing[5] || '',
             totalRides,
             firstRide,
             today,

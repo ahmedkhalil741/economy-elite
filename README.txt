@@ -15,18 +15,22 @@ Every web booking now does four things automatically (see `netlify/functions/`):
 
 1. **Emails the owner** (`send-booking-notification.js`) — sends a booking alert to `thestandard.nj@yahoo.com` via Resend.
 2. **Adds it to Google Calendar** (`add-to-calendar.js`) — using a Google Service Account.
-3. **Logs it to a Google Sheet** (`log-booking.js`) — one running spreadsheet of every reservation (name, route, passengers, car seats, elderly assistance, flight, drink preference, payment method, notes), so it can all be pulled together at year-end for taxes/analysis (opens in Excel, or loads into Python/pandas or SQL later).
-4. **Saves/updates the customer's profile** (`save-customer.js`) — a separate "Customers" tab that remembers each customer's name and preferences (drink, cabin temperature, car seats, elderly assistance) across visits, so returning customers get recognized automatically the next time they book (see `get-customer.js`, which reads this back to prefill the booking form).
+3. **Logs it to a Google Sheet** (`log-booking.js`) — one running spreadsheet of every reservation (name, route, passengers, car seats, elderly assistance, flight, payment method, notes), so it can all be pulled together at year-end for taxes/analysis (opens in Excel, or loads into Python/pandas or SQL later).
+4. **Saves/updates the customer's profile** (`save-customer.js`) — a separate "Customers" tab that remembers each customer's name and preferences (cabin temperature, car seats, elderly assistance) across visits, so returning customers get recognized automatically the next time they book (see `get-customer.js`, which reads this back to prefill the booking form).
 
 For bookings taken by **phone, text, or email** (not through the website), use the private quick-entry page at `admin-booking.html` instead of typing directly into the sheet. It has the exact same fields as the real booking form, plus a dropdown for how the booking came in (Phone / Text / Email), and it calls the same four functions above — so it lands in the sheet in the exact same format as a web booking, and updates the customer's saved profile the same way. It's gated by a simple PIN (see `ADMIN_PIN` near the bottom of that file to change it) — this is only a deterrent against a stumbled-on link, not real security, since the PIN lives in the page's own source code.
 
 **Bookings sheet columns**, in order:
 
-`Timestamp | Requested Date/Time | Pickup | Drop-off | Name | Phone | Passengers | Car Seats | Elderly Assistance | Flight | Drink Preference | Cabin Temperature | Text 15min Before | Payment Method | Notes | Source`
+`Timestamp | Requested Date/Time | Pickup | Drop-off | Name | Phone | Passengers | Car Seats | Elderly Assistance | Flight | Cabin Temperature | Text 15min Before | Payment Method | Notes | Source | Status`
+
+`Status` is filled in by hand after the fact (Completed / Cancelled / No-show) — nothing writes to it automatically, it's there so year-end totals can tell requested rides apart from ones that actually happened.
 
 **Customers sheet** — a second tab in the same spreadsheet, named exactly `Customers`, with these columns:
 
-`Phone | Name | Drink Preference | Cabin Temperature | Car Seats Needed | Elderly Assistance | Notes | Total Rides | First Ride | Last Ride`
+`Phone | Name | Cabin Temperature | Car Seats Needed | Elderly Assistance | Notes | Total Rides | First Ride | Last Ride | Special Occasions`
+
+`Special Occasions` is also filled in by hand (e.g. a noted anniversary or birthday) — not written automatically.
 
 Both tabs live in the one Google Sheet already set up for `GOOGLE_SHEET_ID` — no new environment variables needed for the Customers tab, it reuses the same service account.
 

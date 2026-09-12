@@ -1,6 +1,6 @@
 // Looks up a returning customer by phone number in the "Customers" tab of
 // the same Google Sheet used for booking records, and returns whatever
-// preferences we've saved for them — name, drink, cabin temperature, car
+// preferences we've saved for them — name, cabin temperature, car
 // seats, elderly assistance — so the booking form can prefill it
 // automatically instead of asking a returning customer to repeat themselves.
 //
@@ -10,7 +10,7 @@
 // ---- ONE-TIME SETUP ----
 // In your existing Google Sheet (the one GOOGLE_SHEET_ID points to), add a
 // second tab named exactly "Customers", with these headers in row 1:
-//   Phone | Name | Drink Preference | Cabin Temperature | Car Seats Needed | Elderly Assistance | Notes | Total Rides | First Ride | Last Ride
+//   Phone | Name | Cabin Temperature | Car Seats Needed | Elderly Assistance | Notes | Total Rides | First Ride | Last Ride
 //
 // No new Netlify environment variables needed — this reuses
 // GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_SERVICE_ACCOUNT_KEY, and
@@ -48,7 +48,7 @@ exports.handler = async function (event) {
     const sheets = await getSheetsClient();
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'Customers!A:J',
+      range: 'Customers!A:I',
     });
 
     const rows = res.data.values || [];
@@ -64,12 +64,11 @@ exports.handler = async function (event) {
         found: true,
         phone: match[0] || '',
         name: match[1] || '',
-        drink: match[2] || '',
-        temp: match[3] || '',
-        carSeats: match[4] || '',
-        elderly: match[5] || '',
-        notes: match[6] || '',
-        totalRides: match[7] || '0',
+        temp: match[2] || '',
+        carSeats: match[3] || '',
+        elderly: match[4] || '',
+        notes: match[5] || '',
+        totalRides: match[6] || '0',
       }),
     };
   } catch (err) {

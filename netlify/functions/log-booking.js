@@ -13,7 +13,7 @@
 //    "Google Sheets API" -> Enable).
 // 2. Create a new Google Sheet (sheets.new). In row 1, add these headers,
 //    in this exact order:
-//    Timestamp | Requested Date/Time | Pickup | Drop-off | Name | Phone | Passengers | Car Seats | Elderly Assistance | Flight | Drink Preference | Cabin Temperature | Text 15min Before | Payment Method | Notes | Source
+//    Timestamp | Requested Date/Time | Pickup | Drop-off | Name | Phone | Passengers | Car Seats | Elderly Assistance | Flight | Cabin Temperature | Text 15min Before | Payment Method | Notes | Source
 // 3. Click Share on that Sheet and add the service account's email
 //    (the same "client_email" from the JSON key file you used for
 //    Calendar -- looks like economyelite-calendar@your-project.iam.gserviceaccount.com)
@@ -55,7 +55,7 @@ exports.handler = async function (event) {
   try {
     const {
       name, pickup, dropoff, dateTime, phone, notes, payMethod,
-      passengers, carSeats, flight, drink, temp, elderly, contact15, source,
+      passengers, carSeats, flight, temp, elderly, contact15, source,
     } = JSON.parse(event.body);
 
     if (!pickup || !dropoff) {
@@ -65,7 +65,7 @@ exports.handler = async function (event) {
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'A:P',
+      range: 'A:O',
       valueInputOption: 'USER_ENTERED',
       insertDataOption: 'INSERT_ROWS',
       requestBody: {
@@ -80,7 +80,6 @@ exports.handler = async function (event) {
           (carSeats && carSeats !== '0') ? carSeats : 'None',
           elderly ? 'Yes' : 'No',
           flight || '',
-          drink || '',
           temp || '',
           contact15 ? 'Yes' : 'No',
           payMethod || '',

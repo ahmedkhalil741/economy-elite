@@ -15,7 +15,7 @@ exports.handler = async function (event) {
   try {
     const {
       name, pickup, dropoff, dateTime, phone, notes, payMethod,
-      passengers, carSeats, flight, drink, temp, elderly, contact15,
+      passengers, carSeats, flight, temp, elderly, contact15,
     } = JSON.parse(event.body);
 
     if (!pickup || !dropoff || !phone) {
@@ -33,7 +33,6 @@ exports.handler = async function (event) {
       <p><strong>Car seats needed:</strong> ${carSeats && carSeats !== '0' ? carSeats : 'None'}</p>
       <p><strong>Elderly assistance needed:</strong> ${elderly ? 'Yes' : 'No'}</p>
       <p><strong>Flight number:</strong> ${flight || 'N/A'}</p>
-      <p><strong>Drink preference:</strong> ${drink || 'N/A'}</p>
       <p><strong>Cabin temperature:</strong> ${temp || 'No preference'}</p>
       <p><strong>Text/call 15 min before pickup:</strong> ${contact15 ? 'Yes' : 'No'}</p>
       <p><strong>Payment method:</strong> ${payMethod || 'N/A'}</p>

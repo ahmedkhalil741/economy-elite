@@ -133,10 +133,6 @@
 
     <div class="row">
       <div class="field">
-        <label for="a-drink">Drink preference (optional)</label>
-        <input type="text" id="a-drink" placeholder="e.g. water, none">
-      </div>
-      <div class="field">
         <label for="a-temp">Cabin temperature</label>
         <select id="a-temp">
           <option value="No preference" selected>No preference</option>
@@ -222,7 +218,6 @@
           if(!data || !data.found) return;
           const nameField = document.getElementById('a-name');
           if(!nameField.value && data.name) nameField.value = data.name;
-          if(data.drink) document.getElementById('a-drink').value = data.drink;
           if(data.temp) document.getElementById('a-temp').value = data.temp;
           if(data.carSeats) document.getElementById('a-carseats').value = data.carSeats;
           if(data.elderly === 'Yes') document.getElementById('a-elderly').checked = true;
@@ -250,7 +245,6 @@
       passengers: document.getElementById('a-passengers').value,
       carSeats: document.getElementById('a-carseats').value,
       flight: document.getElementById('a-flight').value,
-      drink: document.getElementById('a-drink').value,
       temp: document.getElementById('a-temp').value,
       elderly: document.getElementById('a-elderly').checked,
       contact15: document.getElementById('a-contact15').checked,

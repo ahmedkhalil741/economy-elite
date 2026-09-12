@@ -495,10 +495,6 @@
 
       <div class="book-row">
         <div class="field">
-          <label for="b-drink">Drink preference (optional)</label>
-          <input type="text" id="b-drink" placeholder="e.g. water, none">
-        </div>
-        <div class="field">
           <label for="b-temp">Cabin temperature</label>
           <select id="b-temp">
             <option value="No preference" selected>No preference</option>
@@ -780,7 +776,7 @@
   });
 
   // Look up a returning customer by phone number and prefill what we already
-  // know about them (name, drink, cabin temperature, car seats, elderly
+  // know about them (name, cabin temperature, car seats, elderly
   // assistance) so they don't have to repeat themselves. Fails silently if
   // the Customers sheet isn't set up yet, or no match is found.
   let customerLookupTimer = null;
@@ -795,7 +791,6 @@
           if(!data || !data.found) return;
           const nameField = document.getElementById('b-name');
           if(!nameField.value && data.name) nameField.value = data.name;
-          if(data.drink && !document.getElementById('b-drink').value) document.getElementById('b-drink').value = data.drink;
           if(data.temp) document.getElementById('b-temp').value = data.temp;
           if(data.carSeats) document.getElementById('b-carseats').value = data.carSeats;
           if(data.elderly === 'Yes') document.getElementById('b-elderly').checked = true;
@@ -823,7 +818,6 @@
     const passengers = document.getElementById('b-passengers').value;
     const carSeats = document.getElementById('b-carseats').value;
     const flight = document.getElementById('b-flight').value;
-    const drink = document.getElementById('b-drink').value;
     const temp = document.getElementById('b-temp').value;
     const elderly = document.getElementById('b-elderly').checked;
     const contact15 = document.getElementById('b-contact15').checked;
@@ -838,7 +832,7 @@
     const payload = {
       name, pickup, dropoff, dateTime, phone, notes,
       payMethod: selectedPay,
-      passengers, carSeats, flight, drink, temp, elderly, contact15,
+      passengers, carSeats, flight, temp, elderly, contact15,
       source: 'Web'
     };
 
