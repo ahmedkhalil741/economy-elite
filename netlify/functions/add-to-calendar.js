@@ -43,7 +43,10 @@ exports.handler = async function (event) {
   }
 
   try {
-    const { pickup, dropoff, dateTime, phone, notes, fareText } = JSON.parse(event.body);
+    const {
+      pickup, dropoff, dateTime, phone, notes,
+      passengers, carSeats, flight, drink, elderly, contact15,
+    } = JSON.parse(event.body);
 
     if (!pickup || !dropoff || !dateTime) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required booking details.' }) };
@@ -52,12 +55,23 @@ exports.handler = async function (event) {
     const start = new Date(dateTime);
     const end = new Date(start.getTime() + 45 * 60000); // default 45-minute block
 
+    const descLines = [
+      `Customer phone: ${phone}`,
+      `Passengers: ${passengers || 'N/A'}`,
+      `Car seats needed: ${carSeats && carSeats !== '0' ? carSeats : 'None'}`,
+      `Elderly assistance needed: ${elderly ? 'Yes' : 'No'}`,
+      flight ? `Flight: ${flight}` : null,
+      drink ? `Drink preference: ${drink}` : null,
+      `Text/call 15 min before pickup: ${contact15 ? 'Yes' : 'No'}`,
+      `Notes: ${notes || 'None'}`,
+    ].filter(Boolean);
+
     const calendar = await getCalendarClient();
     await calendar.events.insert({
       calendarId: process.env.GOOGLE_CALENDAR_ID,
       requestBody: {
         summary: `EconomyElite ride: ${pickup} → ${dropoff}`,
-        description: `Customer phone: ${phone}\nFare: ${fareText}\nNotes: ${notes || 'None'}`,
+        description: descLines.join('\n'),
         start: { dateTime: start.toISOString() },
         end: { dateTime: end.toISOString() },
       },

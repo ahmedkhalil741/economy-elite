@@ -139,12 +139,12 @@
 
   .field{margin-bottom:14px;}
   .field label{display:block; font-size:0.78rem; color:var(--steel); margin-bottom:6px;}
-  .field input{
+  .field input, .field select{
     width:100%; background:var(--bg-raised); border:1px solid var(--line); color:var(--ink);
     padding:12px 14px; border-radius:10px; font-size:0.95rem; font-family:var(--body);
     transition:border-color .15s;
   }
-  .field input:focus{border-color:var(--teal);}
+  .field input:focus, .field select:focus{border-color:var(--teal);}
   .field-icon-row{position:relative;}
 
   .fare-readout{
@@ -259,6 +259,9 @@
   }
   .pay-chip.active{border-color:var(--teal); color:var(--teal); background:rgba(255,255,255,0.08);}
   .pay-note{font-size:0.82rem; color:var(--steel); margin-top:10px; margin-bottom:20px;}
+  .field-check{display:flex; align-items:center; gap:10px; margin-bottom:16px;}
+  .field-check input[type="checkbox"]{width:17px; height:17px; accent-color:var(--teal); flex-shrink:0; cursor:pointer;}
+  .field-check label{font-size:0.88rem; color:var(--ink-dim); margin-bottom:0; cursor:pointer;}
   .book-summary{
     display:flex; justify-content:space-between; align-items:center;
     border-top:1px dashed var(--line); padding-top:18px; margin-bottom:20px;
@@ -350,8 +353,7 @@
 
     <div class="meter-card" id="fare">
       <div class="meter-head">
-        <span class="meter-label">Fare estimator</span>
-        <span class="meter-live"><i class="pulse"></i>LIVE</span>
+        <span class="meter-label">Check your route</span>
       </div>
       <div class="field">
         <label for="pickup">Pickup</label>
@@ -361,11 +363,8 @@
         <label for="dropoff">Drop-off</label>
         <input type="text" id="dropoff" placeholder="Full address or city, state" autocomplete="off">
       </div>
-      <div class="fare-readout">
-        <div class="miles" id="milesOut">— miles</div>
-        <div class="price" id="priceOut">$0<small>.00</small></div>
-      </div>
-      <div class="meter-note"><strong>$10 base fare + $3.50 per mile</strong> ($25 minimum). No surge pricing, no hidden fees. Tolls and bridge/tunnel fees, if any, are added at trip's end and shown before you pay.</div>
+      <a href="#book" class="btn-primary btn-block" style="margin-top:6px;">Continue to book →</a>
+      <div class="meter-note">We'll confirm your driver, timing, and fare with you directly once you send your request — no surprises.</div>
     </div>
   </div>
 </section>
@@ -460,8 +459,8 @@
     </div>
 
     <div class="steps">
-      <div class="step"><div class="num">01</div><h3>Enter your route</h3><p>Pickup and drop-off — your fare is confirmed before you finalize the booking.</p></div>
-      <div class="step"><div class="num">02</div><h3>Select a time and payment method</h3><p>Book immediately or schedule in advance. Pay online, by card, or in cash.</p></div>
+      <div class="step"><div class="num">01</div><h3>Enter your route</h3><p>Pickup and drop-off — with live address lookup as you type.</p></div>
+      <div class="step"><div class="num">02</div><h3>Select a time and payment method</h3><p>Book immediately or schedule in advance. Pay in the car, or by Zelle/Cash App/Venmo.</p></div>
       <div class="step"><div class="num">03</div><h3>Receive confirmation by text</h3><p>You will receive your driver's details and an estimated arrival time ahead of pickup.</p></div>
     </div>
 
@@ -486,24 +485,59 @@
           <input type="tel" id="b-phone" placeholder="(555) 000-0000" required>
         </div>
       </div>
+      <div class="book-row">
+        <div class="field">
+          <label for="b-passengers">Passengers</label>
+          <select id="b-passengers">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4" selected>4</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="b-carseats">Car seats needed</label>
+          <select id="b-carseats">
+            <option value="0" selected>None needed</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="book-row">
+        <div class="field">
+          <label for="b-flight">Flight number (optional)</label>
+          <input type="text" id="b-flight" placeholder="e.g. UA 1234, if airport pickup/drop-off">
+        </div>
+        <div class="field">
+          <label for="b-drink">Drink preference (optional)</label>
+          <input type="text" id="b-drink" placeholder="e.g. water, none">
+        </div>
+      </div>
+
+      <div class="field-check">
+        <input type="checkbox" id="b-elderly">
+        <label for="b-elderly">A passenger needs elderly assistance</label>
+      </div>
+      <div class="field-check">
+        <input type="checkbox" id="b-contact15" checked>
+        <label for="b-contact15">Text/call me 15 minutes before pickup</label>
+      </div>
+
       <div class="field">
-        <label for="b-notes">Notes for your driver (optional)</label>
-        <textarea id="b-notes" placeholder="Flight number, additional stop, car seat, etc."></textarea>
+        <label for="b-notes">Anything else your driver should know? (optional)</label>
+        <textarea id="b-notes" placeholder="Additional stops, special requests, etc."></textarea>
       </div>
 
       <div class="field">
         <label>Payment method</label>
         <div class="pay-options" id="payOptions">
-          <button type="button" class="pay-chip active" data-pay="Pay online now (card)">Pay online now (card)</button>
-          <button type="button" class="pay-chip" data-pay="Pay in car (card or cash)">Pay in car (card or cash)</button>
+          <button type="button" class="pay-chip active" data-pay="Pay in car (card or cash)">Pay in car (card or cash)</button>
           <button type="button" class="pay-chip" data-pay="Zelle / Cash App / Venmo">Zelle / Cash App / Venmo</button>
         </div>
-        <div class="pay-note" id="payNote">You'll pay securely by card when you confirm this booking.</div>
-      </div>
-
-      <div class="book-summary">
-        <div class="label">Estimated fare<br><span id="b-milesOut" style="font-family:var(--mono); font-size:0.78rem;">— miles</span></div>
-        <div class="amt" id="b-priceOut">$0.00</div>
+        <div class="pay-note" id="payNote">Pay your driver directly by card tap or cash at the end of your ride.</div>
       </div>
 
       <button type="submit" class="btn-primary btn-block">Confirm booking</button>
@@ -710,91 +744,23 @@
 </footer>
 
 <script>
-  // ---- Fare calculation using Google Places Autocomplete + Distance Matrix ----
-  const BASE_FARE = 10.00;
-  const PER_MILE = 3.50;
-  const MINIMUM_FARE = 25.00;
+  // ---- Address autocomplete only (no live fare calculation) ----
   let autocompletesReady = false;
 
-  function formatPrice(miles){
-    return Math.max(BASE_FARE + miles*PER_MILE, MINIMUM_FARE);
-  }
-
-  function wireFareCalc(pickupId, dropoffId, milesOutId, priceOutId){
+  function wireAutocomplete(pickupId, dropoffId){
     const pickup = document.getElementById(pickupId);
     const dropoff = document.getElementById(dropoffId);
-    const milesOut = document.getElementById(milesOutId);
-    const priceOut = document.getElementById(priceOutId);
-    const service = new google.maps.DistanceMatrixService();
-    let debounceTimer = null;
-    let requestId = 0;
-
-    function reset(){
-      milesOut.textContent = '— miles';
-      priceOut.innerHTML = '$0<small>.00</small>';
-    }
-
-    function showLoading(){
-      milesOut.textContent = 'calculating…';
-    }
-
-    function update(){
-      const a = pickup.value.trim();
-      const b = dropoff.value.trim();
-      if(!a || !b){ reset(); return; }
-
-      const thisRequest = ++requestId;
-      showLoading();
-
-      service.getDistanceMatrix({
-        origins: [a],
-        destinations: [b],
-        travelMode: 'DRIVING',
-        unitSystem: google.maps.UnitSystem.IMPERIAL
-      }, (response, status) => {
-        if(thisRequest !== requestId) return; // a newer request superseded this one
-
-        if(status !== 'OK'){
-          milesOut.textContent = 'address not found';
-          priceOut.innerHTML = '$0<small>.00</small>';
-          return;
-        }
-        const element = response.rows[0]?.elements[0];
-        if(!element || element.status !== 'OK'){
-          milesOut.textContent = 'address not found';
-          priceOut.innerHTML = '$0<small>.00</small>';
-          return;
-        }
-        const meters = element.distance.value;
-        const miles = meters / 1609.344;
-        const rounded = Math.round(miles*10)/10;
-        const price = formatPrice(rounded);
-        milesOut.textContent = rounded + ' miles';
-        const [dollars, cents] = price.toFixed(2).split('.');
-        priceOut.innerHTML = '$' + dollars + '<small>.' + cents + '</small>';
-      });
-    }
-
-    function onInput(){
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(update, 600); // wait for the user to stop typing
-    }
-
-    pickup.addEventListener('input', onInput);
-    dropoff.addEventListener('input', onInput);
-
-    // Places Autocomplete — fires update() immediately on place selection
-    const acPickup = new google.maps.places.Autocomplete(pickup, { fields: ['formatted_address'] });
-    const acDropoff = new google.maps.places.Autocomplete(dropoff, { fields: ['formatted_address'] });
-    acPickup.addListener('place_changed', update);
-    acDropoff.addListener('place_changed', update);
+    // Google's Places widget fills in the full formatted address itself
+    // once the customer picks a suggestion — no extra wiring needed.
+    new google.maps.places.Autocomplete(pickup, { fields: ['formatted_address'] });
+    new google.maps.places.Autocomplete(dropoff, { fields: ['formatted_address'] });
   }
 
   // Called automatically once the Google Maps script finishes loading (see <head>)
   function initGoogleMaps(){
     autocompletesReady = true;
-    wireFareCalc('pickup','dropoff','milesOut','priceOut');
-    wireFareCalc('b-pickup','b-dropoff','b-milesOut','b-priceOut');
+    wireAutocomplete('pickup','dropoff');
+    wireAutocomplete('b-pickup','b-dropoff');
   }
 
 
@@ -807,9 +773,8 @@
   });
 
   // Payment chip selection
-  let selectedPay = 'Pay online now (card)';
+  let selectedPay = 'Pay in car (card or cash)';
   const payNotes = {
-    'Pay online now (card)': "You'll pay securely by card when you confirm this booking.",
     'Pay in car (card or cash)': 'Pay your driver directly by card tap or cash at the end of your ride.',
     'Zelle / Cash App / Venmo': "We'll send payment details by text after your booking is confirmed."
   };
@@ -822,26 +787,37 @@
     document.getElementById('payNote').textContent = payNotes[selectedPay];
   });
 
-  // Booking form submit — routes to Stripe Checkout for online payment,
-  // or shows a confirmation message for in-car payment.
-  // Every submission also sends the owner a booking notification email.
-  document.getElementById('bookForm').addEventListener('submit', async function(e){
+  // Booking form submit — no online payment yet (fare isn't quoted on the site
+  // anymore), so every submission is a reservation request: pay in the car, or
+  // by Zelle/Cash App/Venmo, confirmed with the customer directly.
+  // Every submission also notifies the owner by email, adds it to the calendar,
+  // and logs it to the Google Sheet for record-keeping.
+  document.getElementById('bookForm').addEventListener('submit', function(e){
     e.preventDefault();
     const msg = document.getElementById('formMsg');
-    const submitBtn = e.target.querySelector('button[type="submit"]');
     const pickup = document.getElementById('b-pickup').value;
     const dropoff = document.getElementById('b-dropoff').value;
     const dateTime = document.getElementById('b-date').value;
     const phone = document.getElementById('b-phone').value;
+    const passengers = document.getElementById('b-passengers').value;
+    const carSeats = document.getElementById('b-carseats').value;
+    const flight = document.getElementById('b-flight').value;
+    const drink = document.getElementById('b-drink').value;
+    const elderly = document.getElementById('b-elderly').checked;
+    const contact15 = document.getElementById('b-contact15').checked;
     const notes = document.getElementById('b-notes').value;
-    const priceText = document.getElementById('b-priceOut').textContent; // e.g. "$18.50"
-    const fareCents = Math.round(parseFloat(priceText.replace('$','')) * 100);
 
-    if(!fareCents || fareCents < 50){
-      msg.textContent = 'Please enter a valid pickup and drop-off to calculate your fare first.';
+    if(!pickup.trim() || !dropoff.trim() || !dateTime || !phone.trim()){
+      msg.textContent = 'Please fill in pickup, drop-off, date & time, and phone number.';
       msg.style.color = '#E8E8E8';
       return;
     }
+
+    const payload = {
+      pickup, dropoff, dateTime, phone, notes,
+      payMethod: selectedPay,
+      passengers, carSeats, flight, drink, elderly, contact15
+    };
 
     // Fire-and-forget: notify the owner by email, add to their calendar, and log
     // the booking to a Google Sheet for record-keeping. Don't block the customer's
@@ -849,55 +825,33 @@
     fetch('/.netlify/functions/send-booking-notification', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pickup, dropoff, dateTime, phone, notes, fareText: priceText, payMethod: selectedPay })
+      body: JSON.stringify(payload)
     }).catch(() => {});
 
     fetch('/.netlify/functions/add-to-calendar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pickup, dropoff, dateTime, phone, notes, fareText: priceText })
+      body: JSON.stringify(payload)
     }).catch(() => {});
 
     fetch('/.netlify/functions/log-booking', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pickup, dropoff, dateTime, phone, notes, fareText: priceText, payMethod: selectedPay })
+      body: JSON.stringify(payload)
     }).catch(() => {});
 
-    if(selectedPay === 'Pay in car (card or cash)'){
-      msg.textContent = `Reservation received — ${pickup} to ${dropoff}, estimated fare ${priceText}. Pay your driver directly. You will receive a text confirmation shortly.`;
-      msg.style.color = '#FFFFFF';
-      return;
-    }
-
     if(selectedPay === 'Zelle / Cash App / Venmo'){
-      msg.textContent = `Reservation received — ${pickup} to ${dropoff}, estimated fare ${priceText}. We'll text you payment details shortly.`;
-      msg.style.color = '#FFFFFF';
-      return;
+      msg.textContent = `Reservation received — ${pickup} to ${dropoff}. We'll text you payment details and confirm your fare shortly.`;
+    }else{
+      msg.textContent = `Reservation received — ${pickup} to ${dropoff}. We'll confirm your driver, timing, and fare shortly. Pay your driver directly.`;
     }
-
-    // "Pay online now" — create a Stripe Checkout session via our Netlify Function
-    submitBtn.disabled = true;
-    msg.textContent = 'Redirecting to secure payment…';
-    msg.style.color = '#B3B3B3';
-
-    try{
-      const res = await fetch('/.netlify/functions/create-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pickup, dropoff, fareCents })
-      });
-      const data = await res.json();
-      if(data.url){
-        window.location.href = data.url; // send the customer to Stripe's secure checkout page
-      }else{
-        throw new Error(data.error || 'Could not start checkout.');
-      }
-    }catch(err){
-      msg.textContent = 'Something went wrong starting payment. Please try again or choose "Pay in car".';
-      msg.style.color = '#E8E8E8';
-      submitBtn.disabled = false;
-    }
+    msg.style.color = '#FFFFFF';
+    e.target.reset();
+    document.getElementById('b-contact15').checked = true;
+    document.querySelectorAll('.pay-chip').forEach(c => c.classList.remove('active'));
+    document.getElementById('payOptions').firstElementChild.classList.add('active');
+    selectedPay = 'Pay in car (card or cash)';
+    document.getElementById('payNote').textContent = payNotes[selectedPay];
   });
 
   // Register service worker for PWA (installable on mobile)

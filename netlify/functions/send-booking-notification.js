@@ -13,7 +13,10 @@ exports.handler = async function (event) {
   }
 
   try {
-    const { pickup, dropoff, dateTime, phone, notes, fareText, payMethod } = JSON.parse(event.body);
+    const {
+      pickup, dropoff, dateTime, phone, notes, payMethod,
+      passengers, carSeats, flight, drink, elderly, contact15,
+    } = JSON.parse(event.body);
 
     if (!pickup || !dropoff || !phone) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required booking details.' }) };
@@ -25,11 +28,16 @@ exports.handler = async function (event) {
       <p><strong>Drop-off:</strong> ${dropoff}</p>
       <p><strong>Requested time:</strong> ${dateTime || 'Not specified'}</p>
       <p><strong>Customer phone:</strong> ${phone}</p>
-      <p><strong>Estimated fare:</strong> ${fareText || 'N/A'}</p>
+      <p><strong>Passengers:</strong> ${passengers || 'N/A'}</p>
+      <p><strong>Car seats needed:</strong> ${carSeats && carSeats !== '0' ? carSeats : 'None'}</p>
+      <p><strong>Elderly assistance needed:</strong> ${elderly ? 'Yes' : 'No'}</p>
+      <p><strong>Flight number:</strong> ${flight || 'N/A'}</p>
+      <p><strong>Drink preference:</strong> ${drink || 'N/A'}</p>
+      <p><strong>Text/call 15 min before pickup:</strong> ${contact15 ? 'Yes' : 'No'}</p>
       <p><strong>Payment method:</strong> ${payMethod || 'N/A'}</p>
       <p><strong>Notes:</strong> ${notes || 'None'}</p>
       <hr>
-      <p style="color:#888; font-size:0.85em;">This booking is not yet confirmed with the customer. Confirm as soon as possible, or the customer will be automatically notified of the estimated availability time.</p>
+      <p style="color:#888; font-size:0.85em;">This booking is not yet confirmed with the customer — no fare has been quoted yet. Confirm as soon as possible and let them know the price.</p>
     `;
 
     const res = await fetch('https://api.resend.com/emails', {
