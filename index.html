@@ -217,6 +217,15 @@
   .spec .k{font-family:var(--mono); font-size:0.72rem; color:var(--steel); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:5px;}
   .spec .v{font-size:0.95rem; font-weight:500;}
 
+  /* QUOTE */
+  .quote-block{padding:60px 0; border-bottom:1px solid var(--line); text-align:center;}
+  .quote-block blockquote{
+    font-family:var(--display); font-style:italic; font-weight:500;
+    font-size:clamp(1.25rem,2.4vw,1.65rem); line-height:1.55;
+    max-width:760px; margin:0 auto 22px; color:var(--ink);
+  }
+  .quote-block .quote-attr{font-family:var(--mono); font-size:0.82rem; color:var(--steel); letter-spacing:0.04em; text-transform:uppercase;}
+
   /* ABOUT */
   .about{padding:64px 0; border-bottom:1px solid var(--line); background:var(--bg-raised);}
   .about-head{text-align:center; max-width:640px; margin:0 auto 44px;}
@@ -412,14 +421,21 @@
     <div class="fleet-info">
       <div class="eyebrow">Meet Hany</div>
       <h2>The face behind every ride</h2>
-      <p>For years, Hany has been a familiar, trusted presence driving people around New Providence and the surrounding towns. That same trusted service is now available by reservation — not a stranger from an app, but a driver who remembers your pickup spot, your flight, and how you like to travel.</p>
+      <p>For more than 24 years, Hany has been driving people around New Providence and the surrounding towns — with the same care he'd give his own neighbors, because many of his riders are exactly that. It was never about racking up rides. It's about building a real relationship, so every trip feels like getting picked up by someone who genuinely knows and looks out for you.</p>
       <div class="spec-grid">
-        <div class="spec"><div class="k">Known locally</div><div class="v">Trusted across New Providence &amp; nearby towns</div></div>
+        <div class="spec"><div class="k">Known locally</div><div class="v">24+ years serving New Providence &amp; nearby towns</div></div>
         <div class="spec"><div class="k">Remembers</div><div class="v">Your pickup, flight, and preferences</div></div>
         <div class="spec"><div class="k">Always reachable</div><div class="v">A real person answers, not a bot</div></div>
         <div class="spec"><div class="k">Coverage</div><div class="v">NJ &amp; NYC metro, on request</div></div>
       </div>
     </div>
+  </div>
+</section>
+
+<section class="quote-block">
+  <div class="wrap">
+    <blockquote>"I'm not trying to make more customers — I'm trying to build real relationships. We don't just care about how the ride looks from the outside. We care about how you feel on the inside: comfortable, safe, and genuinely happy. If you're looking for luxury for its own sake, there's plenty of that around you. If you're looking for real happiness and satisfaction, we're the right choice."</blockquote>
+    <div class="quote-attr">— Hany, EconomyElite</div>
   </div>
 </section>
 
@@ -506,14 +522,24 @@
         </div>
       </div>
 
+      <div class="field">
+        <label for="b-flight">Flight number (optional)</label>
+        <input type="text" id="b-flight" placeholder="e.g. UA 1234, if airport pickup/drop-off">
+      </div>
+
       <div class="book-row">
-        <div class="field">
-          <label for="b-flight">Flight number (optional)</label>
-          <input type="text" id="b-flight" placeholder="e.g. UA 1234, if airport pickup/drop-off">
-        </div>
         <div class="field">
           <label for="b-drink">Drink preference (optional)</label>
           <input type="text" id="b-drink" placeholder="e.g. water, none">
+        </div>
+        <div class="field">
+          <label for="b-temp">Cabin temperature</label>
+          <select id="b-temp">
+            <option value="No preference" selected>No preference</option>
+            <option value="Cool (68°F)">Cool (68°F)</option>
+            <option value="Comfortable (72°F)">Comfortable (72°F)</option>
+            <option value="Warm (76°F)">Warm (76°F)</option>
+          </select>
         </div>
       </div>
 
@@ -803,6 +829,7 @@
     const carSeats = document.getElementById('b-carseats').value;
     const flight = document.getElementById('b-flight').value;
     const drink = document.getElementById('b-drink').value;
+    const temp = document.getElementById('b-temp').value;
     const elderly = document.getElementById('b-elderly').checked;
     const contact15 = document.getElementById('b-contact15').checked;
     const notes = document.getElementById('b-notes').value;
@@ -816,7 +843,7 @@
     const payload = {
       pickup, dropoff, dateTime, phone, notes,
       payMethod: selectedPay,
-      passengers, carSeats, flight, drink, elderly, contact15
+      passengers, carSeats, flight, drink, temp, elderly, contact15
     };
 
     // Fire-and-forget: notify the owner by email, add to their calendar, and log

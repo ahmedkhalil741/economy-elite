@@ -13,7 +13,7 @@
 //    "Google Sheets API" -> Enable).
 // 2. Create a new Google Sheet (sheets.new). In row 1, add these headers,
 //    in this exact order:
-//    Timestamp | Requested Date/Time | Pickup | Drop-off | Phone | Passengers | Car Seats | Elderly Assistance | Flight | Drink Preference | Text 15min Before | Payment Method | Notes | Source
+//    Timestamp | Requested Date/Time | Pickup | Drop-off | Phone | Passengers | Car Seats | Elderly Assistance | Flight | Drink Preference | Cabin Temperature | Text 15min Before | Payment Method | Notes | Source
 // 3. Click Share on that Sheet and add the service account's email
 //    (the same "client_email" from the JSON key file you used for
 //    Calendar -- looks like economyelite-calendar@your-project.iam.gserviceaccount.com)
@@ -51,7 +51,7 @@ exports.handler = async function (event) {
   try {
     const {
       pickup, dropoff, dateTime, phone, notes, payMethod,
-      passengers, carSeats, flight, drink, elderly, contact15,
+      passengers, carSeats, flight, drink, temp, elderly, contact15,
     } = JSON.parse(event.body);
 
     if (!pickup || !dropoff) {
@@ -61,7 +61,7 @@ exports.handler = async function (event) {
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'A:N',
+      range: 'A:O',
       valueInputOption: 'USER_ENTERED',
       insertDataOption: 'INSERT_ROWS',
       requestBody: {
@@ -76,6 +76,7 @@ exports.handler = async function (event) {
           elderly ? 'Yes' : 'No',
           flight || '',
           drink || '',
+          temp || '',
           contact15 ? 'Yes' : 'No',
           payMethod || '',
           notes || '',

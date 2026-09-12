@@ -19,7 +19,7 @@ Every web booking now does three things automatically (see `netlify/functions/`)
 
 For bookings taken by **phone or email** (not through the website), add a row to that same Google Sheet by hand so everything ends up in one place. Use these columns, in this order:
 
-`Timestamp | Requested Date/Time | Pickup | Drop-off | Phone | Passengers | Car Seats | Elderly Assistance | Flight | Drink Preference | Text 15min Before | Payment Method | Notes | Source`
+`Timestamp | Requested Date/Time | Pickup | Drop-off | Phone | Passengers | Car Seats | Elderly Assistance | Flight | Drink Preference | Cabin Temperature | Text 15min Before | Payment Method | Notes | Source`
 
 (Set `Source` to `Phone` or `Email` for those rows, so you can filter web vs. phone vs. email bookings later.)
 
