@@ -1,6 +1,6 @@
-# EconomyElite
+# The Standard
 
-EconomyElite is a side business project I created to target the middle class — people who want a trustworthy, professional, VIP-style ride experience without paying limousine prices.
+The Standard is a side business project I created to target the middle class — people who want a trustworthy, professional, VIP-style ride experience without paying limousine prices.
 
 The idea: pricing close to Uber, but with professional, trusted drivers who won't cancel on you last minute. A reliable, VIP-feeling ride without the limousine cost.
 
@@ -28,7 +28,7 @@ For bookings taken by **phone or email** (not through the website), add a row to
 **Email notifications (Resend):**
 - `RESEND_API_KEY` — from resend.com (free tier: 100 emails/day)
 - `OWNER_EMAIL` = `economyelite_NJ@yahoo.com`
-- `FROM_EMAIL` = `onboarding@resend.dev` (works immediately; switch to a verified economyelite.com address later)
+- `FROM_EMAIL` = `onboarding@resend.dev` (works immediately; switch to a verified domain address later, once the new domain is set up)
 
 **Calendar + Sheet logging (Google Service Account — shared by both):**
 - `GOOGLE_SERVICE_ACCOUNT_EMAIL`

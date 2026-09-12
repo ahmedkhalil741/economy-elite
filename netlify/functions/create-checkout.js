@@ -26,7 +26,7 @@ exports.handler = async function (event) {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: 'EconomyElite ride',
+              name: 'The Standard ride',
               description: `${pickup} → ${dropoff}`,
             },
             unit_amount: fareCents, // Stripe uses cents, e.g. $18.50 -> 1850

@@ -23,7 +23,7 @@ exports.handler = async function (event) {
     }
 
     const emailBody = `
-      <h2>New EconomyElite booking request</h2>
+      <h2>New booking request — The Standard</h2>
       <p><strong>Pickup:</strong> ${pickup}</p>
       <p><strong>Drop-off:</strong> ${dropoff}</p>
       <p><strong>Requested time:</strong> ${dateTime || 'Not specified'}</p>

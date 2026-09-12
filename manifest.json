@@ -1,10 +1,10 @@
 {
-  "name": "EconomyElite — Private Chauffeur",
-  "short_name": "EconomyElite",
+  "name": "The Standard — Private Chauffeur",
+  "short_name": "The Standard",
   "description": "Private chauffeur transportation in New Jersey — a trusted local driver, on request.",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#0A0A0A",
-  "theme_color": "#0A0A0A",
+  "background_color": "#0B0A08",
+  "theme_color": "#0B0A08",
   "icons": []
 }

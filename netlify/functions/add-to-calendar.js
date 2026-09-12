@@ -71,7 +71,7 @@ exports.handler = async function (event) {
     await calendar.events.insert({
       calendarId: process.env.GOOGLE_CALENDAR_ID,
       requestBody: {
-        summary: `EconomyElite ride: ${pickup} → ${dropoff}`,
+        summary: `The Standard ride: ${pickup} → ${dropoff}`,
         description: descLines.join('\n'),
         start: { dateTime: start.toISOString() },
         end: { dateTime: end.toISOString() },
