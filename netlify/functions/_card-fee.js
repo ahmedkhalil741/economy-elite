@@ -15,8 +15,7 @@
 //                             reader — credit, debit, and phone wallets like
 //                             Apple Pay all run through it at this rate
 //   Venmo      1.9% + $0.10   business profile
-//   Cash       nothing        no longer offered on the site, kept so phone
-//                             bookings entered by hand don't get a fee
+//   Cash       nothing
 //
 // ---- TWO THINGS TO KNOW ABOUT SURCHARGING ----
 // 1. It has to be disclosed before the customer books, not sprung on them

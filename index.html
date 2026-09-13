@@ -489,6 +489,7 @@
           <button type="button" class="pay-chip active" data-pay="Square"><img src="payment-logos/square.svg" alt="" onerror="this.remove()">Square</button>
           <button type="button" class="pay-chip" data-pay="Venmo"><img src="payment-logos/venmo.svg" alt="" onerror="this.remove()">Venmo</button>
           <button type="button" class="pay-chip" data-pay="Zelle"><img src="payment-logos/zelle.svg" alt="" onerror="this.remove()">Zelle</button>
+          <button type="button" class="pay-chip" data-pay="Cash">Cash</button>
         </div>
         <div class="pay-note" id="payNote">Tap any card &mdash; credit, debit, or your phone &mdash; in the car at the end of your ride. A card processing fee of 2.6% + $0.15 is added, and we&rsquo;ll confirm your total before the ride.</div>
       </div>
@@ -585,8 +586,8 @@
         <div class="policy-body">
           <ul>
             <li>Payment is due at the completion of the trip unless prepaid.</li>
-            <li>Accepted methods: Square, Venmo, and Zelle. Every card &mdash; credit, debit, or a phone wallet like Apple Pay &mdash; is tapped in the car through Square.</li>
-            <li>Zelle carries no processing fee. Card payments add 2.6% + $0.15 and Venmo adds 1.9% + $0.10, which is what the payment provider charges to accept them. We&rsquo;ll always confirm your total with you before the ride, so nothing is added at the end that you haven&rsquo;t already agreed to.</li>
+            <li>Accepted methods: Square, Venmo, Zelle, and cash. Every card &mdash; credit, debit, or a phone wallet like Apple Pay &mdash; is tapped in the car through Square.</li>
+            <li>Cash and Zelle carry no processing fee. Card payments add 2.6% + $0.15 and Venmo adds 1.9% + $0.10, which is what the payment provider charges to accept them. We&rsquo;ll always confirm your total with you before the ride, so nothing is added at the end that you haven&rsquo;t already agreed to.</li>
           </ul>
         </div>
       </details>
@@ -712,7 +713,8 @@
   const payNotes = {
     'Square': "Tap any card \u2014 credit, debit, or your phone \u2014 in the car at the end of your ride. A card processing fee of 2.6% + $0.15 is added, and we'll confirm your total before the ride.",
     'Venmo': "We'll send Venmo payment details by text after your booking is confirmed. A processing fee of 1.9% + $0.10 is added, and we'll confirm your total before the ride.",
-    'Zelle': "We'll send Zelle payment details by text after your booking is confirmed. No processing fee."
+    'Zelle': "We'll send Zelle payment details by text after your booking is confirmed. No processing fee.",
+    'Cash': 'Pay your driver directly with cash at the end of your ride. No processing fee.'
   };
   document.getElementById('payOptions').addEventListener('click', e => {
     const chip = e.target.closest('.pay-chip');
