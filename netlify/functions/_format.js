@@ -36,4 +36,27 @@ function formatTimestamp(isoUtc) {
   }) + ' ET';
 }
 
-module.exports = { formatRequestedDateTime, formatTimestamp };
+// Shifts a <input type="datetime-local"> value by a number of minutes and
+// hands it back in the same naive "YYYY-MM-DDTHH:mm:ss" shape — no timezone
+// attached, no conversion. Used to build a calendar event's start and end
+// from the time the customer actually typed.
+//
+// Why not just `new Date(value)`: on a server running in UTC (which Netlify
+// is), Node reads a zone-less datetime string as UTC, so "11:38" becomes
+// 11:38 UTC = 7:38 AM Eastern. Keeping the string naive and passing the
+// timezone separately to Google is what preserves the intended wall-clock
+// time. The Date.UTC below is only calendar arithmetic (so month and day
+// rollovers work), never a real instant.
+//
+// On the two DST changeover days a year this can land on a wall-clock time
+// that doesn't exist locally; Google Calendar resolves that on its end.
+function shiftLocalDateTime(dateTimeLocal, minutes) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(dateTimeLocal || '');
+  if (!m) return null;
+  const base = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]));
+  const d = new Date(base + minutes * 60000);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:00`;
+}
+
+module.exports = { formatRequestedDateTime, formatTimestamp, shiftLocalDateTime };

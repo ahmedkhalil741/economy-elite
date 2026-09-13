@@ -1,6 +1,10 @@
 // Adds each booking to the owner's Google Calendar automatically using a
 // Google Service Account (no login prompts — it authenticates as itself).
 //
+// This calendar is how the driver actually sees the day's rides, so the
+// event carries everything needed to run the trip: who, where, what car,
+// how they're paying, and the internal fare to collect.
+//
 // ---- ONE-TIME SETUP (done once in Google Cloud Console) ----
 // 1. In the same Google Cloud project used for Maps, enable "Google Calendar API"
 //    (APIs & Services -> Library -> search "Google Calendar API" -> Enable)
@@ -25,6 +29,18 @@
 //                                   ahmedsolimankhalil33@gmail.com
 
 const { google } = require('googleapis');
+const { estimateFare, isOvernightPickup } = require('./_fare-calc');
+const { shiftLocalDateTime } = require('./_format');
+
+// The business runs out of New Providence, NJ, so every pickup time a
+// customer types is Eastern wall-clock time. This MUST be sent to Google
+// alongside the naive date string — see the note on RIDE_MINUTES below.
+const BUSINESS_TIMEZONE = 'America/New_York';
+
+// How long to block off on the calendar per ride. A rough placeholder so
+// the day doesn't look free right after a pickup — not an actual estimate
+// of the drive.
+const RIDE_MINUTES = 45;
 
 async function getCalendarClient() {
   const auth = new google.auth.JWT(
@@ -44,28 +60,47 @@ exports.handler = async function (event) {
 
   try {
     const {
-      name, pickup, dropoff, dateTime, phone, notes,
-      passengers, carSeats, flight, temp, elderly, contact15,
+      name, pickup, dropoff, dateTime, phone, notes, payMethod,
+      passengers, carSeats, flight, temp, elderly, contact15, vehicle,
     } = JSON.parse(event.body);
 
     if (!pickup || !dropoff || !dateTime) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required booking details.' }) };
     }
 
-    const start = new Date(dateTime);
-    const end = new Date(start.getTime() + 45 * 60000); // default 45-minute block
+    // The booking form hands us a wall-clock time with no timezone on it,
+    // e.g. "2026-09-13T11:38" meaning 11:38 AM here. Passing that through
+    // `new Date()` used to interpret it as the SERVER's timezone — which on
+    // Netlify is UTC — so every event landed on the calendar 4-5 hours early
+    // (an 11:38 AM pickup showed up at 7:38 AM). Instead, keep the naive
+    // string exactly as typed and tell Google which timezone it belongs to.
+    const start = shiftLocalDateTime(dateTime, 0);
+    const end = shiftLocalDateTime(dateTime, RIDE_MINUTES);
+    if (!start || !end) {
+      return { statusCode: 400, body: JSON.stringify({ error: `Unrecognized date/time format: ${dateTime}` }) };
+    }
+
+    const fare = estimateFare(pickup, dropoff, vehicle);
 
     const descLines = [
       `Customer name: ${name || 'N/A'}`,
       `Customer phone: ${phone}`,
-      `Passengers: ${passengers || 'N/A'}`,
+      `Vehicle: ${vehicle || 'SUV'}`,
+      passengers ? `Passengers: ${passengers}` : null,
       `Car seats needed: ${carSeats && carSeats !== '0' ? carSeats : 'None'}`,
       `Elderly assistance needed: ${elderly ? 'Yes' : 'No'}`,
       flight ? `Flight: ${flight}` : null,
       temp && temp !== 'No preference' ? `Cabin temperature: ${temp}` : null,
       `Text/call 15 min before pickup: ${contact15 ? 'Yes' : 'No'}`,
+      isOvernightPickup(dateTime) ? 'Overnight pickup (12 AM–5:59 AM)' : null,
       `Notes: ${notes || 'None'}`,
-    ].filter(Boolean);
+      '',
+      `Payment method: ${payMethod || 'N/A'}`,
+      // Internal number, on a private calendar — confirm with the customer
+      // before treating it as final.
+      `Fare (internal estimate): ${fare.display}`,
+      fare.tipSuggested ? `Suggested tip (20%): $${fare.tipSuggested}` : null,
+    ].filter((line) => line !== null);
 
     const calendar = await getCalendarClient();
     await calendar.events.insert({
@@ -73,8 +108,8 @@ exports.handler = async function (event) {
       requestBody: {
         summary: `The Standard ride for ${name || 'customer'}: ${pickup} → ${dropoff}`,
         description: descLines.join('\n'),
-        start: { dateTime: start.toISOString() },
-        end: { dateTime: end.toISOString() },
+        start: { dateTime: start, timeZone: BUSINESS_TIMEZONE },
+        end: { dateTime: end, timeZone: BUSINESS_TIMEZONE },
       },
     });
 
