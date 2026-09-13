@@ -82,7 +82,7 @@ exports.handler = async function (event) {
       return { statusCode: 400, body: JSON.stringify({ error: `Unrecognized date/time format: ${dateTime}` }) };
     }
 
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime);
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod);
 
     const descLines = [
       `Customer name: ${name || 'N/A'}`,

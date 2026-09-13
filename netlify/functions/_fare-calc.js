@@ -24,6 +24,8 @@
 // Toll and waiting/late-pickup charges can't be known until the ride
 // actually happens, so they're never calculated here.
 
+const { cardFeeFor } = require('./_card-fee');
+
 const SUV_FEE = 35;       // SUV, New Jersey trips
 const SUV_FEE_NY = 50;    // SUV, New York trips — replaces SUV_FEE
 const SEDAN_FEE_NY = 35;  // Sedan, New York trips (sedans pay nothing in NJ)
@@ -82,8 +84,9 @@ function vehicleFeesFor(zone, isSedan) {
 }
 
 // pickup/dropoff pick the route, vehicle decides which vehicle fee applies,
-// and dateTime decides whether the overnight fee applies.
-function estimateFare(pickup, dropoff, vehicle, dateTime) {
+// dateTime decides whether the overnight fee applies, and payMethod decides
+// the card fee that gets added on top (see _card-fee.js).
+function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod) {
   const combined = `${pickup || ''} ${dropoff || ''}`;
   const isSedan = (vehicle || '').trim().toLowerCase() === 'sedan';
   const overnight = isOvernightPickup(dateTime) ? OVERNIGHT_FEE : 0;
@@ -107,6 +110,11 @@ function estimateFare(pickup, dropoff, vehicle, dateTime) {
         suvFeeNy: null,
         sedanFeeNy: null,
         overnightFee: overnight || null,
+        // A range has no single number to take a percentage of, so the card
+        // fee is worked out once the exact fare is agreed.
+        cardFee: null,
+        cardFeeLabel: null,
+        cardFeeRate: null,
         total: null,
         totalDisplay: `$${lo + overnight}–${hi + overnight} flat (all-inclusive)${overnightNote}`,
         tipSuggested: Math.round((((lo + hi) / 2) + overnight) * 0.2),
@@ -116,13 +124,19 @@ function estimateFare(pickup, dropoff, vehicle, dateTime) {
 
     const fees = vehicleFeesFor(zone, isSedan);
     const vehicleFee = fees.suvFee || fees.suvFeeNy || fees.sedanFeeNy || 0;
-    const total = zone.base + vehicleFee + overnight;
+
+    // The fare for the ride itself, before anything the processor takes.
+    const rideFare = zone.base + vehicleFee + overnight;
+    // Ahmed passes the card fee on, so it's added to what the customer pays.
+    const card = cardFeeFor(payMethod, rideFare);
+    const total = Math.round((rideFare + (card ? card.amount : 0)) * 100) / 100;
 
     const parts = [`$${zone.base} base`];
     if (fees.suvFee) parts.push(`$${fees.suvFee} SUV`);
     if (fees.suvFeeNy) parts.push(`$${fees.suvFeeNy} New York (SUV)`);
     if (fees.sedanFeeNy) parts.push(`$${fees.sedanFeeNy} New York (sedan)`);
     if (overnight) parts.push(`$${overnight} overnight`);
+    if (card) parts.push(`$${card.amount.toFixed(2)} ${card.label} fee`);
 
     return {
       matched: true,
@@ -133,9 +147,14 @@ function estimateFare(pickup, dropoff, vehicle, dateTime) {
       suvFeeNy: fees.suvFeeNy,
       sedanFeeNy: fees.sedanFeeNy,
       overnightFee: overnight || null,
+      cardFee: card ? card.amount : null,
+      cardFeeLabel: card ? card.label : null,
+      cardFeeRate: card ? `${(card.rate * 100).toFixed(1)}% + $${card.fixed.toFixed(2)}` : null,
+      rideFare,
       total,
-      totalDisplay: `$${total}`,
-      tipSuggested: Math.round(total * 0.2),
+      totalDisplay: `$${total.toFixed(2).replace(/\.00$/, '')}`,
+      // The tip is on the ride, not on the processor's cut.
+      tipSuggested: Math.round(rideFare * 0.2),
       display: parts.length > 1
         ? `$${total} flat (${parts.join(' + ')})`
         : `$${total} flat (sedan, no extras)`,
@@ -151,6 +170,9 @@ function estimateFare(pickup, dropoff, vehicle, dateTime) {
     suvFeeNy: null,
     sedanFeeNy: null,
     overnightFee: overnight || null,
+    cardFee: null,
+    cardFeeLabel: null,
+    cardFeeRate: null,
     total: null,
     totalDisplay: '',
     tipSuggested: null,

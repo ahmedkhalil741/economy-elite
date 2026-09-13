@@ -84,7 +84,7 @@ exports.handler = async function (event) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required booking details.' }) };
     }
 
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime);
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod);
     const isSedan = (vehicle || '').trim().toLowerCase() === 'sedan';
 
     // Local (range) and unmatched routes don't break down into base + SUV,
@@ -113,6 +113,7 @@ exports.handler = async function (event) {
       // fee for New Jersey, or the New York fee for the vehicle booked. The
       // other two are "N/A", never 0, so a blank fee can't be mistaken for
       // a charge of nothing.
+      card_fee: orNA(fare.cardFee),
       suv_fee: orNA(fare.suvFee),
       suv_fee_ny: orNA(fare.suvFeeNy),
       sedan_fee_ny: orNA(fare.sedanFeeNy),

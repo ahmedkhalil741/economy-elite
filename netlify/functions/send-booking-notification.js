@@ -21,7 +21,7 @@ function fareTable(fare) {
   const rows = [];
 
   if (fare.matched && fare.total !== null) {
-    const hasExtras = Boolean(fare.suvFee || fare.suvFeeNy || fare.sedanFeeNy || fare.overnightFee);
+    const hasExtras = Boolean(fare.suvFee || fare.suvFeeNy || fare.sedanFeeNy || fare.overnightFee || fare.cardFee);
     // With no extras the base fare IS the total — don't print the same
     // number twice, just show the one line.
     if (hasExtras) {
@@ -30,6 +30,7 @@ function fareTable(fare) {
       if (fare.suvFeeNy) rows.push(['New York fee (SUV)', `$${fare.suvFeeNy}`]);
       if (fare.sedanFeeNy) rows.push(['New York fee (sedan)', `$${fare.sedanFeeNy}`]);
       if (fare.overnightFee) rows.push(['Overnight fee', `$${fare.overnightFee}`]);
+      if (fare.cardFee) rows.push([`${fare.cardFeeLabel} fee (${fare.cardFeeRate})`, `$${fare.cardFee.toFixed(2)}`]);
     }
     rows.push(['Fare total', `$${fare.total}`, true]);
     rows.push(['Suggested tip (20%)', `$${fare.tipSuggested}`]);
@@ -60,7 +61,7 @@ exports.handler = async function (event) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required booking details.' }) };
     }
 
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime);
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod);
     const overnight = isOvernightPickup(dateTime);
 
     const emailBody = `
