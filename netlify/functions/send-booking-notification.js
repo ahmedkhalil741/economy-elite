@@ -50,7 +50,7 @@ exports.handler = async function (event) {
       <p><strong>Requested time:</strong> ${formatRequestedDateTime(dateTime)}${overnight ? ' <span style="color:#c9a227;">(overnight pickup)</span>' : ''}</p>
       <p><strong>Vehicle:</strong> ${vehicle || 'SUV'}</p>
       <p><strong>Customer phone:</strong> ${phone}</p>
-      <p><strong>Passengers:</strong> ${passengers || 'N/A'}</p>
+      ${passengers ? `<p><strong>Passengers:</strong> ${passengers}</p>` : ''}
       <p><strong>Car seats needed:</strong> ${carSeats && carSeats !== '0' ? carSeats : 'None'}</p>
       <p><strong>Elderly assistance needed:</strong> ${elderly ? 'Yes' : 'No'}</p>
       <p><strong>Flight number:</strong> ${flight || 'N/A'}</p>
