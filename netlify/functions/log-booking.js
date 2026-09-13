@@ -13,7 +13,11 @@
 //    "Google Sheets API" -> Enable).
 // 2. Create a new Google Sheet (sheets.new). In row 1, add these headers,
 //    in this exact order:
-//    Timestamp | Requested Date/Time | Pickup | Drop-off | Name | Phone | Passengers | Car Seats | Elderly Assistance | Flight | Cabin Temperature | Text 15min Before | Payment Method | Notes | Source
+//    Timestamp | Requested Date/Time | Pickup | Drop-off | Name | Phone | Passengers | Car Seats | Elderly Assistance | Flight | Cabin Temperature | Text 15min Before | Payment Method | Notes | Source | Base Fare | SUV Fee | Fare Total | Toll | Waiting/Late Fee | Suggested Tip
+//    (The last 6 -- Base Fare through Suggested Tip -- are filled in
+//    automatically for known routes; Toll and Waiting/Late Fee are left
+//    blank for you to fill in by hand after the ride, since they depend
+//    on what actually happened on the road.)
 // 3. Click Share on that Sheet and add the service account's email
 //    (the same "client_email" from the JSON key file you used for
 //    Calendar -- looks like economyelite-calendar@your-project.iam.gserviceaccount.com)
@@ -36,6 +40,7 @@
 
 const { google } = require('googleapis');
 const { estimateFare } = require('./_fare-calc');
+const { formatTimestamp, formatRequestedDateTime } = require('./_format');
 
 async function getSheetsClient() {
   const auth = new google.auth.JWT(
@@ -64,17 +69,26 @@ exports.handler = async function (event) {
     }
 
     const fare = estimateFare(pickup, dropoff);
+    // Local (range) and unmatched routes don't decompose into base + SUV —
+    // put the range/fallback text straight in "Fare Total" and leave the
+    // rest blank rather than force a number that isn't real.
+    const baseFareCell = fare.matched && fare.total !== null ? fare.base : '';
+    const suvFeeCell = fare.matched && fare.total !== null ? fare.suvFee : '';
+    const fareTotalCell = fare.matched
+      ? (fare.total !== null ? fare.total : fare.totalDisplay)
+      : fare.display;
+    const tipCell = fare.tipSuggested !== null && fare.tipSuggested !== undefined ? fare.tipSuggested : '';
 
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'A:P',
+      range: 'A:U',
       valueInputOption: 'USER_ENTERED',
       insertDataOption: 'INSERT_ROWS',
       requestBody: {
         values: [[
-          new Date().toISOString(),
-          dateTime || '',
+          formatTimestamp(new Date().toISOString()),
+          formatRequestedDateTime(dateTime),
           pickup,
           dropoff,
           name || '',
@@ -88,7 +102,12 @@ exports.handler = async function (event) {
           payMethod || '',
           notes || '',
           source || 'Web',
-          fare.display,
+          baseFareCell,
+          suvFeeCell,
+          fareTotalCell,
+          '',           // Toll — fill in by hand after the ride
+          '',           // Waiting/Late Fee — fill in by hand after the ride
+          tipCell,
         ]],
       },
     });

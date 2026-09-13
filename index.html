@@ -492,7 +492,9 @@
         <label>Payment method</label>
         <div class="pay-options" id="payOptions">
           <button type="button" class="pay-chip active" data-pay="Pay in car (card or cash)">Pay in car (card or cash)</button>
-          <button type="button" class="pay-chip" data-pay="Zelle / Cash App / Venmo">Zelle / Cash App / Venmo</button>
+          <button type="button" class="pay-chip" data-pay="Zelle">Zelle</button>
+          <button type="button" class="pay-chip" data-pay="Cash App">Cash App</button>
+          <button type="button" class="pay-chip" data-pay="Venmo">Venmo</button>
         </div>
         <div class="pay-note" id="payNote">Pay your driver directly by card tap or cash at the end of your ride.</div>
       </div>
@@ -714,7 +716,9 @@
   let selectedPay = 'Pay in car (card or cash)';
   const payNotes = {
     'Pay in car (card or cash)': 'Pay your driver directly by card tap or cash at the end of your ride.',
-    'Zelle / Cash App / Venmo': "We'll send payment details by text after your booking is confirmed."
+    'Zelle': "We'll send Zelle payment details by text after your booking is confirmed.",
+    'Cash App': "We'll send Cash App payment details by text after your booking is confirmed.",
+    'Venmo': "We'll send Venmo payment details by text after your booking is confirmed."
   };
   document.getElementById('payOptions').addEventListener('click', e => {
     const chip = e.target.closest('.pay-chip');
@@ -815,7 +819,7 @@
       body: JSON.stringify(payload)
     }).catch(() => {});
 
-    if(selectedPay === 'Zelle / Cash App / Venmo'){
+    if(selectedPay !== 'Pay in car (card or cash)'){
       msg.textContent = `Reservation received — ${pickup} to ${dropoff}. We'll review your request and text you to confirm your ride, payment details, and pricing.`;
     }else{
       msg.textContent = `Reservation received — ${pickup} to ${dropoff}. We'll review your request and contact you to confirm your ride and pricing. Pay your driver directly.`;
