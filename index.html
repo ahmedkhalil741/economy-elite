@@ -116,7 +116,8 @@
     background:radial-gradient(circle, rgba(242,237,227,0.14) 0%, transparent 70%);
     pointer-events:none;
   }
-  .hero-grid{display:grid; grid-template-columns:1.05fr 0.95fr; gap:56px; align-items:start; position:relative;}
+  .hero-grid{max-width:720px;}
+  .hero-trust{font-size:0.85rem; color:var(--steel); margin-top:16px;}
   .eyebrow{
     font-family:var(--mono); font-size:0.78rem; color:var(--teal);
     letter-spacing:0.08em; text-transform:uppercase; margin-bottom:18px;
@@ -324,11 +325,9 @@
   <div class="nav-inner">
     <div class="logo"><span class="dot"></span>The Standard</div>
     <div class="nav-links">
-      <a href="#fare">Check Route</a>
       <a href="#hany">Meet Hany</a>
       <a href="#about">About</a>
       <a href="#policy">Policy</a>
-      <a href="#privacy">Privacy</a>
       <a href="#book">Book</a>
     </div>
     <div class="nav-cta-group">
@@ -340,36 +339,19 @@
 
 <section class="hero">
   <div class="wrap hero-grid">
-    <div>
-      <div class="eyebrow">New Providence · Berkeley Heights · Summit · Short Hills, NJ</div>
-      <h1>Your Driver.<br>Not Just Your <em>Ride</em>.</h1>
-      <p class="hero-sub">Private chauffeur transportation built around trust, not just distance. We remember your pickup spot, your flight, and how you like to ride — the same reliable driver, whenever possible.</p>
-      <div class="hero-actions">
-        <a href="#book" class="btn-primary">Book your ride →</a>
-        <a href="#hany" class="btn-ghost">Meet your driver</a>
-      </div>
-      <div class="trust-row">
-        <span><i class="ic"></i>Guaranteed reservations — no cancellations</span>
-        <span><i class="ic"></i>Your preferences, remembered every trip</span>
-        <span><i class="ic"></i>Smart booking, a real person behind it</span>
-      </div>
+    <div class="eyebrow">Serving New Providence &amp; surrounding communities</div>
+    <h1>Your Driver.<br>Not Just Your <em>Ride</em>.</h1>
+    <p class="hero-sub">Private chauffeur transportation built on 24+ years of local trust.</p>
+    <div class="trust-row">
+      <span><i class="ic"></i>Airport</span>
+      <span><i class="ic"></i>Local</span>
+      <span><i class="ic"></i>Family &amp; special occasions</span>
     </div>
-
-    <div class="meter-card" id="fare">
-      <div class="meter-head">
-        <span class="meter-label">Check your route</span>
-      </div>
-      <div class="field">
-        <label for="pickup">Pickup</label>
-        <input type="text" id="pickup" placeholder="Murray Hill, NJ" autocomplete="off">
-      </div>
-      <div class="field">
-        <label for="dropoff">Drop-off</label>
-        <input type="text" id="dropoff" placeholder="Full address or city, state" autocomplete="off">
-      </div>
-      <a href="#book" class="btn-primary btn-block" style="margin-top:6px;">Continue to book →</a>
-      <div class="meter-note">We'll confirm your driver, timing, and fare with you directly once you send your request — no surprises.</div>
+    <div class="hero-actions">
+      <a href="#book" class="btn-primary">Book a ride →</a>
+      <a href="#hany" class="btn-ghost">Meet your driver</a>
     </div>
+    <p class="hero-trust">Guaranteed reservations — the same trusted driver, whenever possible.</p>
   </div>
 </section>
 
@@ -386,7 +368,7 @@
       <p>For more than 24 years, Hany has been driving people around New Providence and the surrounding towns — with the same care he'd give his own neighbors, because many of his riders are exactly that. He built The Standard to bring that same care to more people than he could ever drive alone. Every driver on our team is held to it: whoever picks you up, Hany or one of our trusted local drivers, it's the same promise — someone who genuinely knows and looks out for you, not just another fare.</p>
       <div class="spec-grid">
         <div class="spec"><div class="k">Known locally</div><div class="v">24+ years serving New Providence &amp; nearby towns</div></div>
-        <div class="spec"><div class="k">Remembers</div><div class="v">Your pickup, flight, and preferences</div></div>
+        <div class="spec"><div class="k">Remembers</div><div class="v">Your name, comfort, and how you like your ride</div></div>
         <div class="spec"><div class="k">Smart &amp; personal</div><div class="v">Automated confirmations and reminders, with a real person always behind them</div></div>
         <div class="spec"><div class="k">Coverage</div><div class="v">NJ, NYC &amp; beyond</div></div>
       </div>
@@ -405,8 +387,8 @@
   <div class="wrap">
     <div class="about-head">
       <div class="eyebrow">Why The Standard</div>
-      <h2>Fairness, at the center of everything</h2>
-      <p>At The Standard, we believe great transportation starts with fairness. That's why we are committed to providing exceptional service while treating both our customers and our drivers with respect, transparency, and professionalism. By creating value for everyone involved, we deliver a reliable, comfortable, and trustworthy experience on every trip.</p>
+      <h2>A real driver who knows you — not an app, not a stranger every time</h2>
+      <p>Most car services are built to move as many people as possible, as fast as possible. The Standard is built the opposite way — around a small, known team and real relationships, so the person behind the wheel actually knows who you are. That's the standard we hold ourselves to, for you and for the people who drive you.</p>
     </div>
     <div class="about-pillars">
       <div class="about-pillar">
@@ -538,21 +520,19 @@
   <div class="wrap">
     <div class="policy-head">
       <div class="eyebrow">Good to know</div>
-      <h2>Transportation policy</h2>
-      <p>Clear terms so there are no surprises — for you or for us.</p>
+      <h2>Policy</h2>
+      <p>Clear terms so there are no surprises — for your trip, or for your data.</p>
     </div>
 
     <div class="policy-grid">
       <details class="policy-item">
-        <summary>Pricing</summary>
+        <summary>Fares</summary>
         <div class="policy-body">
+          <p>We don't run on a fixed meter. Every fare is confirmed with you directly — based on your route, timing, and any special requests — before your ride is locked in, so there's never a surprise on arrival.</p>
           <ul>
-            <li><strong>Base fare:</strong> $10.00</li>
-            <li><strong>Mileage rate:</strong> $3.50 per mile</li>
-            <li><strong>Minimum fare:</strong> $25.00</li>
-            <li><strong>Hourly service:</strong> $60.00 per hour (2-hour minimum)</li>
-            <li><strong>Waiting time:</strong> First 15 minutes complimentary, then $1.00/minute</li>
+            <li><strong>Waiting time:</strong> First 15 minutes complimentary, then $1.00 per minute (airport pickups follow the longer complimentary window below).</li>
             <li>Tolls, parking, and airport fees are the customer's responsibility unless otherwise agreed.</li>
+            <li>Want a ballpark before booking? Call or text us and we'll give you a straight answer.</li>
           </ul>
         </div>
       </details>
@@ -576,6 +556,7 @@
             <li><strong>2–12 hours before pickup:</strong> $20 cancellation fee</li>
             <li><strong>Less than 2 hours before pickup:</strong> $50 cancellation fee</li>
             <li><strong>No-show:</strong> $50 fee or the minimum trip fare, whichever is greater</li>
+            <li>This applies even to last-minute cancellations for personal reasons — a cancelled flight, illness, or anything similar — since your driver's time was already reserved for you.</li>
           </ul>
         </div>
       </details>
@@ -585,8 +566,8 @@
         <div class="policy-body">
           <ul>
             <li>Flight status is monitored when flight information is provided.</li>
-            <li><strong>Complimentary waiting time:</strong> 30 minutes for domestic flights, 45 minutes for international flights</li>
-            <li>Additional waiting time is charged at $1.00 per minute.</li>
+            <li><strong>Complimentary waiting time:</strong> 35 minutes for domestic flights, 45 minutes for international flights.</li>
+            <li>Additional waiting time beyond that is normally $1.00 per minute — but if your flight is delayed for reasons outside your control, we cover the extra wait ourselves. You'll never be charged more because your flight ran late.</li>
           </ul>
         </div>
       </details>
@@ -631,26 +612,15 @@
           <p>The Standard provides private transportation throughout New Jersey and surrounding areas, including airport transportation and long-distance trips by reservation.</p>
         </div>
       </details>
-    </div>
-  </div>
-</section>
+      <div style="text-align:center; margin:18px 0 4px; font-family:var(--mono); font-size:0.72rem; color:var(--steel); text-transform:uppercase; letter-spacing:0.08em;">Privacy &amp; your data</div>
 
-<section class="policy" id="privacy">
-  <div class="wrap">
-    <div class="policy-head">
-      <div class="eyebrow">Your data</div>
-      <h2>Privacy policy</h2>
-      <p>What we collect, why we collect it, and how it's protected.</p>
-    </div>
-
-    <div class="policy-grid">
       <details class="policy-item">
         <summary>Information we collect</summary>
         <div class="policy-body">
           <ul>
             <li><strong>Contact details:</strong> name, phone number, and email address you provide when booking.</li>
             <li><strong>Trip details:</strong> pickup and drop-off addresses, requested date and time, and any notes you add for your driver.</li>
-            <li><strong>Payment information:</strong> processed securely by our payment providers (Stripe and Square). The Standard does not store your card number.</li>
+            <li><strong>Payment information:</strong> processed securely by our payment provider, Stripe. The Standard does not store your card number.</li>
           </ul>
         </div>
       </details>
@@ -672,7 +642,7 @@
         <summary>Who we share it with</summary>
         <div class="policy-body">
           <ul>
-            <li><strong>Payment processors</strong> (Stripe, Square) to complete transactions securely.</li>
+            <li><strong>Payment processor</strong> (Stripe) to complete transactions securely.</li>
             <li><strong>Mapping and routing services</strong> (Google Maps) to calculate distance and fare estimates.</li>
             <li>We do not share your information with advertisers or data brokers.</li>
           </ul>
@@ -719,10 +689,8 @@
   <div class="wrap foot-inner">
     <div class="logo"><span class="dot"></span>The Standard</div>
     <div class="foot-links">
-      <a href="#fare">Check Route</a>
       <a href="#hany">Meet Hany</a>
       <a href="#policy">Policy</a>
-      <a href="#privacy">Privacy</a>
       <a href="#book">Book</a>
       <a href="tel:9084949256" style="color:var(--teal);">(908) 494-9256</a>
       <a href="mailto:thestandard.nj@yahoo.com" style="color:var(--teal);">thestandard.nj@yahoo.com</a>
@@ -747,18 +715,8 @@
   // Called automatically once the Google Maps script finishes loading (see <head>)
   function initGoogleMaps(){
     autocompletesReady = true;
-    wireAutocomplete('pickup','dropoff');
     wireAutocomplete('b-pickup','b-dropoff');
   }
-
-
-  // Keep hero + booking form roughly in sync when either changes
-  document.getElementById('pickup').addEventListener('input', e => {
-    if(!document.getElementById('b-pickup').value) document.getElementById('b-pickup').value = e.target.value;
-  });
-  document.getElementById('dropoff').addEventListener('input', e => {
-    if(!document.getElementById('b-dropoff').value) document.getElementById('b-dropoff').value = e.target.value;
-  });
 
   // Payment chip selection
   let selectedPay = 'Pay in car (card or cash)';
@@ -866,9 +824,9 @@
     }).catch(() => {});
 
     if(selectedPay === 'Zelle / Cash App / Venmo'){
-      msg.textContent = `Reservation received — ${pickup} to ${dropoff}. We'll text you payment details and confirm your fare shortly.`;
+      msg.textContent = `Reservation received — ${pickup} to ${dropoff}. We'll review your request and text you to confirm your ride, payment details, and pricing.`;
     }else{
-      msg.textContent = `Reservation received — ${pickup} to ${dropoff}. We'll confirm your driver, timing, and fare shortly. Pay your driver directly.`;
+      msg.textContent = `Reservation received — ${pickup} to ${dropoff}. We'll review your request and contact you to confirm your ride and pricing. Pay your driver directly.`;
     }
     msg.style.color = '#F2EDE3';
     e.target.reset();
