@@ -491,12 +491,13 @@
       <div class="field">
         <label>Payment method</label>
         <div class="pay-options" id="payOptions">
-          <button type="button" class="pay-chip active" data-pay="Pay in car (card or cash)">Pay in car (card or cash)</button>
           <button type="button" class="pay-chip" data-pay="Zelle">Zelle</button>
-          <button type="button" class="pay-chip" data-pay="Cash App">Cash App</button>
+          <button type="button" class="pay-chip" data-pay="Apple Pay">Apple Pay</button>
+          <button type="button" class="pay-chip active" data-pay="Cash">Cash</button>
           <button type="button" class="pay-chip" data-pay="Venmo">Venmo</button>
+          <button type="button" class="pay-chip" data-pay="Square">Square</button>
         </div>
-        <div class="pay-note" id="payNote">Pay your driver directly by card tap or cash at the end of your ride.</div>
+        <div class="pay-note" id="payNote">Pay your driver directly with cash at the end of your ride.</div>
       </div>
 
       <button type="submit" class="btn-primary btn-block">Confirm booking</button>
@@ -591,7 +592,7 @@
         <div class="policy-body">
           <ul>
             <li>Payment is due at the completion of the trip unless prepaid.</li>
-            <li>Accepted methods: major credit/debit cards, Zelle, Cash App, Venmo, and cash (subject to availability).</li>
+            <li>Accepted methods: Zelle, Apple Pay, Cash, Venmo, and Square (subject to availability).</li>
           </ul>
         </div>
       </details>
@@ -713,12 +714,13 @@
   }
 
   // Payment chip selection
-  let selectedPay = 'Pay in car (card or cash)';
+  let selectedPay = 'Cash';
   const payNotes = {
-    'Pay in car (card or cash)': 'Pay your driver directly by card tap or cash at the end of your ride.',
+    'Cash': 'Pay your driver directly with cash at the end of your ride.',
     'Zelle': "We'll send Zelle payment details by text after your booking is confirmed.",
-    'Cash App': "We'll send Cash App payment details by text after your booking is confirmed.",
-    'Venmo': "We'll send Venmo payment details by text after your booking is confirmed."
+    'Apple Pay': "We'll send Apple Pay payment details by text after your booking is confirmed.",
+    'Venmo': "We'll send Venmo payment details by text after your booking is confirmed.",
+    'Square': "We'll send a Square payment link by text after your booking is confirmed."
   };
   document.getElementById('payOptions').addEventListener('click', e => {
     const chip = e.target.closest('.pay-chip');
@@ -819,7 +821,7 @@
       body: JSON.stringify(payload)
     }).catch(() => {});
 
-    if(selectedPay !== 'Pay in car (card or cash)'){
+    if(selectedPay !== 'Cash'){
       msg.textContent = `Reservation received — ${pickup} to ${dropoff}. We'll review your request and text you to confirm your ride, payment details, and pricing.`;
     }else{
       msg.textContent = `Reservation received — ${pickup} to ${dropoff}. We'll review your request and contact you to confirm your ride and pricing. Pay your driver directly.`;
@@ -830,7 +832,7 @@
     document.getElementById('b-contact15').checked = true;
     document.querySelectorAll('.pay-chip').forEach(c => c.classList.remove('active'));
     document.getElementById('payOptions').firstElementChild.classList.add('active');
-    selectedPay = 'Pay in car (card or cash)';
+    selectedPay = 'Cash';
     document.getElementById('payNote').textContent = payNotes[selectedPay];
   });
 
