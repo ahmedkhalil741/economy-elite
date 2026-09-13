@@ -424,6 +424,13 @@
           <input type="text" id="b-dropoff" placeholder="Address or landmark" required>
         </div>
       </div>
+      <div class="field">
+        <label for="b-vehicle">Vehicle</label>
+        <select id="b-vehicle">
+          <option value="SUV" selected>SUV</option>
+          <option value="Sedan">Sedan</option>
+        </select>
+      </div>
       <div class="book-row">
         <div class="field">
           <label for="b-date">Date &amp; time</label>
@@ -771,6 +778,7 @@
     const dateTime = document.getElementById('b-date').value;
     const name = document.getElementById('b-name').value;
     const phone = document.getElementById('b-phone').value;
+    const vehicle = document.getElementById('b-vehicle').value;
     const passengers = document.getElementById('b-passengers').value;
     const carSeats = document.getElementById('b-carseats').value;
     const flight = document.getElementById('b-flight').value;
@@ -788,7 +796,7 @@
     const payload = {
       name, pickup, dropoff, dateTime, phone, notes,
       payMethod: selectedPay,
-      passengers, carSeats, flight, temp, elderly, contact15,
+      passengers, carSeats, flight, temp, elderly, contact15, vehicle,
       source: 'Web'
     };
 
@@ -830,6 +838,7 @@
     e.target.reset();
     document.getElementById('b-name').value = '';
     document.getElementById('b-contact15').checked = true;
+    document.getElementById('b-vehicle').value = 'SUV';
     document.querySelectorAll('.pay-chip').forEach(c => c.classList.remove('active'));
     document.getElementById('payOptions').firstElementChild.classList.add('active');
     selectedPay = 'Cash';

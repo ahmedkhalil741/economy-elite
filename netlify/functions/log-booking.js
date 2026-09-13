@@ -13,11 +13,11 @@
 //    "Google Sheets API" -> Enable).
 // 2. Create a new Google Sheet (sheets.new). In row 1, add these headers,
 //    in this exact order:
-//    Timestamp | Requested Date/Time | Pickup | Drop-off | Name | Phone | Passengers | Car Seats | Elderly Assistance | Flight | Cabin Temperature | Text 15min Before | Payment Method | Notes | Source | Base Fare | SUV Fee | Fare Total | Toll | Waiting/Late Fee | Suggested Tip
-//    (The last 6 -- Base Fare through Suggested Tip -- are filled in
-//    automatically for known routes; Toll and Waiting/Late Fee are left
-//    blank for you to fill in by hand after the ride, since they depend
-//    on what actually happened on the road.)
+//    timestamp | requested_datetime | pickup | dropoff | name | phone | passengers | car_seats | elderly_assistance | flight | cabin_temp | text_before_ride | payment_method | notes | source | base_fare | suv_fee | toll | tip | overnight_trip | hourly_trip | waiting_late_fee | fare_total
+//    (base_fare, suv_fee, tip, overnight_trip, hourly_trip, and
+//    fare_total are filled in automatically for known routes; toll and
+//    waiting_late_fee are left blank for you to fill in by hand after the
+//    ride, since they depend on what actually happened on the road.)
 // 3. Click Share on that Sheet and add the service account's email
 //    (the same "client_email" from the JSON key file you used for
 //    Calendar -- looks like economyelite-calendar@your-project.iam.gserviceaccount.com)
@@ -39,7 +39,7 @@
 // update the customer's saved profile.
 
 const { google } = require('googleapis');
-const { estimateFare } = require('./_fare-calc');
+const { estimateFare, isOvernightPickup } = require('./_fare-calc');
 const { formatTimestamp, formatRequestedDateTime } = require('./_format');
 
 async function getSheetsClient() {
@@ -61,14 +61,14 @@ exports.handler = async function (event) {
   try {
     const {
       name, pickup, dropoff, dateTime, phone, notes, payMethod,
-      passengers, carSeats, flight, temp, elderly, contact15, source,
+      passengers, carSeats, flight, temp, elderly, contact15, source, vehicle,
     } = JSON.parse(event.body);
 
     if (!pickup || !dropoff) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required booking details.' }) };
     }
 
-    const fare = estimateFare(pickup, dropoff);
+    const fare = estimateFare(pickup, dropoff, vehicle);
     // Local (range) and unmatched routes don't decompose into base + SUV —
     // put the range/fallback text straight in "Fare Total" and leave the
     // rest blank rather than force a number that isn't real.
@@ -78,11 +78,13 @@ exports.handler = async function (event) {
       ? (fare.total !== null ? fare.total : fare.totalDisplay)
       : fare.display;
     const tipCell = fare.tipSuggested !== null && fare.tipSuggested !== undefined ? fare.tipSuggested : '';
+    const overnightCell = isOvernightPickup(dateTime) ? 'Yes' : 'No';
+    const hourlyCell = fare.matched ? 'No' : 'Yes';
 
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'A:U',
+      range: 'A:W',
       valueInputOption: 'USER_ENTERED',
       insertDataOption: 'INSERT_ROWS',
       requestBody: {
@@ -104,10 +106,12 @@ exports.handler = async function (event) {
           source || 'Web',
           baseFareCell,
           suvFeeCell,
-          fareTotalCell,
-          '',           // Toll — fill in by hand after the ride
-          '',           // Waiting/Late Fee — fill in by hand after the ride
+          '',              // Toll — fill in by hand after the ride
           tipCell,
+          overnightCell,
+          hourlyCell,
+          '',              // Waiting/Late Fee — fill in by hand after the ride
+          fareTotalCell,
         ]],
       },
     });

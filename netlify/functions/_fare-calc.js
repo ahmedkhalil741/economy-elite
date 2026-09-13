@@ -11,19 +11,28 @@
 // this only returns a suggested tip and the pre-ride numbers — base fare,
 // the SUV line, and the flat total. Toll and waiting/late fee are left
 // for the owner to fill in by hand after the ride, in the Sheet.
+//
+// The customer now picks a vehicle (SUV or Sedan) on the booking form.
+// The SUV fee only applies when SUV is selected — Sedan gets the base
+// fare with no SUV line added.
+//
+// "Overnight" and "hourly" are also auto-classified for the Sheet:
+//   - Overnight: the requested pickup time falls between 12:00 AM and
+//     5:59 AM. (No extra fee is added automatically yet — just flagged
+//     Yes/No so it can be reviewed. Add a fee here once that's decided.)
+//   - Hourly: the pickup/drop-off didn't match any known flat-rate route,
+//     so it falls back to the $/hr rate rather than a flat fare.
 
 const SUV_FEE = 35;
 
 const FARES = {
   hourlyRate: 60,       // $/hr, 2-hr minimum, all-inclusive (SUV included)
-  localRange: [25, 35], // flat, nearby towns, all-inclusive
+  localRange: [25, 35], // flat, nearby towns, all-inclusive (same either vehicle)
 
   // Order matters — first match wins. Keep specific airports above the
   // broader "local" list so e.g. "Newark, NJ" doesn't get caught by a
-  // generic New Jersey pattern. `base` is the sedan-equivalent portion;
-  // `base + SUV_FEE` is the flat total actually charged (the fleet is
-  // SUV-only, so this is really one price — split out only so it can be
-  // itemized on the internal breakdown).
+  // generic New Jersey pattern. `base` is the sedan fare; SUV adds
+  // SUV_FEE on top of it.
   //
   // Airport/Manhattan zones check BOTH pickup and dropoff (the airport
   // could be either end of the trip — a drop-off or a pickup on the way
@@ -40,8 +49,10 @@ const FARES = {
   ],
 };
 
-function estimateFare(pickup, dropoff) {
+function estimateFare(pickup, dropoff, vehicle) {
   const combined = `${pickup || ''} ${dropoff || ''}`;
+  const isSedan = (vehicle || '').trim().toLowerCase() === 'sedan';
+  const suvFeeForVehicle = isSedan ? 0 : SUV_FEE;
 
   for (const zone of FARES.zones) {
     const haystack = zone.field === 'dropoff' ? (dropoff || '') : combined;
@@ -61,16 +72,18 @@ function estimateFare(pickup, dropoff) {
       };
     }
 
-    const total = zone.base + SUV_FEE;
+    const total = zone.base + suvFeeForVehicle;
     return {
       matched: true,
       label: zone.label,
       base: zone.base,
-      suvFee: SUV_FEE,
+      suvFee: suvFeeForVehicle,
       total,
       totalDisplay: `$${total}`,
       tipSuggested: Math.round(total * 0.2),
-      display: `$${total} flat ($${zone.base} base + $${SUV_FEE} SUV)`,
+      display: suvFeeForVehicle > 0
+        ? `$${total} flat ($${zone.base} base + $${suvFeeForVehicle} SUV)`
+        : `$${total} flat (sedan, no SUV fee)`,
     };
   }
 
@@ -86,4 +99,15 @@ function estimateFare(pickup, dropoff) {
   };
 }
 
-module.exports = { estimateFare, FARES, SUV_FEE };
+// Requested pickup time falls between 12:00 AM and 5:59 AM -> overnight.
+// dateTimeLocal is the raw value of an <input type="datetime-local">,
+// e.g. "2026-09-13T02:15" — already the customer's own local wall-clock
+// time, so no timezone conversion here (matches _format.js).
+function isOvernightPickup(dateTimeLocal) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(dateTimeLocal || '');
+  if (!m) return false;
+  const hour = Number(m[4]);
+  return hour >= 0 && hour < 6;
+}
+
+module.exports = { estimateFare, isOvernightPickup, FARES, SUV_FEE };

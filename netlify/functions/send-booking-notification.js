@@ -7,7 +7,7 @@
 //   FROM_EMAIL       = onboarding@resend.dev  (works immediately with no setup;
 //                       switch to a verified economyelite.com address later)
 
-const { estimateFare } = require('./_fare-calc');
+const { estimateFare, isOvernightPickup } = require('./_fare-calc');
 const { formatRequestedDateTime } = require('./_format');
 
 exports.handler = async function (event) {
@@ -18,14 +18,16 @@ exports.handler = async function (event) {
   try {
     const {
       name, pickup, dropoff, dateTime, phone, notes, payMethod,
-      passengers, carSeats, flight, temp, elderly, contact15,
+      passengers, carSeats, flight, temp, elderly, contact15, vehicle,
     } = JSON.parse(event.body);
 
     if (!pickup || !dropoff || !phone) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required booking details.' }) };
     }
 
-    const fare = estimateFare(pickup, dropoff);
+    const fare = estimateFare(pickup, dropoff, vehicle);
+    const overnight = isOvernightPickup(dateTime);
+    const hourly = !fare.matched;
 
     const fareRows = fare.matched && fare.total !== null
       ? `
@@ -45,7 +47,8 @@ exports.handler = async function (event) {
       <p><strong>Customer name:</strong> ${name || 'N/A'}</p>
       <p><strong>Pickup:</strong> ${pickup}</p>
       <p><strong>Drop-off:</strong> ${dropoff}</p>
-      <p><strong>Requested time:</strong> ${formatRequestedDateTime(dateTime)}</p>
+      <p><strong>Requested time:</strong> ${formatRequestedDateTime(dateTime)}${overnight ? ' <span style="color:#c9a227;">(overnight pickup)</span>' : ''}</p>
+      <p><strong>Vehicle:</strong> ${vehicle || 'SUV'}</p>
       <p><strong>Customer phone:</strong> ${phone}</p>
       <p><strong>Passengers:</strong> ${passengers || 'N/A'}</p>
       <p><strong>Car seats needed:</strong> ${carSeats && carSeats !== '0' ? carSeats : 'None'}</p>
@@ -59,6 +62,7 @@ exports.handler = async function (event) {
       <div style="background:#fff6dd; border-left:3px solid #c9a227; padding:10px 14px; font-size:0.95em;">
         <strong>Estimated fare breakdown</strong>
         <table style="margin-top:6px; border-collapse:collapse;">${fareRows}</table>
+        <div style="margin-top:6px;">Overnight trip (12 AM–5:59 AM pickup): <strong>${overnight ? 'Yes' : 'No'}</strong> &nbsp;•&nbsp; Hourly job (no fixed route match): <strong>${hourly ? 'Yes' : 'No'}</strong></div>
         <div style="color:#888; font-size:0.85em; margin-top:6px;">Internal estimate only. Confirm the final number with the customer before it's locked in.</div>
       </div>
       <p style="color:#888; font-size:0.85em;">This booking is not yet confirmed with the customer — let them know the price as soon as possible.</p>
