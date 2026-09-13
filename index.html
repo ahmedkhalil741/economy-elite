@@ -114,6 +114,11 @@
      leaving roughly 220px of dead margin before the first word. Still a
      generous gutter — the point is balance, not edge-to-edge. */
   .hero > .wrap{max-width:1400px; padding-left:56px;}
+  /* .hero-grid and .wrap are the same element, and `.hero > .wrap` outranks
+     the single-class `.hero-grid{max-width:500px}` rule — so the copy
+     column's width bound has to be re-applied to the children instead, or
+     the headline is free to run the full 1400px. */
+  .hero > .wrap > *{max-width:500px;}
   .hero::before{
     content:'';
     position:absolute; top:-30%; right:-2%;
