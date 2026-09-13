@@ -10,7 +10,7 @@
 //   RESEND_API_KEY   = your API key from resend.com (free tier: 100 emails/day)
 //   OWNER_EMAIL      = thestandard.nj@yahoo.com  (where booking alerts go)
 //   FROM_EMAIL       = onboarding@resend.dev  (works immediately with no setup;
-//                       switch to a verified economyelite.com address later)
+//                       switch to a verified standardnj.com address later)
 
 const { estimateFare, isOvernightPickup } = require('./_fare-calc');
 const { formatRequestedDateTime } = require('./_format');
