@@ -37,10 +37,13 @@ const { shiftLocalDateTime } = require('./_format');
 // alongside the naive date string — see the note on RIDE_MINUTES below.
 const BUSINESS_TIMEZONE = 'America/New_York';
 
-// How long to block off on the calendar per ride. A rough placeholder so
-// the day doesn't look free right after a pickup — not an actual estimate
-// of the drive.
-const RIDE_MINUTES = 45;
+// The event is created AT the pickup time with no length, so the calendar
+// reads "12:43am" rather than a made-up "12:43 - 1:28am" block. The pickup
+// time is the fact that matters; how long the drive takes isn't known.
+//
+// If Google ever refuses a zero-length event, the insert is retried with
+// this many minutes so the ride still lands on the calendar either way.
+const FALLBACK_MINUTES = 30;
 
 async function getCalendarClient() {
   const auth = new google.auth.JWT(
@@ -75,12 +78,11 @@ exports.handler = async function (event) {
     // (an 11:38 AM pickup showed up at 7:38 AM). Instead, keep the naive
     // string exactly as typed and tell Google which timezone it belongs to.
     const start = shiftLocalDateTime(dateTime, 0);
-    const end = shiftLocalDateTime(dateTime, RIDE_MINUTES);
-    if (!start || !end) {
+    if (!start) {
       return { statusCode: 400, body: JSON.stringify({ error: `Unrecognized date/time format: ${dateTime}` }) };
     }
 
-    const fare = estimateFare(pickup, dropoff, vehicle);
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime);
 
     const descLines = [
       `Customer name: ${name || 'N/A'}`,
@@ -103,15 +105,21 @@ exports.handler = async function (event) {
     ].filter((line) => line !== null);
 
     const calendar = await getCalendarClient();
-    await calendar.events.insert({
-      calendarId: process.env.GOOGLE_CALENDAR_ID,
-      requestBody: {
-        summary: `The Standard ride for ${name || 'customer'}: ${pickup} → ${dropoff}`,
-        description: descLines.join('\n'),
-        start: { dateTime: start, timeZone: BUSINESS_TIMEZONE },
-        end: { dateTime: end, timeZone: BUSINESS_TIMEZONE },
-      },
-    });
+    const requestBody = {
+      summary: `The Standard ride for ${name || 'customer'}: ${pickup} → ${dropoff}`,
+      description: descLines.join('\n'),
+      start: { dateTime: start, timeZone: BUSINESS_TIMEZONE },
+      end: { dateTime: start, timeZone: BUSINESS_TIMEZONE },
+    };
+
+    try {
+      await calendar.events.insert({ calendarId: process.env.GOOGLE_CALENDAR_ID, requestBody });
+    } catch (zeroLengthErr) {
+      // A zero-length event is what puts a single time on the calendar, but
+      // don't lose the booking over it if Google won't take one.
+      requestBody.end = { dateTime: shiftLocalDateTime(dateTime, FALLBACK_MINUTES), timeZone: BUSINESS_TIMEZONE };
+      await calendar.events.insert({ calendarId: process.env.GOOGLE_CALENDAR_ID, requestBody });
+    }
 
     return { statusCode: 200, body: JSON.stringify({ success: true }) };
   } catch (err) {
