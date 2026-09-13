@@ -59,4 +59,18 @@ function shiftLocalDateTime(dateTimeLocal, minutes) {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:00`;
 }
 
-module.exports = { formatRequestedDateTime, formatTimestamp, shiftLocalDateTime };
+// Today's date where the business actually operates, as both a plain
+// "2026-09-13" and the "2026-09" it belongs to. Used for the customer
+// records, so a ride booked at 11pm Eastern counts toward that day and that
+// month rather than tomorrow's (the server's clock runs on UTC).
+function easternToday(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(now);
+  const get = (type) => parts.find((part) => part.type === type).value;
+  const year = get('year'), month = get('month'), day = get('day');
+  return { date: `${year}-${month}-${day}`, yearMonth: `${year}-${month}` };
+}
+
+module.exports = { formatRequestedDateTime, formatTimestamp, shiftLocalDateTime, easternToday };

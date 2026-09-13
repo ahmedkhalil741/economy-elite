@@ -1,22 +1,17 @@
-// Looks up a returning customer by phone number in the "Customers" tab of
-// the same Google Sheet used for booking records, and returns whatever
-// preferences we've saved for them — name, cabin temperature, car
-// seats, elderly assistance — so the booking form can prefill it
-// automatically instead of asking a returning customer to repeat themselves.
+// Looks up a returning customer by phone number in the "Customers" tab and
+// returns what we've saved about them, so the booking form can prefill it
+// instead of asking a regular to repeat themselves.
 //
-// Reuses the SAME Google Service Account already set up for log-booking.js
-// and add-to-calendar.js. One extra one-time setup step:
+// Columns are matched by HEADER NAME, not position — see _sheet.js. The tab
+// can be rearranged freely without touching this file.
 //
-// ---- ONE-TIME SETUP ----
-// In your existing Google Sheet (the one GOOGLE_SHEET_ID points to), add a
-// second tab named exactly "Customers", with these headers in row 1:
-//   Phone | Name | Cabin Temperature | Car Seats Needed | Elderly Assistance | Notes | Total Rides | First Ride | Last Ride
-//
-// No new Netlify environment variables needed — this reuses
-// GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_SERVICE_ACCOUNT_KEY, and
-// GOOGLE_SHEET_ID, already set up for log-booking.js.
+// Reuses the same service account and GOOGLE_SHEET_ID as the other
+// functions. No extra environment variables.
 
 const { google } = require('googleapis');
+const { readTab, rowToObject } = require('./_sheet');
+
+const CUSTOMERS_TAB = 'Customers';
 
 function normalizePhone(phone) {
   return (phone || '').replace(/\D/g, '').slice(-10);
@@ -46,29 +41,35 @@ exports.handler = async function (event) {
     }
 
     const sheets = await getSheetsClient();
-    const res = await sheets.spreadsheets.values.get({
-      spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'Customers!A:I',
-    });
+    const { keys, rows } = await readTab(sheets, process.env.GOOGLE_SHEET_ID, CUSTOMERS_TAB);
 
-    const rows = res.data.values || [];
-    const match = rows.slice(1).find((row) => normalizePhone(row[0]) === target);
+    const phoneIndex = keys.indexOf('phone');
+    const match = phoneIndex === -1
+      ? undefined
+      : rows.find((row) => normalizePhone(row[phoneIndex]) === target);
 
     if (!match) {
       return { statusCode: 200, body: JSON.stringify({ found: false }) };
     }
 
+    const customer = rowToObject(keys, match);
+
     return {
       statusCode: 200,
       body: JSON.stringify({
         found: true,
-        phone: match[0] || '',
-        name: match[1] || '',
-        temp: match[2] || '',
-        carSeats: match[3] || '',
-        elderly: match[4] || '',
-        notes: match[5] || '',
-        totalRides: match[6] || '0',
+        phone: customer.phone || '',
+        name: customer.name || '',
+        temp: customer.cabin_temp || '',
+        carSeats: customer.car_seats || '',
+        elderly: customer.elderly_assistance || '',
+        notes: customer.notes || '',
+        carType: customer.car_type || '',
+        totalRides: customer.total_rides || '0',
+        ridesThisMonth: customer.rides_this_month || '0',
+        status: customer.status || '',
+        likes: customer.likes || '',
+        dislikes: customer.dislikes || '',
       }),
     };
   } catch (err) {

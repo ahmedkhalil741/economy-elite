@@ -50,54 +50,13 @@
 const { google } = require('googleapis');
 const { estimateFare } = require('./_fare-calc');
 const { formatTimestamp, formatRequestedDateTime } = require('./_format');
+const { readTab, buildRow, orNA } = require('./_sheet');
 
 // The tab bookings are appended to.
 const SHEET_TAB = 'Bookings';
 
 // What gets written when the customer didn't give us something.
 const NA = 'N/A';
-
-// Some headers in the sheet are spelled slightly differently from the key
-// used below — map those here so they still match.
-const HEADER_ALIASES = {
-  elderly_assitance: 'elderly_assistance',
-  elderly_assistence: 'elderly_assistance',
-  elderly: 'elderly_assistance',
-  requested_date_time: 'requested_datetime',
-  car_seat: 'car_seats',
-  carseats: 'car_seats',
-  waiting_fee: 'waiting_late_fee',
-  late_fee: 'waiting_late_fee',
-  waiting_late: 'waiting_late_fee',
-  overnight: 'overnight_trip',
-  hourly: 'hourly_trip',
-  total: 'fare_total',
-  payment: 'payment_method',
-};
-
-// "Base Fare" / "base_fare" / "base fare" -> "base_fare"
-function normalizeHeader(header) {
-  const key = String(header || '').trim().toLowerCase().replace(/[\s\-]+/g, '_').replace(/_+/g, '_');
-  return HEADER_ALIASES[key] || key;
-}
-
-// 1 -> "A", 26 -> "Z", 27 -> "AA"
-function columnLetter(n) {
-  let letters = '';
-  while (n > 0) {
-    const remainder = (n - 1) % 26;
-    letters = String.fromCharCode(65 + remainder) + letters;
-    n = Math.floor((n - 1) / 26);
-  }
-  return letters;
-}
-
-// Empty / missing -> "N/A". Note 0 is a real value and is kept as 0.
-function orNA(value) {
-  if (value === null || value === undefined) return NA;
-  if (typeof value === 'string' && value.trim() === '') return NA;
-  return value;
-}
 
 async function getSheetsClient() {
   const auth = new google.auth.JWT(
@@ -168,23 +127,16 @@ exports.handler = async function (event) {
 
     // Read the header row and build the row in whatever order the sheet is
     // currently arranged in.
-    const headerRes = await sheets.spreadsheets.values.get({
-      spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: `${SHEET_TAB}!1:1`,
-    });
-    const headers = (headerRes.data.values && headerRes.data.values[0]) || [];
-    if (!headers.length) {
+    const { keys, lastColumn } = await readTab(sheets, process.env.GOOGLE_SHEET_ID, SHEET_TAB);
+    if (!keys.length) {
       throw new Error(`No header row found in the "${SHEET_TAB}" tab — row 1 must contain the column names.`);
     }
 
-    const row = headers.map((header) => {
-      const key = normalizeHeader(header);
-      return Object.prototype.hasOwnProperty.call(cells, key) ? cells[key] : '';
-    });
+    const row = buildRow(keys, cells);
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: `${SHEET_TAB}!A:${columnLetter(headers.length)}`,
+      range: `${SHEET_TAB}!A:${lastColumn}`,
       valueInputOption: 'USER_ENTERED',
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: [row] },
@@ -195,7 +147,3 @@ exports.handler = async function (event) {
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
 };
-
-// Exported for testing the column matching without touching Google.
-module.exports.normalizeHeader = normalizeHeader;
-module.exports.columnLetter = columnLetter;
