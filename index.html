@@ -116,23 +116,47 @@
   .hero > .wrap{max-width:1400px; padding-left:56px;}
   .hero::before{
     content:'';
-    position:absolute; top:-30%; right:-6%;
+    position:absolute; top:-30%; right:-2%;
     width:600px; height:600px;
     background:radial-gradient(circle, rgba(242,237,227,0.14) 0%, transparent 70%);
     pointer-events:none;
   }
   .hero-grid{max-width:500px; position:relative; z-index:2;}
   .hero-car{
-    /* Pulled slightly left and up about 6% in size to balance the copy now
-       that the text sits further left. The mask fades the car's left edge,
-       so the gap between text and vehicle reads as negative space rather
-       than a collision even on narrower desktops. */
-    position:absolute; top:50%; right:-1%; transform:translateY(-50%);
-    width:58%; max-width:830px; z-index:1; pointer-events:none;
-    -webkit-mask-image:linear-gradient(to right, transparent 0%, rgba(0,0,0,0.35) 26%, #000 54%);
-    mask-image:linear-gradient(to right, transparent 0%, rgba(0,0,0,0.35) 26%, #000 54%);
+    /* The vehicle deliberately overlaps ~70px into the text column so the
+       headline and the SUV read as one composition rather than two
+       columns. The copy sits at z-index 2 and the car at z-index 1, and
+       the car's left edge is masked down to almost nothing, so the overlap
+       is a faint dark presence BEHIND the words — never a shape covering
+       them. */
+    position:absolute; top:50%; right:-1%;
+    transform:translate(-70px, -50%);
+    width:61%; max-width:872px; z-index:1; pointer-events:none;
+    -webkit-mask-image:linear-gradient(to right, transparent 0%, rgba(0,0,0,0.18) 22%, rgba(0,0,0,0.55) 40%, #000 62%);
+    mask-image:linear-gradient(to right, transparent 0%, rgba(0,0,0,0.18) 22%, rgba(0,0,0,0.55) 40%, #000 62%);
   }
-  .hero-car img{width:100%; height:auto; display:block;}
+  /* The bottom fade lives on the image rather than the container, so it
+     multiplies with the container's left fade. Two single-axis masks
+     behave identically in every browser; one composited two-axis mask
+     does not. Only the last stretch fades and it never reaches full
+     transparency until the very edge, so the tyres stay solid and the car
+     doesn't dissolve into the page. */
+  .hero-car img{
+    width:100%; height:auto; display:block;
+    -webkit-mask-image:linear-gradient(to bottom, #000 86%, rgba(0,0,0,0.7) 95%, transparent 100%);
+    mask-image:linear-gradient(to bottom, #000 86%, rgba(0,0,0,0.7) 95%, transparent 100%);
+  }
+  /* The only thing grounding the vehicle: a faint pool of light on the
+     floor beneath it. On a near-black background a dark shadow would be
+     invisible, so this is a very low-opacity cream wash instead — enough
+     that the SUV isn't floating, nowhere near a wet-floor reflection. It
+     inherits the container's left fade, so it disappears with the car. */
+  .hero-car::before{
+    content:'';
+    position:absolute; left:14%; right:8%; bottom:3%; height:10%;
+    background:radial-gradient(ellipse at 50% 50%, rgba(242,237,227,0.075) 0%, transparent 72%);
+    z-index:-1; pointer-events:none;
+  }
   .hero-trust{font-size:0.85rem; color:var(--steel); margin-top:16px;}
   .eyebrow{
     font-family:var(--mono); font-size:0.78rem; color:var(--teal);
@@ -328,7 +352,7 @@
     .hero > .wrap{max-width:1160px; padding-left:24px;}
     .hero-grid{grid-template-columns:1fr; gap:36px;}
     .hero-car{
-      position:static; width:100%; max-width:100%; transform:none; margin-top:24px;
+      position:relative; width:100%; max-width:100%; transform:none; margin-top:24px;
       -webkit-mask-image:linear-gradient(to bottom, transparent 0%, #000 14%);
       mask-image:linear-gradient(to bottom, transparent 0%, #000 14%);
     }
