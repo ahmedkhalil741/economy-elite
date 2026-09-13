@@ -116,9 +116,12 @@
   .hero > .wrap{max-width:1400px; padding-left:56px;}
   /* .hero-grid and .wrap are the same element, and `.hero > .wrap` outranks
      the single-class `.hero-grid{max-width:500px}` rule — so the copy
-     column's width bound has to be re-applied to the children instead, or
-     the headline is free to run the full 1400px. */
-  .hero > .wrap > *{max-width:500px;}
+     column's width bound has to be re-applied here, or the headline is
+     free to run the full 1400px. 580px is deliberate rather than the
+     original 500: "Not Just Your Ride." measures ~516px, so 500 would
+     break it onto a third line and change a headline that's already
+     signed off. The subhead keeps its own narrower bound. */
+  .hero > .wrap > h1{max-width:580px;}
   .hero::before{
     content:'';
     position:absolute; top:-30%; right:-2%;
