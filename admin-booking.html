@@ -160,8 +160,9 @@
     <div class="field">
       <label>Payment method</label>
       <div class="pay-options" id="payOptions">
-        <button type="button" class="pay-chip active" data-pay="Pay in car (card or cash)">Pay in car (card or cash)</button>
-        <button type="button" class="pay-chip" data-pay="Zelle / Cash App / Venmo">Zelle / Cash App / Venmo</button>
+        <button type="button" class="pay-chip active" data-pay="Square">Square</button>
+        <button type="button" class="pay-chip" data-pay="Venmo">Venmo</button>
+        <button type="button" class="pay-chip" data-pay="Zelle">Zelle</button>
       </div>
     </div>
 
@@ -196,7 +197,7 @@
   }
 
   // ---- Payment chip selection ----
-  let selectedPay = 'Pay in car (card or cash)';
+  let selectedPay = 'Square';
   document.getElementById('payOptions').addEventListener('click', e => {
     const chip = e.target.closest('.pay-chip');
     if(!chip) return;

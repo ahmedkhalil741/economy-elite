@@ -10,18 +10,23 @@
 // once money starts moving, and correct them here — processors change
 // their pricing and the rate can depend on the specific account.
 //
-//   Cash       nothing
 //   Zelle      nothing — bank to bank, no merchant fee
-//   Square     2.6% + $0.15   card tapped in the car with a Square reader
-//   Apple Pay  2.6% + $0.15   runs through the same Square reader
+//   Square     2.6% + $0.15   EVERY card is tapped in the car on the Square
+//                             reader — credit, debit, and phone wallets like
+//                             Apple Pay all run through it at this rate
 //   Venmo      1.9% + $0.10   business profile
+//   Cash       nothing        no longer offered on the site, kept so phone
+//                             bookings entered by hand don't get a fee
 //
 // ---- TWO THINGS TO KNOW ABOUT SURCHARGING ----
 // 1. It has to be disclosed before the customer books, not sprung on them
 //    at payment. The booking form says so.
-// 2. Card network rules allow surcharging CREDIT cards but not DEBIT
-//    cards, and an Apple Pay tap is often a debit card underneath. If that
-//    becomes a problem, set the Apple Pay entry to null and absorb it.
+// 2. Card network rules permit surcharging CREDIT cards but NOT debit
+//    cards. Ahmed's decision (2026-09-13) is to charge the fee on every
+//    card including debit. That's a rule set by Visa/Mastercard rather
+//    than by law, and the consequence lands with Square — fines or losing
+//    card acceptance — so it's worth confirming directly with them. To
+//    stop surcharging a method, set its entry below to null.
 //
 // The fee is worked out on the fare and then added, which leaves a few
 // cents of the processor's cut uncovered (the processor also takes its

@@ -3,12 +3,11 @@ Payment method logos for the booking form.
 Drop the official logo files in this folder using these EXACT filenames and
 the booking form picks them up automatically -- no code change needed:
 
-    zelle.svg
-    apple-pay.svg
-    venmo.svg
     square.svg
+    venmo.svg
+    zelle.svg
 
-(Cash has no logo -- it stays as plain text.)
+(Those are the only three payment methods the site offers.)
 
 .png works too, but then the filename in index.html has to be changed to
 match. .svg is preferred: it stays sharp at any size.
@@ -18,10 +17,9 @@ page, never a random image off Google. They publish these specifically for
 businesses that accept them, and each one has usage rules (don't recolor,
 don't stretch, leave clear space around it):
 
-    Zelle      -- Zelle's brand / marketing resources page
-    Apple Pay  -- Apple's "Apple Pay Marks" on developer.apple.com
-    Venmo      -- PayPal / Venmo brand center
-    Square     -- Square's brand guidelines / press kit
+    Square  -- Square's brand guidelines / press kit
+    Venmo   -- PayPal / Venmo brand center
+    Zelle   -- Zelle's brand / marketing resources page
 
 Until the files are here, each chip just shows its name as text -- the
 missing image removes itself, so nothing looks broken.
