@@ -21,13 +21,15 @@ function fareTable(fare) {
   const rows = [];
 
   if (fare.matched && fare.total !== null) {
-    const hasExtras = fare.suvFee > 0 || fare.overnightFee > 0;
+    const hasExtras = Boolean(fare.suvFee || fare.suvFeeNy || fare.sedanFeeNy || fare.overnightFee);
     // With no extras the base fare IS the total — don't print the same
     // number twice, just show the one line.
     if (hasExtras) {
       rows.push(['Base fare', `$${fare.base}`]);
-      if (fare.suvFee > 0) rows.push(['SUV fee', `$${fare.suvFee}`]);
-      if (fare.overnightFee > 0) rows.push(['Overnight fee', `$${fare.overnightFee}`]);
+      if (fare.suvFee) rows.push(['SUV fee', `$${fare.suvFee}`]);
+      if (fare.suvFeeNy) rows.push(['New York fee (SUV)', `$${fare.suvFeeNy}`]);
+      if (fare.sedanFeeNy) rows.push(['New York fee (sedan)', `$${fare.sedanFeeNy}`]);
+      if (fare.overnightFee) rows.push(['Overnight fee', `$${fare.overnightFee}`]);
     }
     rows.push(['Fare total', `$${fare.total}`, true]);
     rows.push(['Suggested tip (20%)', `$${fare.tipSuggested}`]);

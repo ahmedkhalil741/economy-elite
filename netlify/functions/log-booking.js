@@ -109,16 +109,21 @@ exports.handler = async function (event) {
       notes: orNA(notes),
       source: source || 'Web',
       base_fare: hasNumericFare ? fare.base : NA,
-      suv_fee: hasNumericFare ? fare.suvFee : NA,
+      // Exactly one of these three ever carries a number — the standard SUV
+      // fee for New Jersey, or the New York fee for the vehicle booked. The
+      // other two are "N/A", never 0, so a blank fee can't be mistaken for
+      // a charge of nothing.
+      suv_fee: orNA(fare.suvFee),
+      suv_fee_ny: orNA(fare.suvFeeNy),
+      sedan_fee_ny: orNA(fare.sedanFeeNy),
       sedan: isSedan ? 'Yes' : 'No',
       // Neither of these can be known at booking time — they depend on the
       // real route and what actually happened on the road.
       toll: NA,
       waiting_late_fee: NA,
       tip: orNA(fare.tipSuggested),
-      // The dollar amount charged for an overnight pickup, 0 when it isn't
-      // one — kept numeric so the column can be totalled at year-end.
-      overnight_trip: fare.overnightFee,
+      // The amount charged for an overnight pickup, "N/A" when it isn't one.
+      overnight_trip: orNA(fare.overnightFee),
       hourly_trip: fare.matched ? 'No' : 'Yes',
       fare_total: hasNumericFare ? fare.total : (fare.matched ? fare.totalDisplay : fare.display),
     };
