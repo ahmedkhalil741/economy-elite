@@ -7,6 +7,8 @@
 //   FROM_EMAIL       = onboarding@resend.dev  (works immediately with no setup;
 //                       switch to a verified economyelite.com address later)
 
+const { estimateFare } = require('./_fare-calc');
+
 exports.handler = async function (event) {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
@@ -21,6 +23,8 @@ exports.handler = async function (event) {
     if (!pickup || !dropoff || !phone) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required booking details.' }) };
     }
+
+    const fare = estimateFare(pickup, dropoff);
 
     const emailBody = `
       <h2>New booking request — The Standard</h2>
@@ -38,7 +42,11 @@ exports.handler = async function (event) {
       <p><strong>Payment method:</strong> ${payMethod || 'N/A'}</p>
       <p><strong>Notes:</strong> ${notes || 'None'}</p>
       <hr>
-      <p style="color:#888; font-size:0.85em;">This booking is not yet confirmed with the customer — no fare has been quoted yet. Confirm as soon as possible and let them know the price.</p>
+      <p style="background:#fff6dd; border-left:3px solid #c9a227; padding:10px 14px; font-size:0.95em;">
+        <strong>Estimated fare:</strong> ${fare.display}${fare.matched ? ` — matched: ${fare.label}` : ''}<br>
+        <span style="color:#888; font-size:0.85em;">Internal estimate only — tolls, parking, and gratuity are additional. Confirm the final number with the customer before it's locked in.</span>
+      </p>
+      <p style="color:#888; font-size:0.85em;">This booking is not yet confirmed with the customer — let them know the price as soon as possible.</p>
     `;
 
     const res = await fetch('https://api.resend.com/emails', {

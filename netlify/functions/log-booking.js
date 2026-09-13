@@ -35,6 +35,7 @@
 // update the customer's saved profile.
 
 const { google } = require('googleapis');
+const { estimateFare } = require('./_fare-calc');
 
 async function getSheetsClient() {
   const auth = new google.auth.JWT(
@@ -62,10 +63,12 @@ exports.handler = async function (event) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required booking details.' }) };
     }
 
+    const fare = estimateFare(pickup, dropoff);
+
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'A:O',
+      range: 'A:P',
       valueInputOption: 'USER_ENTERED',
       insertDataOption: 'INSERT_ROWS',
       requestBody: {
@@ -85,6 +88,7 @@ exports.handler = async function (event) {
           payMethod || '',
           notes || '',
           source || 'Web',
+          fare.display,
         ]],
       },
     });
