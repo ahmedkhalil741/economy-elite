@@ -13,11 +13,11 @@
 
 const SUV_FEE = 35;
 
-// Extra charge for a pickup between 12:00 AM and 5:59 AM.
-// *** NOT CONFIRMED BY AHMED — he asked for the overnight amount to be
-// written to the sheet but never named a figure. $25 is a placeholder.
-// Change this one number to change it everywhere. ***
-const OVERNIGHT_FEE = 25;
+// Extra charge for a pickup between 12:00 AM and 5:59 AM. Set by Ahmed.
+// Change this one number to change it everywhere — the fare total, the
+// suggested tip, the owner email, the calendar event and the sheet all
+// read from here.
+const OVERNIGHT_FEE = 10;
 
 const FARES = {
   hourlyRate: 60,       // $/hr, 2-hr minimum, all-inclusive (SUV included)
