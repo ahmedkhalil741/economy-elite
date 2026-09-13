@@ -513,12 +513,12 @@
 
     <div class="policy-grid">
       <details class="policy-item">
-        <summary>Fares</summary>
+        <summary>Simple, Upfront Pricing</summary>
         <div class="policy-body">
-          <p>We don't run on a fixed meter. Every fare is confirmed with you directly — based on your route, timing, and any special requests — before your ride is locked in, so there's never a surprise on arrival.</p>
+          <p>Tell us where you're going and we'll confirm your fare before your ride. No surge pricing. No meter. No surprises.</p>
           <ul>
             <li><strong>Waiting time:</strong> First 15 minutes complimentary, then $1.00 per minute (airport pickups follow the longer complimentary window below).</li>
-            <li>Tolls, parking, and airport fees are the customer's responsibility unless otherwise agreed.</li>
+            <li>Tolls and parking are the customer's responsibility unless otherwise agreed.</li>
             <li>Want a ballpark before booking? Call or text us and we'll give you a straight answer.</li>
           </ul>
         </div>
@@ -703,7 +703,11 @@
   // Called automatically once the Google Maps script finishes loading (see <head>)
   function initGoogleMaps(){
     autocompletesReady = true;
-    wireAutocomplete('b-pickup','b-dropoff');
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => wireAutocomplete('b-pickup','b-dropoff'));
+    } else {
+      wireAutocomplete('b-pickup','b-dropoff');
+    }
   }
 
   // Payment chip selection
