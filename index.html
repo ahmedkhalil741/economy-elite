@@ -109,17 +109,26 @@
     border-bottom:1px solid var(--line);
     overflow:hidden;
   }
+  /* The hero breaks out of the shared 1160px container so the copy starts
+     closer to the left edge. On a wide screen the centred container was
+     leaving roughly 220px of dead margin before the first word. Still a
+     generous gutter — the point is balance, not edge-to-edge. */
+  .hero > .wrap{max-width:1400px; padding-left:56px;}
   .hero::before{
     content:'';
-    position:absolute; top:-30%; right:-10%;
+    position:absolute; top:-30%; right:-6%;
     width:600px; height:600px;
     background:radial-gradient(circle, rgba(242,237,227,0.14) 0%, transparent 70%);
     pointer-events:none;
   }
   .hero-grid{max-width:500px; position:relative; z-index:2;}
   .hero-car{
-    position:absolute; top:50%; right:-4%; transform:translateY(-50%);
-    width:54%; max-width:780px; z-index:1; pointer-events:none;
+    /* Pulled slightly left and up about 6% in size to balance the copy now
+       that the text sits further left. The mask fades the car's left edge,
+       so the gap between text and vehicle reads as negative space rather
+       than a collision even on narrower desktops. */
+    position:absolute; top:50%; right:-1%; transform:translateY(-50%);
+    width:58%; max-width:830px; z-index:1; pointer-events:none;
     -webkit-mask-image:linear-gradient(to right, transparent 0%, rgba(0,0,0,0.35) 26%, #000 54%);
     mask-image:linear-gradient(to right, transparent 0%, rgba(0,0,0,0.35) 26%, #000 54%);
   }
@@ -316,6 +325,7 @@
 
   @media (max-width: 880px){
     .nav-links{display:none;}
+    .hero > .wrap{max-width:1160px; padding-left:24px;}
     .hero-grid{grid-template-columns:1fr; gap:36px;}
     .hero-car{
       position:static; width:100%; max-width:100%; transform:none; margin-top:24px;
