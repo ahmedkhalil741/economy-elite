@@ -43,18 +43,27 @@ const FARES = {
   // `ny: true` marks the destinations that sit in New York and therefore
   // carry the New York vehicle fee.
   //
-  // Airport/Manhattan zones check BOTH pickup and dropoff (the airport
-  // could be either end of the trip — a drop-off or a pickup on the way
-  // home). The local-town zone checks the drop-off ONLY: the pickup is
-  // almost always a local town too (that's the home base), so matching it
-  // there would call nearly every trip "local" regardless of where it's
-  // actually going.
+  // `field` says which part of the trip the pattern is tested against:
+  //
+  //   'combined'  -> matches if EITHER end mentions it. Right for airports
+  //                  and Manhattan, which can be the drop-off or the pickup
+  //                  on the way home.
+  //   'bothEnds'  -> matches only if BOTH ends match. Right for the local
+  //                  flat rate, which is a price for going between nearby
+  //                  towns and nothing else.
+  //
+  // The local zone used to test the DROP-OFF ONLY, on the assumption that
+  // the pickup was always a local town anyway. That assumption was wrong
+  // and it cost money: a booking from New Rochelle, NY to New Providence,
+  // NJ — about 35 miles across two states — matched "new providence" on the
+  // drop-off and was quoted $25–35 all-inclusive. Any long trip ENDING in a
+  // local town was underpriced the same way. Both ends must match now.
   zones: [
     { label: 'Newark Liberty Airport (EWR)', base: 70, field: 'combined', test: /\bnewark\s*(liberty)?\s*(international)?\s*airport\b|\bewr\b/i },
     { label: 'Manhattan / New York City', base: 145, ny: true, field: 'combined', test: /\bmanhattan\b|\bnew york,?\s*ny\b|\bnyc\b/i },
     { label: 'LaGuardia Airport (LGA)', base: 180, ny: true, field: 'combined', test: /\blaguardia\b|\blga\b/i },
     { label: 'JFK Airport', base: 200, ny: true, field: 'combined', test: /\bjfk\b|\bkennedy\s*airport\b/i },
-    { label: 'Local (Berkeley Heights, Summit, Chatham, Millburn, Short Hills, Springfield, New Vernon, New Providence)', local: true, field: 'dropoff', test: /\b(berkeley heights|summit|chatham|millburn|short hills|springfield|new vernon|new providence)\b/i },
+    { label: 'Local (Berkeley Heights, Summit, Chatham, Millburn, Short Hills, Springfield, New Vernon, New Providence)', local: true, field: 'bothEnds', test: /\b(berkeley heights|summit|chatham|millburn|short hills|springfield|new vernon|new providence)\b/i },
   ],
 };
 
@@ -67,6 +76,17 @@ function isOvernightPickup(dateTimeLocal) {
   if (!m) return false;
   const hour = Number(m[4]);
   return hour >= 0 && hour < 6;
+}
+
+// Decides whether a trip falls in a zone. See the `field` notes on FARES.zones:
+// 'bothEnds' needs the pattern to hit the pickup AND the drop-off, everything
+// else needs it to hit either end.
+function zoneMatches(zone, pickup, dropoff, combined) {
+  if (zone.field === 'bothEnds') {
+    return zone.test.test(pickup || '') && zone.test.test(dropoff || '');
+  }
+  if (zone.field === 'dropoff') return zone.test.test(dropoff || '');
+  return zone.test.test(combined);
 }
 
 // Works out which single vehicle fee applies. Everything that doesn't
@@ -93,8 +113,7 @@ function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod) {
   const overnightNote = overnight ? ` + $${overnight} overnight` : '';
 
   for (const zone of FARES.zones) {
-    const haystack = zone.field === 'dropoff' ? (dropoff || '') : combined;
-    if (!zone.test.test(haystack)) continue;
+    if (!zoneMatches(zone, pickup, dropoff, combined)) continue;
 
     // Local trips are quoted as an all-inclusive range rather than a single
     // number, so there's no fee breakdown to report — but the overnight fee
