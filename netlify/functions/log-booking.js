@@ -17,8 +17,8 @@
 //   timestamp, requested_datetime, pickup, dropoff, name, phone,
 //   passengers, car_seats, elderly_assistance, flight, cabin_temp,
 //   text_before_ride, payment_method, notes, source, base_fare, suv_fee,
-//   sedan, toll, tip, overnight_trip, hourly_trip, waiting_late_fee,
-//   fare_total
+//   sedan, vehicle, toll, tip, overnight_trip, hourly_trip,
+//   waiting_late_fee, fare_total
 // Any column whose header isn't in that list is left alone (so your own
 // notes/status columns won't get overwritten). Any header in that list
 // that isn't in your sheet is simply skipped.
@@ -118,6 +118,12 @@ exports.handler = async function (event) {
       suv_fee_ny: orNA(fare.suvFeeNy),
       sedan_fee_ny: orNA(fare.sedanFeeNy),
       sedan: isSedan ? 'Yes' : 'No',
+      // Says the vehicle outright so you never have to work it out from a
+      // Yes/No plus a fee column. On a local trip the fare is one
+      // all-inclusive range with no separate vehicle fee, so suv_fee is
+      // legitimately N/A even on an SUV booking — which read as a
+      // contradiction until this column existed.
+      vehicle: isSedan ? 'Sedan' : 'SUV',
       // Neither of these can be known at booking time — they depend on the
       // real route and what actually happened on the road.
       toll: NA,
@@ -125,7 +131,14 @@ exports.handler = async function (event) {
       tip: orNA(fare.tipSuggested),
       // The amount charged for an overnight pickup, "N/A" when it isn't one.
       overnight_trip: orNA(fare.overnightFee),
-      hourly_trip: fare.matched ? 'No' : 'Yes',
+      // Always N/A. The booking form has no hourly option, so a web booking
+      // is never an hourly job and there is no amount to record. This used to
+      // read `fare.matched ? 'No' : 'Yes'`, which was wrong twice over: it
+      // guessed "hourly" purely because a route didn't match a known zone
+      // (unmatched means unknown, not hourly), and it wrote Yes/No into a
+      // column that holds an amount everywhere else. If hourly bookings are
+      // ever offered, put the charge here and leave N/A when it isn't one.
+      hourly_trip: NA,
       fare_total: hasNumericFare ? fare.total : (fare.matched ? fare.totalDisplay : fare.display),
     };
 
