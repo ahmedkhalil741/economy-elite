@@ -25,8 +25,25 @@
 //   GOOGLE_SERVICE_ACCOUNT_KEY   = the "private_key" value from the JSON file
 //                                   (paste it exactly, including the
 //                                   -----BEGIN PRIVATE KEY----- lines)
-//   GOOGLE_CALENDAR_ID           = usually just your Gmail address, e.g.
-//                                   ahmedsolimankhalil33@gmail.com
+//   GOOGLE_CALENDAR_ID           = the Calendar ID of the calendar bookings go
+//                                   on. Currently hany@standardnj.com.
+//
+// ---- IF BOOKINGS STOP APPEARING ON THE CALENDAR ----
+// This happened on 2026-09-17 and cost an evening, so: an insert that returns
+// success only means Google accepted it for whatever GOOGLE_CALENDAR_ID names.
+// It had been left pointing at an old Yahoo-login Google account nobody opened,
+// so months of rides went somewhere invisible while every call reported OK.
+// Check the env var FIRST, before suspecting the code.
+//
+// Two further traps, both hit that same evening:
+//   1. Changing a Netlify environment variable does nothing until a new deploy.
+//   2. standardnj.com is a Google Workspace domain, and Workspace refuses by
+//      default to share a calendar with an address outside the domain - which a
+//      service account always is. It does not refuse loudly; it silently
+//      downgrades the permission to "See only free/busy", and the insert then
+//      fails with "You need to have writer access to this calendar". The fix is
+//      in the Admin console: Apps > Google Workspace > Calendar > Sharing
+//      settings > External sharing options for primary calendars.
 
 const { google } = require('googleapis');
 const { estimateFare, isOvernightPickup } = require('./_fare-calc');
@@ -57,26 +74,6 @@ async function getCalendarClient() {
 }
 
 exports.handler = async function (event) {
-  // TEMPORARY DIAGNOSTIC (2026-09-17): bookings were reported missing from the
-  // calendar while every insert returned success, which means they were landing
-  // on a calendar nobody is looking at. A GET reports only the DOMAIN of the
-  // configured calendar, never the address itself, so this endpoint cannot leak
-  // anything. DELETE THIS BLOCK once the calendar ID is confirmed correct.
-  if (event.httpMethod === 'GET') {
-    const id = process.env.GOOGLE_CALENDAR_ID || '';
-    const sa = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        calendarConfigured: Boolean(id),
-        calendarDomain: id.includes('@') ? '@' + id.split('@').pop() : (id ? 'not-an-email' : 'EMPTY'),
-        calendarLooksLikeGroupId: /calendar\.google\.com$/.test(id),
-        serviceAccountConfigured: Boolean(sa),
-        serviceAccountDomain: sa.includes('@') ? '@' + sa.split('@').pop() : 'EMPTY',
-      }),
-    };
-  }
-
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
