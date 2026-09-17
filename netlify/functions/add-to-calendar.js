@@ -57,6 +57,26 @@ async function getCalendarClient() {
 }
 
 exports.handler = async function (event) {
+  // TEMPORARY DIAGNOSTIC (2026-09-17): bookings were reported missing from the
+  // calendar while every insert returned success, which means they were landing
+  // on a calendar nobody is looking at. A GET reports only the DOMAIN of the
+  // configured calendar, never the address itself, so this endpoint cannot leak
+  // anything. DELETE THIS BLOCK once the calendar ID is confirmed correct.
+  if (event.httpMethod === 'GET') {
+    const id = process.env.GOOGLE_CALENDAR_ID || '';
+    const sa = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        calendarConfigured: Boolean(id),
+        calendarDomain: id.includes('@') ? '@' + id.split('@').pop() : (id ? 'not-an-email' : 'EMPTY'),
+        calendarLooksLikeGroupId: /calendar\.google\.com$/.test(id),
+        serviceAccountConfigured: Boolean(sa),
+        serviceAccountDomain: sa.includes('@') ? '@' + sa.split('@').pop() : 'EMPTY',
+      }),
+    };
+  }
+
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
