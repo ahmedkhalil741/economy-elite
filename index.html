@@ -469,6 +469,18 @@
   .trip-recap strong{color:var(--ink); font-weight:500;}
   /* The optional details, folded away by default — this is the whole point
      of the split. Open it and it behaves like an ordinary run of fields. */
+  /* The care questions sit in the open, above the fold-away extras. They are
+     the reason someone picks this service over an app, so hiding them behind
+     a toggle was exactly backwards. */
+  .care-block{border-top:1px solid var(--line); margin-top:4px; padding-top:20px;}
+  .care-label{
+    font-family:var(--mono); font-size:0.72rem; letter-spacing:0.09em;
+    text-transform:uppercase; color:var(--steel); margin-bottom:14px;
+  }
+  .care-block .field-check label{line-height:1.5;}
+  .care-block .field-check{align-items:flex-start;}
+  .care-block .field-check input[type="checkbox"]{margin-top:2px;}
+
   .extras{border-top:1px solid var(--line); margin:4px 0 20px; padding-top:18px;}
   .extras summary{
     list-style:none; cursor:pointer; display:flex; align-items:center; justify-content:space-between;
@@ -707,8 +719,20 @@
           </div>
         </div>
 
+        <div class="care-block">
+          <div class="care-label">Looking after your passengers</div>
+          <div class="field-check">
+            <input type="checkbox" id="b-elderly">
+            <label for="b-elderly">A passenger needs elderly assistance &mdash; help to and from the door, and a hand with the seat</label>
+          </div>
+          <div class="field-check">
+            <input type="checkbox" id="b-contact15" checked>
+            <label for="b-contact15">Text or call me 15 minutes before pickup</label>
+          </div>
+        </div>
+
         <details class="extras">
-          <summary>Flight, temperature, and other preferences</summary>
+          <summary>Flight number, cabin temperature, and notes</summary>
           <div class="extras-body">
             <div class="field">
               <label for="b-flight">Flight number (optional)</label>
@@ -722,14 +746,6 @@
                 <option value="Comfortable (72°F)">Comfortable (72°F)</option>
                 <option value="Warm (76°F)">Warm (76°F)</option>
               </select>
-            </div>
-            <div class="field-check">
-              <input type="checkbox" id="b-elderly">
-              <label for="b-elderly">A passenger needs elderly assistance</label>
-            </div>
-            <div class="field-check">
-              <input type="checkbox" id="b-contact15" checked>
-              <label for="b-contact15">Text or call me 15 minutes before pickup</label>
             </div>
             <div class="field">
               <label for="b-notes">Anything else your driver should know? (optional)</label>
