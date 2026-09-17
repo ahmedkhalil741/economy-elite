@@ -721,6 +721,15 @@
 
         <div class="care-block">
           <div class="care-label">Looking after your passengers</div>
+          <div class="field">
+            <label for="b-temp">Cabin temperature</label>
+            <select id="b-temp">
+              <option value="No preference" selected>No preference</option>
+              <option value="Cool (68°F)">Cool (68°F)</option>
+              <option value="Comfortable (72°F)">Comfortable (72°F)</option>
+              <option value="Warm (76°F)">Warm (76°F)</option>
+            </select>
+          </div>
           <div class="field-check">
             <input type="checkbox" id="b-elderly">
             <label for="b-elderly">A passenger needs elderly assistance &mdash; help to and from the door, and a hand with the seat</label>
@@ -732,20 +741,11 @@
         </div>
 
         <details class="extras">
-          <summary>Flight number, cabin temperature, and notes</summary>
+          <summary>Flight number and notes for your driver</summary>
           <div class="extras-body">
             <div class="field">
               <label for="b-flight">Flight number (optional)</label>
               <input type="text" id="b-flight" placeholder="e.g. UA 1234, if airport pickup or drop-off">
-            </div>
-            <div class="field">
-              <label for="b-temp">Cabin temperature</label>
-              <select id="b-temp">
-                <option value="No preference" selected>No preference</option>
-                <option value="Cool (68°F)">Cool (68°F)</option>
-                <option value="Comfortable (72°F)">Comfortable (72°F)</option>
-                <option value="Warm (76°F)">Warm (76°F)</option>
-              </select>
             </div>
             <div class="field">
               <label for="b-notes">Anything else your driver should know? (optional)</label>
