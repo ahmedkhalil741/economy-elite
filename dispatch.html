@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Dispatch — The Standard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0A08; --raised:#161310; --panel:#1C1815; --line:#332D26;
+    --ink:#F2EDE3; --dim:#B5ADA0; --steel:#8A8272; --accent:#C9A96B;
+    --display:'Fraunces',serif; --body:'Inter',sans-serif; --mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5;padding:24px 16px 60px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:820px;margin:0 auto}
+  a{color:var(--accent)}
+  h1{font-family:var(--display);font-size:1.5rem;font-weight:600;margin-bottom:4px}
+  .sub{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--steel);margin-bottom:26px}
+  input,select,button{font-family:inherit;font-size:0.95rem}
+  input,select{width:100%;background:var(--raised);border:1px solid var(--line);color:var(--ink);padding:11px 13px;border-radius:9px}
+  input:focus,select:focus{outline:none;border-color:var(--accent)}
+  button{cursor:pointer;border:none;border-radius:100px;padding:11px 20px;font-weight:600}
+  .btn{background:var(--ink);color:#0B0A08}
+  .btn:hover{background:#E3DCC9}
+  .btn-line{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:500}
+  .btn-line:hover{border-color:var(--steel);background:var(--raised)}
+  .btn-sms{background:var(--accent);color:#0B0A08}
+
+  /* gate */
+  #gate{max-width:340px;margin:60px auto}
+  #gate p{color:var(--dim);font-size:0.9rem;margin-bottom:18px}
+  #gate input{margin-bottom:12px}
+
+  .note{background:var(--raised);border:1px solid var(--line);border-left:3px solid var(--accent);
+        border-radius:9px;padding:14px 16px;font-size:0.88rem;color:var(--dim);margin-bottom:18px;line-height:1.6}
+  .note strong{color:var(--ink)}
+  .note code{font-family:var(--mono);font-size:0.85em;color:var(--accent)}
+
+  .ride{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:14px}
+  .ride.assigned{border-color:#3d5a3d}
+  .ride-when{font-family:var(--mono);font-size:0.74rem;letter-spacing:0.07em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+  .ride-route{font-size:1.02rem;font-weight:500;line-height:1.45;margin-bottom:10px}
+  .ride-route .arrow{color:var(--steel);margin:0 6px}
+  .ride-meta{font-size:0.85rem;color:var(--dim);line-height:1.7;margin-bottom:14px}
+  .ride-meta .tag{display:inline-block;font-family:var(--mono);font-size:0.68rem;letter-spacing:0.06em;
+                  text-transform:uppercase;border:1px solid var(--line);border-radius:100px;padding:2px 9px;margin-right:6px;color:var(--steel)}
+  .ride-meta .care{border-color:var(--accent);color:var(--accent)}
+  .assign-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line)}
+  .assign-row select{flex:1;min-width:150px;width:auto}
+  .current{font-family:var(--mono);font-size:0.74rem;letter-spacing:0.07em;text-transform:uppercase;color:#8fbf8f}
+  .result{font-size:0.85rem;color:var(--dim);margin-top:12px;line-height:1.7;display:none}
+  .result.show{display:block}
+  .result ul{margin:6px 0 0 18px}
+  .result .bad{color:#E0A0A0}
+  .result .good{color:#8fbf8f}
+  .sms-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .empty{color:var(--steel);text-align:center;padding:50px 0;font-size:0.95rem}
+  .hidden{display:none}
+  .toprow{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:26px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<!-- The passcode is checked on the server, not here. Typing anything into this
+     box only stores it; the list stays empty unless the server agrees. -->
+<div id="gate" class="wrap">
+  <h1>Dispatch</h1>
+  <p class="sub">The Standard</p>
+  <p>Enter the dispatch passcode.</p>
+  <input type="password" id="pass" placeholder="Passcode" autocomplete="current-password">
+  <button class="btn" style="width:100%" id="unlock">Open</button>
+  <p id="gateMsg" style="margin-top:12px;color:#E0A0A0;font-size:0.86rem"></p>
+</div>
+
+<div id="app" class="wrap hidden">
+  <div class="toprow">
+    <div>
+      <h1>Dispatch</h1>
+      <p class="sub" style="margin:0">Upcoming rides</p>
+    </div>
+    <button class="btn-line" id="refresh">Refresh</button>
+  </div>
+  <div id="setupNotes"></div>
+  <div id="list"></div>
+</div>
+
+<script>
+  const KEY = 'standard-dispatch-token';
+  let token = sessionStorage.getItem(KEY) || '';
+  let data = { rides: [], drivers: [] };
+
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  // iOS wants sms:number&body=, Android wants sms:number?body=. Only the phone
+  // that's about to open the link knows which, so the link is built here.
+  function smsLink(phone, body){
+    const sep = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) ? '&' : '?';
+    return 'sms:' + phone + sep + 'body=' + encodeURIComponent(body);
+  }
+
+  async function load(){
+    const res = await fetch('/.netlify/functions/list-bookings?token=' + encodeURIComponent(token));
+    const json = await res.json();
+    if(!res.ok) throw new Error(json.error || ('Error ' + res.status));
+    data = json;
+    render();
+  }
+
+  function render(){
+    const notes = [];
+    if(data.driversError){
+      notes.push('<div class="note"><strong>The driver list can\'t be read.</strong> ' + esc(data.driversError) + '</div>');
+    } else if(!data.drivers.length){
+      notes.push('<div class="note"><strong>No drivers set up yet.</strong> In Netlify, add an environment variable called <code>DRIVERS</code> holding a list like <code>[{"key":"hany","name":"Hany","phone":"9084949256","email":"hany@standardnj.com"}]</code>, then redeploy.</div>');
+    }
+    if(!data.hasDriverColumn){
+      notes.push('<div class="note">Your Bookings sheet has no <code>driver</code> column, so assignments won\'t be recorded there. Add one to the header row &mdash; anywhere you like, the code finds it by name.</div>');
+    }
+    document.getElementById('setupNotes').innerHTML = notes.join('');
+
+    const list = document.getElementById('list');
+    if(!data.rides.length){
+      list.innerHTML = '<p class="empty">No upcoming rides.</p>';
+      return;
+    }
+
+    list.innerHTML = data.rides.map((r, i) => {
+      const tags = [];
+      if(r.vehicle) tags.push('<span class="tag">' + esc(r.vehicle) + '</span>');
+      if(r.passengers) tags.push('<span class="tag">' + esc(r.passengers) + ' pax</span>');
+      if(r.carSeats && r.carSeats !== 'None' && r.carSeats !== 'N/A' && r.carSeats !== '0')
+        tags.push('<span class="tag care">' + esc(r.carSeats) + ' car seat</span>');
+      if(r.elderly === 'Yes') tags.push('<span class="tag care">Assistance</span>');
+      if(r.flight && r.flight !== 'N/A') tags.push('<span class="tag">' + esc(r.flight) + '</span>');
+
+      const opts = ['<option value="">Choose a driver&hellip;</option>']
+        .concat(data.drivers.map(d => '<option value="' + esc(d.key) + '">' + esc(d.name) + '</option>')).join('');
+
+      return '<div class="ride' + (r.driver ? ' assigned' : '') + '" data-i="' + i + '">' +
+        '<div class="ride-when">' + esc(r.when || 'time not recorded') + '</div>' +
+        '<div class="ride-route">' + esc(r.pickup) + '<span class="arrow">&rarr;</span>' + esc(r.dropoff) + '</div>' +
+        '<div class="ride-meta">' + tags.join('') +
+          (tags.length ? '<br>' : '') +
+          esc(r.name || 'no name') + (r.phone ? ' &middot; <a href="tel:' + esc(r.phone) + '">' + esc(r.phone) + '</a>' : '') +
+          (r.fare ? ' &middot; ' + esc(r.fare) : '') +
+          (r.payMethod ? ' &middot; ' + esc(r.payMethod) : '') +
+          (r.notes && r.notes !== 'N/A' ? '<br>' + esc(r.notes) : '') +
+        '</div>' +
+        '<div class="assign-row">' +
+          (r.driver ? '<span class="current">Driver: ' + esc(r.driver) + '</span>' : '') +
+          '<select class="pick">' + opts + '</select>' +
+          '<button class="btn go">' + (r.driver ? 'Reassign' : 'Assign') + '</button>' +
+        '</div>' +
+        '<div class="result"></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  document.addEventListener('click', async (e) => {
+    const go = e.target.closest('.go');
+    if(!go) return;
+    const card = go.closest('.ride');
+    const ride = data.rides[Number(card.dataset.i)];
+    const driverKey = card.querySelector('.pick').value;
+    const out = card.querySelector('.result');
+
+    if(!driverKey){
+      out.className = 'result show';
+      out.innerHTML = '<span class="bad">Pick a driver first.</span>';
+      return;
+    }
+
+    go.disabled = true;
+    const label = go.textContent;
+    go.textContent = 'Sending…';
+    out.className = 'result show';
+    out.innerHTML = 'Working…';
+
+    try{
+      const res = await fetch('/.netlify/functions/assign-driver', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(Object.assign({ token, driverKey }, ride))
+      });
+      const json = await res.json();
+      if(!res.ok) throw new Error(json.error || ('Error ' + res.status));
+
+      const s = json.steps;
+      const line = (label, value) => '<li>' + label + ': <span class="' +
+        (/assigned|updated|sent/.test(value) ? 'good' : 'bad') + '">' + esc(value) + '</span></li>';
+
+      out.innerHTML =
+        '<strong>' + esc(json.driver.name) + '</strong>' +
+        '<ul>' + line('Sheet', s.sheet) + line('Calendar', s.calendar) + line('Email', s.email) + '</ul>' +
+        (json.driver.phone
+          ? '<div class="sms-actions">' +
+              '<a class="btn btn-sms" style="text-decoration:none;display:inline-block" href="' +
+                esc(smsLink(json.driver.phone, json.smsBody)) + '">Text ' + esc(json.driver.name) + '</a>' +
+              '<button class="btn-line copy">Copy the message</button>' +
+            '</div>'
+          : '<p style="margin-top:8px">No phone number on file for this driver.</p>');
+
+      const copy = out.querySelector('.copy');
+      if(copy) copy.addEventListener('click', async () => {
+        try{ await navigator.clipboard.writeText(json.smsBody); copy.textContent = 'Copied'; }
+        catch(err){ copy.textContent = 'Select it from the email instead'; }
+      });
+
+      // reflect the assignment without a full reload
+      ride.driver = json.driver.name;
+      card.classList.add('assigned');
+    }catch(err){
+      out.innerHTML = '<span class="bad">' + esc(err.message) + '</span>';
+    }finally{
+      go.disabled = false;
+      go.textContent = label;
+    }
+  });
+
+  async function open_(){
+    document.getElementById('gate').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    try{ await load(); }
+    catch(err){
+      document.getElementById('list').innerHTML = '<p class="empty">' + esc(err.message) + '</p>';
+    }
+  }
+
+  document.getElementById('unlock').addEventListener('click', async () => {
+    token = document.getElementById('pass').value.trim();
+    const msg = document.getElementById('gateMsg');
+    msg.textContent = 'Checking…';
+    try{
+      await load();
+      sessionStorage.setItem(KEY, token);
+      msg.textContent = '';
+      open_();
+    }catch(err){
+      msg.textContent = err.message;
+    }
+  });
+  document.getElementById('pass').addEventListener('keydown', e => {
+    if(e.key === 'Enter') document.getElementById('unlock').click();
+  });
+  document.getElementById('refresh').addEventListener('click', () => load().catch(()=>{}));
+
+  if(token) open_();
+</script>
+</body>
+</html>

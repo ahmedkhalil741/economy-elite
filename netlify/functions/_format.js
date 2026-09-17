@@ -73,4 +73,19 @@ function easternToday(now = new Date()) {
   return { date: `${year}-${month}-${day}`, yearMonth: `${year}-${month}` };
 }
 
-module.exports = { formatRequestedDateTime, formatTimestamp, shiftLocalDateTime, easternToday };
+// The reverse of formatRequestedDateTime. The sheet stores the pickup as
+// "Fri, Sep 25, 2026 · 6:30 AM", which is the right thing for a human reading
+// a spreadsheet and the wrong thing for sorting or for handing back to the
+// fare calculator. This turns it back into "2026-09-25T06:30".
+function parseRequestedDateTime(display) {
+  const m = /([A-Za-z]{3})\s+(\d{1,2}),\s*(\d{4}).*?(\d{1,2}):(\d{2})\s*(AM|PM)/i.exec(String(display || ''));
+  if (!m) return null;
+  const month = MONTHS.findIndex((x) => x.toLowerCase() === m[1].toLowerCase());
+  if (month === -1) return null;
+  let hour = Number(m[4]) % 12;
+  if (/PM/i.test(m[6])) hour += 12;
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${m[3]}-${pad(month + 1)}-${pad(Number(m[2]))}T${pad(hour)}:${m[5]}`;
+}
+
+module.exports = { formatRequestedDateTime, parseRequestedDateTime, formatTimestamp, shiftLocalDateTime, easternToday };
