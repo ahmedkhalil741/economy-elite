@@ -43,8 +43,10 @@ const OVERNIGHT_FEE = 10;
 const LOCAL_RANGE = [25, 35];
 
 // For work that isn't A to B — a night out, waiting between stops, errands.
-// STILL UNCONFIRMED BY AHMED.
+// Ahmed's decision (2026-09-17): $60/hr, and no minimum. He'd rather take a
+// short job than turn someone away over a two-hour floor.
 const HOURLY_RATE = 60;
+const HOURLY_MINIMUM_HOURS = 0;
 
 // The four destinations the table prices. LaGuardia and JFK share a column.
 const DESTINATIONS = [
@@ -107,7 +109,9 @@ const TOWN_FARES = [
   { town: 'New Brunswick',    names: ['new brunswick'],                          ewr: 95,  manh: 145, lgajfk: 205 },
   { town: 'New Providence',   names: ['new providence'],                         ewr: 75,  manh: 135, lgajfk: 185 },
   { town: 'New Vernon',       names: ['new vernon'],                             ewr: 95,  manh: 155, lgajfk: 205 },
+  { town: 'Plainfield',       names: ['plainfield'],       ewr: 85,  manh: 145, lgajfk: 195 },
   { town: 'North Plainfield', names: ['north plainfield', 'n. plainfield'],      ewr: 85,  manh: 140, lgajfk: 190 },
+  { town: 'Orange',           names: ['orange'],           ewr: 80,  manh: 140, lgajfk: 190 },
   { town: 'Oldwick',          names: ['oldwick'],                                ewr: 110, manh: 170, lgajfk: 220 },
   { town: 'Parsippany',       names: ['parsippany'],                             ewr: 85,  manh: 145, lgajfk: 195 },
   { town: 'Peapack',          names: ['peapack'],                                ewr: 130, manh: 190, lgajfk: 240 },
@@ -148,28 +152,44 @@ function isOvernightPickup(dateTimeLocal) {
 
 // Longest match wins. "New Providence, Union County" must not price as Union,
 // and "South Bound Brook" must not price as Bound Brook.
+// Words that turn one town into a DIFFERENT town. "Orange" is on the list;
+// "East Orange" and "South Orange" are separate places that are not, and
+// quoting them at Orange's price would undercharge every single time. So a
+// match is thrown away when the word in front of it is one of these AND the
+// pair isn't itself a listed town — "West Orange" and "South Plainfield" have
+// their own rows, so they survive and win on length.
+const QUALIFIERS = ['east', 'west', 'north', 'south', 'new', 'old', 'upper',
+                    'lower', 'port', 'mount', 'mt', 'glen', 'little', 'big'];
+
 function findTown(text) {
   const hay = ` ${String(text || '').toLowerCase().replace(/\s+/g, ' ')} `;
-  let best = null;
-  let bestLen = 0;
+
+  // every spelling of every town, so a qualified pair can be checked for
+  const known = new Set();
+  for (const row of TOWN_FARES) for (const n of row.names) known.add(n);
+
+  let best = null, bestLen = 0;
   for (const row of TOWN_FARES) {
     for (const name of row.names) {
-      let from = 0;
-      let idx;
+      let from = 0, idx;
       while ((idx = hay.indexOf(name, from)) !== -1) {
+        from = idx + 1;
         const before = hay[idx - 1] || ' ';
         const after = hay[idx + name.length] || ' ';
-        // Only count it when the name stands alone, not inside a longer word.
-        if (!/[a-z]/.test(before) && !/[a-z]/.test(after) && name.length > bestLen) {
-          best = row;
-          bestLen = name.length;
-        }
-        from = idx + 1;
+        if (/[a-z]/.test(before) || /[a-z]/.test(after)) continue;  // mid-word
+        if (name.length <= bestLen) continue;
+
+        // "east orange" must not be priced as "orange"
+        const lead = hay.slice(0, idx).trim().split(' ').pop().replace(/[^a-z]/g, '');
+        if (QUALIFIERS.includes(lead) && !known.has(`${lead} ${name}`)) continue;
+
+        best = row; bestLen = name.length;
       }
     }
   }
   return best;
 }
+
 
 function findDestination(text) {
   const s = String(text || '');
@@ -286,7 +306,7 @@ function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod) {
     };
   }
 
-  return noMatch(overnight, `No listed price for this route. Quote it by hand, or $${HOURLY_RATE}/hr (2-hr minimum) if it isn't a straight A-to-B trip.${overnightNote}`);
+  return noMatch(overnight, `No listed price for this route. Quote it by hand, or $${HOURLY_RATE}/hr (no minimum) if it isn't a straight A-to-B trip.${overnightNote}`);
 }
 
 module.exports = {
@@ -298,6 +318,7 @@ module.exports = {
   DESTINATIONS,
   LOCAL_RANGE,
   HOURLY_RATE,
+  HOURLY_MINIMUM_HOURS,
   SUV_FEE,
   SUV_FEE_NY,
   SEDAN_FEE_NY,
