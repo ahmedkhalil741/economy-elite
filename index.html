@@ -91,6 +91,7 @@
   .nav-call:hover{color:var(--ink);}
   .logo{font-family:var(--display); font-weight:700; font-size:1.15rem; letter-spacing:-0.005em; display:flex; align-items:center; gap:8px;}
   .logo .dot{width:8px; height:8px; border-radius:50%; background:var(--teal); box-shadow:0 0 12px var(--teal);}
+  .brand-sub{font-family:var(--mono); font-size:0.62rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--steel); margin-top:3px; padding-left:16px;}
   .nav-links{display:flex; gap:28px; font-size:0.92rem; color:var(--ink-dim);}
   .nav-links a{text-decoration:none; transition:color .15s;}
   .nav-links a:hover{color:var(--ink);}
@@ -354,7 +355,7 @@
   .foot-links a{text-decoration:none;}
   .foot-links a:hover{color:var(--ink);}
   .foot-area{font-family:var(--mono); font-size:0.76rem; color:var(--steel);}
-  .foot-fullname{font-family:var(--mono); font-size:0.68rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--steel); margin-top:6px; padding-left:18px;}
+  .foot-fullname{font-family:var(--mono); font-size:0.62rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--steel); margin-top:4px; padding-left:16px;}
 
   @media (max-width: 880px){
     .nav-links{display:none;}
@@ -381,7 +382,10 @@
 
 <nav>
   <div class="nav-inner">
-    <div class="logo"><span class="dot"></span>The Standard</div>
+    <div class="brand">
+      <div class="logo"><span class="dot"></span>The Standard</div>
+      <div class="brand-sub">Private Chauffeur Services</div>
+    </div>
     <div class="nav-links">
       <a href="#hany">Meet Hany</a>
       <a href="#about">About</a>
@@ -399,7 +403,7 @@
   <div class="wrap hero-grid">
     <div class="eyebrow">Serving New Providence &amp; Union County, NJ — NYC and beyond</div>
     <h1>Your Driver.<br>Not Just Your <em>Ride</em>.</h1>
-    <p class="hero-sub">Private chauffeur transportation built on 24+ years of local trust.<br>Reservations by phone, text, or online.</p>
+    <p class="hero-sub">Private transportation built on 24+ years of local trust.<br>Reservations by phone, text, or online.</p>
     <div class="hero-actions">
       <a href="#book" class="btn-primary">Book a ride →</a>
     </div>
