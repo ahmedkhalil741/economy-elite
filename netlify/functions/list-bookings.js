@@ -115,7 +115,12 @@ exports.handler = async function (event) {
 
     let drivers = [];
     let driversError = null;
-    try { drivers = allDrivers(); } catch (err) { driversError = err.message; }
+    let driversSource = 'none';
+    try {
+      const dt = await readTab(sheets, process.env.GOOGLE_SHEET_ID, 'Drivers');
+      driversSource = dt.keys.length ? 'sheet' : 'tab has no header row';
+    } catch (err) { driversSource = process.env.DRIVERS ? 'netlify setting (no Drivers tab yet)' : 'none'; }
+    try { drivers = await allDrivers(sheets); } catch (err) { driversError = err.message; }
 
     return {
       statusCode: 200,
@@ -130,6 +135,9 @@ exports.handler = async function (event) {
         sheetColumns: headers,
         customerColumns,
         creditsTab,
+        // Where the dropdown's names came from, so an empty dropdown points at
+        // a missing tab rather than looking like a bug.
+        driversFrom: driversSource,
         // Named so a blank field on a card points at a missing column instead
         // of being a mystery — the same mistake has cost hours twice already.
         missingColumns: {

@@ -109,8 +109,8 @@ exports.handler = async function (event) {
       return { statusCode: 400, body: JSON.stringify({ error: 'The ride is missing its pickup, drop-off or time.' }) };
     }
 
-    const driver = findDriver(driverKey);
-    if (!driver) return { statusCode: 404, body: JSON.stringify({ error: `No driver called "${driverKey}". Check the DRIVERS setting.` }) };
+    const driver = await findDriver(driverKey);
+    if (!driver) return { statusCode: 404, body: JSON.stringify({ error: `No driver called "${driverKey}". Check the Drivers tab in the sheet.` }) };
 
     const when = storedWhen || formatRequestedDateTime(dateTime);
 

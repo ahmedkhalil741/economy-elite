@@ -127,7 +127,9 @@
     if(data.driversError){
       notes.push('<div class="note"><strong>The driver list can\'t be read.</strong> ' + esc(data.driversError) + '</div>');
     } else if(!data.drivers.length){
-      notes.push('<div class="note"><strong>No drivers set up yet.</strong> In Netlify, add an environment variable called <code>DRIVERS</code> holding a list like <code>[{"key":"hany","name":"Hany","phone":"9084949256","email":"hany@standardnj.com"}]</code>, then redeploy.</div>');
+      notes.push('<div class="note"><strong>No drivers yet.</strong> Add a tab to your spreadsheet called <code>Drivers</code> with this header row: <code>key</code> <code>name</code> <code>phone</code> <code>email</code> <code>active</code> &mdash; then one row per driver. Leave <code>key</code> blank and it makes one from the name. Put <code>No</code> under <code>active</code> to take someone out of this dropdown without deleting them.</div>');
+    } else if(data.driversFrom && data.driversFrom.indexOf('netlify') === 0){
+      notes.push('<div class="note">Drivers are still coming from the old Netlify setting. Make a <code>Drivers</code> tab in the spreadsheet &mdash; headers <code>key</code> <code>name</code> <code>phone</code> <code>email</code> <code>active</code> &mdash; and you can add a driver by typing a row instead of editing settings.</div>');
     }
     const miss = data.missingColumns || {};
     if((miss.bookings||[]).length || (miss.customers||[]).length){
