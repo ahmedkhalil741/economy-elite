@@ -136,6 +136,9 @@
         ((miss.customers||[]).length ? '<br>Customers tab: <code>' + miss.customers.join('</code> <code>') + '</code>' : '') +
         '</div>');
     }
+    if(data.creditsTab && data.creditsTab !== 'ok'){
+      notes.push('<div class="note"><strong>No <code>Credits</code> tab.</strong> Credits still work &mdash; the balance is on the customer &mdash; but each one is not being logged as its own row, which is what makes them addable up at the end of the year. Add a tab called <code>Credits</code> with this header row: <code>date</code> <code>phone</code> <code>name</code> <code>type</code> <code>amount</code> <code>reason</code> <code>balance_after</code> <code>points_after</code></div>');
+    }
     if(data.hasRideStatusColumn === false){
       notes.push('<div class="note"><strong>No <code>ride_status</code> column in the Bookings tab.</strong> Add one to the header row and the Completed / Cancelled / No-show buttons appear. Points are only awarded when a ride is marked Completed, so nothing counts until this exists.</div>');
     }

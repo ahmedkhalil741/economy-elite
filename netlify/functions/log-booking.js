@@ -95,6 +95,12 @@ exports.handler = async function (event) {
     const cells = {
       timestamp: formatTimestamp(new Date().toISOString()),
       requested_datetime: formatRequestedDateTime(dateTime),
+      // The month the RIDE falls in, not the month it was booked in — written
+      // as "2026-09" so it sorts and filters as text. This exists so a
+      // question like "how many rides did this customer take in September"
+      // is one COUNTIFS in the sheet instead of a script that can drift out
+      // of step with the rows it is counting.
+      ride_month: /^(\d{4})-(\d{2})/.test(String(dateTime || '')) ? String(dateTime).slice(0, 7) : NA,
       pickup,
       dropoff,
       name: orNA(name),

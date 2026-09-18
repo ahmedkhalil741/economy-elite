@@ -106,6 +106,13 @@ exports.handler = async function (event) {
       .filter((r) => !r.dateTime || (easternToInstant(r.dateTime) || new Date(0)).getTime() > cutoff)
       .sort((a, b) => String(a.dateTime || '').localeCompare(String(b.dateTime || '')));
 
+    // Is there somewhere to keep the credit ledger?
+    let creditsTab = 'missing';
+    try {
+      const cr = await readTab(sheets, process.env.GOOGLE_SHEET_ID, 'Credits');
+      creditsTab = cr.keys.length ? 'ok' : 'no header row';
+    } catch (err) { creditsTab = 'missing'; }
+
     let drivers = [];
     let driversError = null;
     try { drivers = allDrivers(); } catch (err) { driversError = err.message; }
@@ -122,6 +129,7 @@ exports.handler = async function (event) {
         // dispatch card points at a missing column rather than a mystery
         sheetColumns: headers,
         customerColumns,
+        creditsTab,
         // Named so a blank field on a card points at a missing column instead
         // of being a mystery — the same mistake has cost hours twice already.
         missingColumns: {

@@ -20,6 +20,8 @@ const L = require('./_loyalty');
 
 const BOOKINGS_TAB = 'Bookings';
 const CUSTOMERS_TAB = 'Customers';
+// Every credit event, one per row. See logCredit below for why.
+const CREDITS_TAB = 'Credits';
 
 const COMPLETED = 'Completed';
 const CANCELLED = 'Cancelled';
@@ -40,6 +42,36 @@ async function sheetsClient() {
   );
   await auth.authorize();
   return google.sheets({ version: 'v4', auth });
+}
+
+// Appends one row to the Credits tab.
+//
+// WHY THIS EXISTS: credits used to be squashed into a single credit_history
+// cell that grew forever — "2026-09-18 +$5 (first completed ride) · 2026-10-02
+// +$10 (referred Dana) · …". Readable for a week, useless by December: you
+// cannot sort it, filter it, total it, or answer "how much did I give away
+// this year" without reading every cell by eye.
+//
+// One row per event fixes all of that. The running balance still lives on the
+// customer, so nothing has to be recomputed to know what is owed.
+//
+// A missing Credits tab is not an error — the credit itself has already been
+// recorded on the customer. The ledger is the nice-to-have.
+async function logCredit(sheets, spreadsheetId, entry) {
+  try {
+    const { keys, lastColumn } = await readTab(sheets, spreadsheetId, CREDITS_TAB);
+    if (!keys.length) return 'the Credits tab has no header row';
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: `${CREDITS_TAB}!A:${lastColumn}`,
+      valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS',
+      requestBody: { values: [buildRow(keys, entry)] },
+    });
+    return 'logged';
+  } catch (err) {
+    return `not logged: ${err.message}`;
+  }
 }
 
 exports.handler = async function (event) {
@@ -141,14 +173,10 @@ exports.handler = async function (event) {
       + (credit ? credit.amount : 0)
       - (reversed ? reversed.amount : 0));
 
-    const entry = credit
-      ? `${today.date} +$${credit.amount} (${credit.reason})`
-      : reversed
-        ? `${today.date} −$${reversed.amount} (${wanted.toLowerCase()} — reversed)`
-        : null;
-    const creditNote = entry
-      ? [c.credit_history, entry].filter(Boolean).join(' · ')
-      : (c.credit_history || '');
+    // The one-cell history is no longer appended to — it grew without limit
+    // and could not be analysed. Whatever is already in it is left alone so
+    // nothing is lost; new events go to the Credits tab as rows.
+    const creditNote = c.credit_history || '';
 
     await sheets.spreadsheets.values.update({
       spreadsheetId,
@@ -167,6 +195,23 @@ exports.handler = async function (event) {
         }, customers.rows[cIdx])],
       },
     });
+
+    // ---- the ledger ----
+    let ledger = null;
+    if (credit) {
+      ledger = await logCredit(sheets, spreadsheetId, {
+        date: today.date, phone: key, name: c.name || name || '',
+        type: 'Earned', amount: credit.amount, reason: credit.reason,
+        balance_after: creditOwed, points_after: points,
+      });
+    } else if (reversed) {
+      ledger = await logCredit(sheets, spreadsheetId, {
+        date: today.date, phone: key, name: c.name || name || '',
+        type: 'Reversed', amount: -reversed.amount,
+        reason: `ride marked ${wanted.toLowerCase()}`,
+        balance_after: creditOwed, points_after: points,
+      });
+    }
 
     // ---- the referral ----
     // Paid to the REFERRER, once, when the person they sent completes their
@@ -196,6 +241,12 @@ exports.handler = async function (event) {
             requestBody: { values: [buildRow(customers.keys, { credit_owed: refOwed, credit_history: refNote }, customers.rows[refIdx])] },
           });
           referral = { name: ref.name || refKey, phone: refKey, amount: L.REFERRAL_CREDIT, owed: refOwed };
+          await logCredit(sheets, spreadsheetId, {
+            date: today.date, phone: refKey, name: ref.name || refKey,
+            type: 'Referral', amount: L.REFERRAL_CREDIT,
+            reason: `referred ${c.name || key}`,
+            balance_after: refOwed, points_after: parseInt(ref.lifetime_points, 10) || 0,
+          });
         } catch (err) {
           referral = { error: err.message };
         }
@@ -237,6 +288,7 @@ exports.handler = async function (event) {
           standing: L.standingLine({ name: who, status: status_, activity, points, completedRides }),
         },
         referral,
+        ledger,
         emailed,
       }),
     };
