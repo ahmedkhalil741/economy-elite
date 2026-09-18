@@ -72,6 +72,19 @@
   /* Finished and cancelled rides stay reachable but stop competing for
      attention — they are sorted to the bottom and faded, not hidden, because
      hiding them makes an accidental tap impossible to undo. */
+  /* Change the price after the fact — a renegotiation, an added stop, a route
+     that turned out longer. Sits on the fare itself so it is obvious what it
+     edits. */
+  .fare-edit{background:none;border:0;color:var(--accent);padding:0 0 0 6px;
+             font-size:0.82rem;font-family:inherit;text-decoration:underline;text-underline-offset:3px}
+  .fare-edit:hover{color:var(--ink)}
+  .fare-box{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;
+            padding:12px;background:var(--raised);border:1px solid var(--line);border-radius:10px}
+  .fare-box input{width:110px;background:var(--panel);border:1px solid var(--line);color:var(--ink);
+                  padding:9px 11px;border-radius:8px;font-family:var(--mono);font-size:0.95rem}
+  .fare-box .lbl{font-family:var(--mono);font-size:0.68rem;letter-spacing:0.08em;
+                 text-transform:uppercase;color:var(--steel)}
+  .fare-box button{padding:9px 16px;font-size:0.85rem}
   .ride.done{opacity:0.5}
   .ride.done:hover{opacity:1}
   .windowbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;
@@ -253,7 +266,8 @@
         '<div class="ride-meta">' + tags.join('') +
           (tags.length ? '<br>' : '') +
           esc(r.name || 'no name') + (r.phone ? ' &middot; <a href="tel:' + esc(r.phone) + '">' + esc(r.phone) + '</a>' : '') +
-          (r.fare ? ' &middot; ' + esc(r.fare) : '') +
+          (r.fare ? ' &middot; <span class="fare-val">' + esc(r.fare) + '</span>' : ' &middot; <span class="fare-val">no fare</span>') +
+          '<button class="fare-edit">change</button>' +
           (r.payMethod ? ' &middot; ' + esc(r.payMethod) : '') +
           (r.notes && r.notes !== 'N/A' ? '<br>' + esc(r.notes) : '') +
         '</div>' +
@@ -267,6 +281,15 @@
           '</div>' +
           '<button class="btn go">' + (r.driver ? 'Reassign' : 'Assign') + '</button>' +
         '</div>' +
+        '<div class="fare-box" hidden>' +
+          '<span class="lbl">New fare</span>' +
+          '<input type="number" class="fare-in" min="0" step="1" placeholder="0">' +
+          '<span class="lbl">Tolls</span>' +
+          '<input type="number" class="toll-in" min="0" step="1" placeholder="optional">' +
+          '<button class="btn fare-save">Save</button>' +
+          '<button class="btn-line fare-cancel">Cancel</button>' +
+          '<span class="result fareres"></span>' +
+        '</div>' +
         '<div class="result"></div>' +
         statusRow +
       '</div>';
@@ -274,6 +297,64 @@
   }
 
   document.addEventListener('click', async (e) => {
+    // ---- change the fare ----
+    const edit = e.target.closest('.fare-edit');
+    if(edit){
+      const box = edit.closest('.ride').querySelector('.fare-box');
+      const ride = data.rides[Number(edit.closest('.ride').dataset.i)];
+      box.hidden = !box.hidden;
+      if(!box.hidden){
+        const v = String(ride.fare || '').replace(/[^0-9.]/g,'');
+        box.querySelector('.fare-in').value = v;
+        box.querySelector('.fare-in').focus();
+      }
+      return;
+    }
+    const cancel = e.target.closest('.fare-cancel');
+    if(cancel){ cancel.closest('.fare-box').hidden = true; return; }
+
+    const saveFare = e.target.closest('.fare-save');
+    if(saveFare){
+      const card = saveFare.closest('.ride');
+      const ride = data.rides[Number(card.dataset.i)];
+      const box = saveFare.closest('.fare-box');
+      const out = box.querySelector('.fareres');
+      const amount = box.querySelector('.fare-in').value.trim();
+      const tollVal = box.querySelector('.toll-in').value.trim();
+
+      if(amount === ''){
+        out.className = 'result fareres show';
+        out.innerHTML = '<span class="bad">Put a number in.</span>';
+        return;
+      }
+
+      saveFare.disabled = true;
+      out.className = 'result fareres show';
+      out.textContent = 'Saving\u2026';
+      try{
+        const res = await fetch('/.netlify/functions/update-fare', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ token, rowNumber: ride.rowNumber, pickup: ride.pickup,
+                                 dropoff: ride.dropoff, dateTime: ride.dateTime,
+                                 fare: amount, toll: tollVal })
+        });
+        const j = await res.json();
+        if(!res.ok || j.error) throw new Error(j.error || ('Error ' + res.status));
+
+        ride.fare = String(j.fare);
+        const shown = card.querySelector('.fare-val');
+        if(shown) shown.textContent = j.fare;
+        out.innerHTML = '<span class="good">Sheet ' + esc(j.steps.sheet) +
+                        ' &middot; calendar ' + esc(j.steps.calendar) + '</span>';
+        setTimeout(() => { box.hidden = true; }, 1800);
+      }catch(err){
+        out.innerHTML = '<span class="bad">' + esc(err.message) + '</span>';
+      }finally{
+        saveFare.disabled = false;
+      }
+      return;
+    }
+
     const howBtn = e.target.closest('.how button');
     if(howBtn){
       notifyHow = howBtn.dataset.how;

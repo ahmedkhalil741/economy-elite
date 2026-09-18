@@ -45,26 +45,26 @@ const LOCAL_RANGE = [25, 35];
 // ---- TOLLS ----
 // Charged to the customer as their own line, never buried in the base fare.
 // The site promises "No surge pricing. No meter. No surprises", and a toll
-// added after the ride is exactly the surprise that promise rules out. Naming
-// the number before the car moves is what keeps it true.
+// added after the ride is exactly the surprise that promise rules out.
 //
-// Only EASTBOUND crossings into New York are tolled — the drive home is free —
-// so these are one-way figures for one crossing, not a round trip.
+// THESE ARE AHMED'S FIXED FIGURES, not a live lookup, and they are ROUND TRIP.
+// The passenger travels one way; the car does not. Sending a driver to JFK
+// means paying to get there and paying to get back, and the customer who
+// caused the journey pays for the journey. This is how black-car and limousine
+// operators normally quote out-of-area work, and it is why these are roughly
+// double a one-way published rate.
 //
-// Figures from the Port Authority and the MTA, September 2026:
-//   Port Authority crossing (GWB, Lincoln, Holland)  $16.79 peak / $14.79 off
-//   Manhattan below 60th St, congestion charge       $9 peak / $2.25 overnight
-//   LGA and JFK are reached without entering the congestion zone, so they
-//   carry the crossing only.
-//   Newark and local trips cross nothing — Route 78 is free.
+// It follows that the toll applies whether the trip GOES to New York or COMES
+// FROM it - either way the car makes the round trip. The code already matches
+// a destination at either end, so that falls out for free.
 //
-// THESE ARE ESTIMATES AND ARE LABELLED AS SUCH. Ahmed and Hany drive these
-// routes and know what actually comes off the E-ZPass; when they say, replace
-// these with their numbers.
+// Flat amounts, deliberately. Real tolls move with the hour and the crossing,
+// but a number that changes while a customer is on the phone is worse than a
+// number that is occasionally a dollar out.
 const TOLLS = {
-  ewr:    { standard: 0,  overnight: 0 },
-  manh:   { standard: 26, overnight: 17 },
-  lgajfk: { standard: 17, overnight: 15 },
+  ewr:    { standard: 0,  overnight: 0 },   // Route 78 is free
+  manh:   { standard: 29, overnight: 29 },  // Manhattan, round trip
+  lgajfk: { standard: 50, overnight: 50 },  // LaGuardia and JFK, round trip
 };
 const LOCAL_TOLL = 0;
 

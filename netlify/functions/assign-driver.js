@@ -21,6 +21,7 @@
 
 const { google } = require('googleapis');
 const { findDriver } = require('./_drivers');
+const { findRideEvent } = require('./_calendar');
 const { sendEmail } = require('./_email');
 const { readTab, buildRow, rowToObject } = require('./_sheet');
 const { formatRequestedDateTime, shiftLocalDateTime, easternOffsetMinutes, easternToInstant } = require('./_format');
@@ -196,39 +197,8 @@ exports.handler = async function (event) {
 
     // ---- 2. the owner's calendar entry ----
     try {
-      const auth = await googleAuth(['https://www.googleapis.com/auth/calendar']);
-      const calendar = google.calendar({ version: 'v3', auth });
-      // The pickup time is Eastern wall-clock; the calendar API wants real
-      // instants. Converting is not optional - see easternToInstant.
-      const pivot = easternToInstant(dateTime) || new Date(dateTime.slice(0, 16) + ':00Z');
-      const list = await calendar.events.list({
-        calendarId: process.env.GOOGLE_CALENDAR_ID,
-        timeMin: new Date(pivot.getTime() - SEARCH_WINDOW_MINUTES * 60000).toISOString(),
-        timeMax: new Date(pivot.getTime() + SEARCH_WINDOW_MINUTES * 60000).toISOString(),
-        singleEvents: true,
-        maxResults: 50,
-      });
-      // THE BUG THIS REPLACES: matching on the first 20 characters of the
-      // pickup, with OR. Two rides from the same street matched each other;
-      // "Terminal B" and "Terminal C" at Newark share their first 20
-      // characters; and a short pickup like "Summit, NJ" also matched an
-      // unrelated event that was DROPPING someone at Summit. The wrong ride
-      // got retitled and the page said "updated".
-      //
-      // Now: the start time has to be the same minute, and BOTH ends have to
-      // appear. add-to-calendar writes the summary as
-      // "The Standard ride for NAME: PICKUP → DROPOFF", so both are in there.
-      const wantStart = pivot.getTime();
-      const candidates = (list.data.items || []).filter((e) => {
-        const hay = `${e.summary || ''} ${e.description || ''}`;
-        if (!hay.includes(pickup) || !hay.includes(dropoff)) return false;
-        const started = e.start && (e.start.dateTime || e.start.date);
-        return started ? Math.abs(new Date(started).getTime() - wantStart) < 60000 : false;
-      });
-      // More than one identical event is a duplicate booking, not a choice to
-      // make silently — say so rather than picking one.
-      const match = candidates.length === 1 ? candidates[0] : null;
-      if (candidates.length > 1) steps.calendar = `${candidates.length} identical entries at that time — fix them on the calendar first`;
+      const { event: match, calendar, note: why } = await findRideEvent({ pickup, dropoff, dateTime });
+      if (why) steps.calendar = why;
 
       if (!match) {
         if (steps.calendar === 'skipped') steps.calendar = 'no matching calendar entry found';
