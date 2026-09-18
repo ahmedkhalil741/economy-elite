@@ -19,9 +19,17 @@ const L = require('./_loyalty');
 
 const SHEET_TAB = 'Bookings';
 const CUSTOMERS_TAB = 'Customers';
-// Rides that started within the last few hours still matter — the driver may
-// be on that trip right now.
-const LOOK_BACK_HOURS = 6;
+
+// WHAT THIS PAGE IS FOR decides what it shows. There are exactly two reasons
+// to open it: to give a ride to a driver, and to mark one finished afterwards.
+// Both of those live in a narrow window around today. A booking three months
+// out needs nothing from anybody yet, and showing it from the day it is made
+// just means scrolling past next month to find tonight.
+//
+// So the default window is yesterday to a week ahead, and `days=all` widens it
+// to everything upcoming when you actually want to look further out.
+const LOOK_BACK_HOURS = 30;      // yesterday, so last night's rides can still be marked
+const DEFAULT_DAYS_AHEAD = 7;
 
 exports.handler = async function (event) {
   const token = (event.queryStringParameters || {}).token || '';
@@ -45,7 +53,13 @@ exports.handler = async function (event) {
     const sheets = google.sheets({ version: 'v4', auth });
 
     const { headers, keys, rows } = await readTab(sheets, process.env.GOOGLE_SHEET_ID, SHEET_TAB);
+
+    const daysParam = (event.queryStringParameters || {}).days || '';
+    const showAll = String(daysParam).toLowerCase() === 'all';
+    const daysAhead = /^\d+$/.test(daysParam) ? Number(daysParam) : DEFAULT_DAYS_AHEAD;
+
     const cutoff = Date.now() - LOOK_BACK_HOURS * 3600 * 1000;
+    const horizon = showAll ? Infinity : Date.now() + daysAhead * 86400 * 1000;
 
     // Who each customer is, so every reservation carries their standing —
     // Ahmed's spec point 6. A missing Customers tab must not take the
@@ -103,8 +117,34 @@ exports.handler = async function (event) {
       // shrinks this six-hour look-back to two — a ride the driver is on RIGHT
       // NOW then vanishes off the dispatch page. easternToInstant is the only
       // correct way to turn a typed time into a real one.
-      .filter((r) => !r.dateTime || (easternToInstant(r.dateTime) || new Date(0)).getTime() > cutoff)
-      .sort((a, b) => String(a.dateTime || '').localeCompare(String(b.dateTime || '')));
+      .filter((r) => {
+        // A row with an unreadable date stays in whatever the window is —
+        // better a ride you have to look at than one that silently vanished
+        // because somebody typed its date by hand.
+        if (!r.dateTime) return true;
+        const t = (easternToInstant(r.dateTime) || new Date(0)).getTime();
+        return t > cutoff && t < horizon;
+      })
+      // Anything already finished or called off drops to the bottom. It is
+      // still there to look at or undo, just not in the way of the rides that
+      // still need something doing.
+      .sort((a, b) => {
+        const done = (r) => /^(completed|cancelled|no-?show)$/i.test(String(r.rideStatus || '').trim()) ? 1 : 0;
+        const byDone = done(a) - done(b);
+        if (byDone) return byDone;
+        return String(a.dateTime || '').localeCompare(String(b.dateTime || ''));
+      });
+
+    // How many are outside the window, so the page can offer to show them
+    // rather than pretending they don't exist.
+    const beyond = showAll ? 0 : rows.reduce((n, row) => {
+      const r = rowToObject(keys, row);
+      if (!r.pickup || !r.dropoff) return n;
+      const dt = parseRequestedDateTime(r.requested_datetime);
+      if (!dt) return n;
+      const t = (easternToInstant(dt) || new Date(0)).getTime();
+      return (t >= horizon) ? n + 1 : n;
+    }, 0);
 
     // Is there somewhere to keep the credit ledger?
     let creditsTab = 'missing';
@@ -126,6 +166,8 @@ exports.handler = async function (event) {
       statusCode: 200,
       body: JSON.stringify({
         rides,
+        beyond,
+        window: showAll ? 'all' : `${daysAhead} days`,
         drivers,
         driversError,
         hasDriverColumn: keys.includes('driver'),

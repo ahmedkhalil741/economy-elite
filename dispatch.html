@@ -69,6 +69,17 @@
   .st.on{border-color:var(--accent);color:var(--accent);background:rgba(201,169,107,0.1)}
   .st.done.on{border-color:#8fbf8f;color:#8fbf8f;background:rgba(143,191,143,0.1)}
   .ride.completed{border-color:#3d5a3d}
+  /* Finished and cancelled rides stay reachable but stop competing for
+     attention — they are sorted to the bottom and faded, not hidden, because
+     hiding them makes an accidental tap impossible to undo. */
+  .ride.done{opacity:0.5}
+  .ride.done:hover{opacity:1}
+  .windowbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;
+             font-family:var(--mono);font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--steel)}
+  .windowbar button{background:transparent;border:1px solid var(--line);color:var(--dim);
+                    border-radius:100px;padding:7px 14px;font-family:var(--mono);font-size:0.68rem;
+                    letter-spacing:0.08em;text-transform:uppercase}
+  .windowbar button:hover{border-color:var(--steel);color:var(--ink)}
   .empty{color:var(--steel);text-align:center;padding:50px 0;font-size:0.95rem}
   .hidden{display:none}
   .toprow{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:26px;flex-wrap:wrap}
@@ -96,6 +107,7 @@
     <button class="btn-line" id="refresh">Refresh</button>
   </div>
   <div id="setupNotes"></div>
+  <div id="windowBar" class="windowbar"></div>
   <div id="list"></div>
 </div>
 
@@ -114,8 +126,14 @@
     return 'sms:' + phone + sep + 'body=' + encodeURIComponent(body);
   }
 
+  // Default: yesterday to a week ahead — the only rides that need anything
+  // doing. Everything further out is one tap away.
+  let windowDays = '';
+
   async function load(){
-    const res = await fetch('/.netlify/functions/list-bookings?token=' + encodeURIComponent(token));
+    const q = '/.netlify/functions/list-bookings?token=' + encodeURIComponent(token) +
+              (windowDays ? '&days=' + encodeURIComponent(windowDays) : '');
+    const res = await fetch(q, {cache:'no-store'});
     const json = await res.json();
     if(!res.ok) throw new Error(json.error || ('Error ' + res.status));
     data = json;
@@ -149,9 +167,25 @@
     }
     document.getElementById('setupNotes').innerHTML = notes.join('');
 
+    // What you're looking at, and how to look wider
+    const bar = document.getElementById('windowBar');
+    const showingAll = data.window === 'all';
+    bar.innerHTML =
+      '<span>' + (showingAll ? 'All upcoming rides' : 'Yesterday to a week ahead') + '</span>' +
+      (showingAll
+        ? '<button id="narrow">Just this week</button>'
+        : (data.beyond > 0
+            ? '<button id="widen">Show all (' + data.beyond + ' further out)</button>'
+            : '')) ;
+    const widen = document.getElementById('widen');
+    if(widen) widen.addEventListener('click', () => { windowDays = 'all'; load().catch(()=>{}); });
+    const narrow = document.getElementById('narrow');
+    if(narrow) narrow.addEventListener('click', () => { windowDays = ''; load().catch(()=>{}); });
+
     const list = document.getElementById('list');
     if(!data.rides.length){
-      list.innerHTML = '<p class="empty">No upcoming rides.</p>';
+      list.innerHTML = '<p class="empty">Nothing to do' +
+        (data.beyond > 0 ? ' this week &mdash; ' + data.beyond + ' ride' + (data.beyond===1?'':'s') + ' further out.' : '.') + '</p>';
       return;
     }
 
@@ -180,6 +214,7 @@
         : '<div class="standing">New &middot; no profile yet</div>';
 
       const isDone = String(r.rideStatus || '').toLowerCase() === 'completed';
+      const isSettled = /^(completed|cancelled|no-?show)$/i.test(String(r.rideStatus || '').trim());
       const statusRow = data.hasRideStatusColumn
         ? '<div class="status-row">' +
             '<span class="lbl">After the ride</span>' +
@@ -190,7 +225,8 @@
           '</div>'
         : '';
 
-      return '<div class="ride' + (r.driver ? ' assigned' : '') + (isDone ? ' completed' : '') + '" data-i="' + i + '">' +
+      return '<div class="ride' + (r.driver ? ' assigned' : '') + (isDone ? ' completed' : '') +
+             (isSettled ? ' done' : '') + '" data-i="' + i + '">' +
         '<div class="ride-when">' + esc(r.when || 'time not recorded') + '</div>' +
         '<div class="ride-route">' + esc(r.pickup) + '<span class="arrow">&rarr;</span>' + esc(r.dropoff) + '</div>' +
         standing +
