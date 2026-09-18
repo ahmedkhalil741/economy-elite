@@ -127,7 +127,7 @@ exports.handler = async function (event) {
         missingColumns: {
           bookings: ['driver', 'ride_status', 'passengers', 'car_seats', 'elderly_assistance', 'email', 'referred_by']
             .filter((k) => !keys.includes(k)),
-          customers: ['email', 'completed_rides', 'lifetime_points', 'activity', 'credit_owed', 'credit_history', 'referred_by', 'birthday']
+          customers: ['email', 'completed_rides', 'lifetime_points', 'activity', 'credit_owed', 'credit_history', 'referred_by', 'birthday', 'car_seats']
             .filter((k) => !customerColumns.map((h) => String(h).trim().toLowerCase().replace(/[\s-]+/g, '_')).includes(k)),
         },
       }),
