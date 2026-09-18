@@ -44,6 +44,9 @@
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
+  /* Safari on iOS will still scroll sideways when only body carries this,
+     because the overflow lives on the scrolling element above it. */
+  html{overflow-x:hidden; max-width:100%;}
   body{
     background:var(--bg);
     color:var(--ink);
@@ -336,10 +339,16 @@
   footer{border-top:1px solid var(--line); padding:36px 0; }
   .foot-inner{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;}
   .foot-inner .logo{font-size:1rem;}
-  .foot-links{display:flex; gap:22px; font-size:0.85rem; color:var(--steel);}
-  .foot-links a{text-decoration:none;}
+  /* The footer links used to be one non-wrapping flex row. Six of them,
+     including a phone number and hany@standardnj.com, are far wider than a
+     phone screen, and a flex row does not wrap unless it is told to - so the
+     row set the page's width and the whole site slid left and right under the
+     thumb. Wrapping is the actual fix; the overflow guards below are a belt
+     as well as braces. */
+  .foot-links{display:flex; flex-wrap:wrap; gap:12px 22px; font-size:0.85rem; color:var(--steel); max-width:100%;}
+  .foot-links a{text-decoration:none; overflow-wrap:anywhere;}
   .foot-links a:hover{color:var(--ink);}
-  .foot-area{font-family:var(--mono); font-size:0.76rem; color:var(--steel);}
+  .foot-area{font-family:var(--mono); font-size:0.76rem; color:var(--steel); max-width:100%; overflow-wrap:anywhere;}
   .foot-fullname{font-family:var(--mono); font-size:0.62rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--steel); margin-top:4px; padding-left:16px;}
 
   @media (max-width: 880px){
