@@ -99,7 +99,7 @@ exports.handler = async function (event) {
   const steps = { sheet: 'skipped', calendar: 'skipped', email: 'skipped' };
 
   try {
-    const { token, driverKey, rowNumber, fare: storedFare, when: storedWhen,
+    const { token, driverKey, notify, rowNumber, fare: storedFare, when: storedWhen,
             pickup, dropoff, dateTime, name, phone, vehicle,
             passengers, carSeats, flight, temp, elderly, notes, payMethod } = JSON.parse(event.body);
 
@@ -108,6 +108,11 @@ exports.handler = async function (event) {
     if (!pickup || !dropoff || !dateTime) {
       return { statusCode: 400, body: JSON.stringify({ error: 'The ride is missing its pickup, drop-off or time.' }) };
     }
+
+    // How the driver is told. The sheet and the calendar are updated either
+    // way — those are the record, not a message to somebody.
+    const how = ['email', 'text', 'both'].includes(String(notify || '').toLowerCase())
+      ? String(notify).toLowerCase() : 'both';
 
     const driver = await findDriver(driverKey);
     if (!driver) return { statusCode: 404, body: JSON.stringify({ error: `No driver called "${driverKey}". Check the Drivers tab in the sheet.` }) };
@@ -245,7 +250,7 @@ exports.handler = async function (event) {
 
     // ---- 3. the driver's email, with the ride on a .ics he can tap ----
     const startLocal = shiftLocalDateTime(dateTime.slice(0, 16), 0);
-    const ics = buildIcs({
+    const ics = how === 'text' ? null : buildIcs({
       uid: `ride-${Date.now()}@standardnj.com`,
       startLocal,
       minutes: 60,
@@ -254,7 +259,9 @@ exports.handler = async function (event) {
       location: pickup,
     });
 
-    if (!driver.email) {
+    if (how === 'text') {
+      steps.email = 'not sent — you chose to text';
+    } else if (!driver.email) {
       steps.email = 'no email on file for this driver — text him instead';
     } else {
       try {
@@ -294,6 +301,9 @@ exports.handler = async function (event) {
         // and Android wants sms:number?body=, and only the browser knows
         // which phone is about to open it.
         smsBody,
+        // Whether the page should offer the Text button at all.
+        offerText: how === 'text' || how === 'both',
+        notify: how,
       }),
     };
   } catch (err) {

@@ -82,6 +82,14 @@
   .windowbar button:hover{border-color:var(--steel);color:var(--ink)}
   .windowbar button.on{border-color:var(--accent);color:var(--accent);background:rgba(201,169,107,0.1)}
   .windowbar .count{color:var(--steel);text-transform:none;letter-spacing:0.04em}
+  /* How the driver gets told. Sits next to the driver dropdown because it is
+     part of the same decision, not a setting buried somewhere else. */
+  .how{display:flex;gap:0;border:1px solid var(--line);border-radius:100px;overflow:hidden;flex-shrink:0}
+  .how button{background:transparent;border:0;border-radius:0;color:var(--dim);
+              padding:9px 14px;font-size:0.78rem;font-weight:500}
+  .how button + button{border-left:1px solid var(--line)}
+  .how button:hover{color:var(--ink);background:var(--raised)}
+  .how button.on{background:var(--accent);color:#0B0A08;font-weight:600}
   .empty{color:var(--steel);text-align:center;padding:50px 0;font-size:0.95rem}
   .hidden{display:none}
   .toprow{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:26px;flex-wrap:wrap}
@@ -130,6 +138,8 @@
 
   // Default: yesterday to a week ahead — the only rides that need anything
   // doing. Everything further out is one tap away.
+  const HKEY = 'standard-dispatch-notify';
+  let notifyHow = sessionStorage.getItem(HKEY) || 'both';
   const WKEY = 'standard-dispatch-window';
   let windowDays = sessionStorage.getItem(WKEY) || '';
 
@@ -250,6 +260,11 @@
         '<div class="assign-row">' +
           (r.driver ? '<span class="current">Driver: ' + esc(r.driver) + '</span>' : '') +
           '<select class="pick">' + opts + '</select>' +
+          '<div class="how">' +
+            '<button data-how="email"' + (notifyHow==='email'?' class="on"':'') + '>Email</button>' +
+            '<button data-how="text"' + (notifyHow==='text'?' class="on"':'') + '>Text</button>' +
+            '<button data-how="both"' + (notifyHow==='both'?' class="on"':'') + '>Both</button>' +
+          '</div>' +
           '<button class="btn go">' + (r.driver ? 'Reassign' : 'Assign') + '</button>' +
         '</div>' +
         '<div class="result"></div>' +
@@ -259,6 +274,17 @@
   }
 
   document.addEventListener('click', async (e) => {
+    const howBtn = e.target.closest('.how button');
+    if(howBtn){
+      notifyHow = howBtn.dataset.how;
+      try { sessionStorage.setItem(HKEY, notifyHow); } catch(err){}
+      // The choice is one setting, not one per card — change it anywhere and
+      // every card agrees, so what you see is what the next Assign will do.
+      document.querySelectorAll('.how button').forEach(b =>
+        b.classList.toggle('on', b.dataset.how === notifyHow));
+      return;
+    }
+
     const st = e.target.closest('.st');
     if(st){
       const card = st.closest('.ride');
@@ -328,7 +354,7 @@
     try{
       const res = await fetch('/.netlify/functions/assign-driver', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(Object.assign({ token, driverKey }, ride))
+        body: JSON.stringify(Object.assign({ token, driverKey, notify: notifyHow }, ride))
       });
       const json = await res.json();
       if(!res.ok) throw new Error(json.error || ('Error ' + res.status));
@@ -340,13 +366,15 @@
       out.innerHTML =
         '<strong>' + esc(json.driver.name) + '</strong>' +
         '<ul>' + line('Sheet', s.sheet) + line('Calendar', s.calendar) + line('Email', s.email) + '</ul>' +
-        (json.driver.phone
+        (json.driver.phone && json.offerText
           ? '<div class="sms-actions">' +
               '<a class="btn btn-sms" style="text-decoration:none;display:inline-block" href="' +
                 esc(smsLink(json.driver.phone, json.smsBody)) + '">Text ' + esc(json.driver.name) + '</a>' +
               '<button class="btn-line copy">Copy the message</button>' +
             '</div>'
-          : '<p style="margin-top:8px">No phone number on file for this driver.</p>');
+          : (json.offerText
+              ? '<p style="margin-top:8px" class="bad">No phone number for this driver &mdash; add one in the Drivers tab.</p>'
+              : ''));
 
       const copy = out.querySelector('.copy');
       if(copy) copy.addEventListener('click', async () => {
