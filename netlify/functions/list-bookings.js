@@ -115,6 +115,14 @@ exports.handler = async function (event) {
           temp: r.cabin_temp || '', elderly: r.elderly_assistance || '',
           notes: r.notes || '', payMethod: r.payment_method || '',
           fare: r.fare_total || '', driver: r.driver || '',
+          // Ahmed's page, not the driver's — the driver gets a text with the
+          // total to collect and nothing else. Showing the zone and any
+          // discount here is also the only way to see, without opening the
+          // sheet, that those columns are actually receiving values.
+          zone: r.zone || '',
+          discount: r.discount && r.discount !== 'N/A' ? r.discount : '',
+          discountReason: r.discount_reason && r.discount_reason !== 'N/A' ? r.discount_reason : '',
+          discountSpent: r.discount_spent && r.discount_spent !== 'N/A' ? r.discount_spent : '',
           email: r.email || '',
           rideStatus: r.ride_status || '',
           customer: byPhone.get(String(r.phone || '').replace(/\D/g, '').slice(-10)) || null,
