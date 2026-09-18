@@ -21,7 +21,7 @@ function fareTable(fare) {
   const rows = [];
 
   if (fare.matched && fare.total !== null) {
-    const hasExtras = Boolean(fare.suvFee || fare.suvFeeNy || fare.sedanFeeNy || fare.overnightFee || fare.cardFee);
+    const hasExtras = Boolean(fare.suvFee || fare.suvFeeNy || fare.sedanFeeNy || fare.overnightFee || fare.toll || fare.cardFee);
     // With no extras the base fare IS the total — don't print the same
     // number twice, just show the one line.
     if (hasExtras) {
@@ -30,10 +30,13 @@ function fareTable(fare) {
       if (fare.suvFeeNy) rows.push(['New York fee (SUV)', `$${fare.suvFeeNy}`]);
       if (fare.sedanFeeNy) rows.push(['New York fee (sedan)', `$${fare.sedanFeeNy}`]);
       if (fare.overnightFee) rows.push(['Overnight fee', `$${fare.overnightFee}`]);
+      // Its own line, never folded into the base. "No surprises" only holds
+      // if the customer is told the number before the car moves.
+      if (fare.toll) rows.push(['Tolls (estimated)', `$${fare.toll}`]);
       if (fare.cardFee) rows.push([`${fare.cardFeeLabel} fee (${fare.cardFeeRate})`, `$${fare.cardFee.toFixed(2)}`]);
     }
     rows.push(['Fare total', `$${fare.total}`, true]);
-    rows.push(['Suggested tip (20%)', `$${fare.tipSuggested}`]);
+    rows.push(['Suggested tip (20% of the fare, not the tolls)', `$${fare.tipSuggested}`]);
   } else if (fare.matched) {
     rows.push([fare.label, fare.totalDisplay, true]);
     if (fare.tipSuggested) rows.push(['Suggested tip (20%)', `$${fare.tipSuggested}`]);

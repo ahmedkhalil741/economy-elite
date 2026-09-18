@@ -38,6 +38,7 @@ exports.handler = async function (event) {
       if (fare.suvFee) lines.push(`$${fare.suvFee} SUV`);
       if (fare.suvFeeNy) lines.push(`$${fare.suvFeeNy} SUV into New York`);
       if (fare.overnightFee) lines.push(`$${fare.overnightFee} overnight pickup`);
+      if (fare.toll) lines.push(`$${fare.toll} tolls (estimated)`);
       if (fare.cardFee) lines.push(`$${fare.cardFee.toFixed(2)} ${fare.cardFeeLabel} fee (${fare.cardFeeRate})`);
     }
 
@@ -51,6 +52,7 @@ exports.handler = async function (event) {
         display: fare.display,
         lines,
         tip: fare.tipSuggested,
+        toll: fare.toll || 0,
         overnight: isOvernightPickup(dateTime),
         hourlyRate: HOURLY_RATE,
       }),

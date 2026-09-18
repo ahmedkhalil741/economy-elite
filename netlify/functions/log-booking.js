@@ -140,9 +140,14 @@ exports.handler = async function (event) {
       // column empty however it was spelled. Write both keys; whichever one
       // the sheet actually has gets filled and the other is ignored.
       car_type: isSedan ? 'Sedan' : 'SUV',
-      // Neither of these can be known at booking time — they depend on the
-      // real route and what actually happened on the road.
-      toll: NA,
+      // The toll is an ESTIMATE from the destination — a Manhattan run crosses
+      // one Port Authority tolled bridge or tunnel and pays the congestion
+      // charge, an airport run crosses the bridge only, Newark and local trips
+      // cross nothing. Replace it with the real figure off the E-ZPass
+      // statement if it differs; nothing else recalculates from it.
+      toll: orNA(fare.toll),
+      // This one still cannot be known at booking time — it depends on what
+      // actually happened on the road.
       waiting_late_fee: NA,
       tip: orNA(fare.tipSuggested),
       // The amount charged for an overnight pickup, "N/A" when it isn't one.

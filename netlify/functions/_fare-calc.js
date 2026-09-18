@@ -42,6 +42,32 @@ const OVERNIGHT_FEE = 10;
 // Town to town, all-inclusive, same price either vehicle.
 const LOCAL_RANGE = [25, 35];
 
+// ---- TOLLS ----
+// Charged to the customer as their own line, never buried in the base fare.
+// The site promises "No surge pricing. No meter. No surprises", and a toll
+// added after the ride is exactly the surprise that promise rules out. Naming
+// the number before the car moves is what keeps it true.
+//
+// Only EASTBOUND crossings into New York are tolled — the drive home is free —
+// so these are one-way figures for one crossing, not a round trip.
+//
+// Figures from the Port Authority and the MTA, September 2026:
+//   Port Authority crossing (GWB, Lincoln, Holland)  $16.79 peak / $14.79 off
+//   Manhattan below 60th St, congestion charge       $9 peak / $2.25 overnight
+//   LGA and JFK are reached without entering the congestion zone, so they
+//   carry the crossing only.
+//   Newark and local trips cross nothing — Route 78 is free.
+//
+// THESE ARE ESTIMATES AND ARE LABELLED AS SUCH. Ahmed and Hany drive these
+// routes and know what actually comes off the E-ZPass; when they say, replace
+// these with their numbers.
+const TOLLS = {
+  ewr:    { standard: 0,  overnight: 0 },
+  manh:   { standard: 26, overnight: 17 },
+  lgajfk: { standard: 17, overnight: 15 },
+};
+const LOCAL_TOLL = 0;
+
 // For work that isn't A to B — a night out, waiting between stops, errands.
 // Ahmed's decision (2026-09-17): $60/hr, and no minimum. He'd rather take a
 // short job than turn someone away over a two-hour floor.
@@ -269,6 +295,8 @@ function noMatch(overnight, note) {
     suvFeeNy: null,
     sedanFeeNy: null,
     overnightFee: overnight || null,
+    toll: null,
+    tollEstimated: false,
     cardFee: null,
     cardFeeLabel: null,
     cardFeeRate: null,
@@ -308,14 +336,25 @@ function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod) {
     const suvFeeNy = isSedan ? null : (dest.ny ? SUV_FEE_NY : null);
     const vehicleFee = suvFee || suvFeeNy || 0;
 
-    const rideFare = base + vehicleFee + overnight;
+    const tollTable = TOLLS[dest.key] || { standard: 0, overnight: 0 };
+    const toll = overnight ? tollTable.overnight : tollTable.standard;
+
+    // The card fee is worked out on everything going through the card,
+    // INCLUDING the toll — Square takes its percentage of the whole amount
+    // swiped, so leaving the toll out would quietly under-recover the fee.
+    const rideFare = base + vehicleFee + overnight + toll;
     const card = cardFeeFor(payMethod, rideFare);
     const total = Math.round((rideFare + (card ? card.amount : 0)) * 100) / 100;
+
+    // The tip is on the DRIVING, not on the toll and not on the processor's
+    // cut. Nobody tips twenty per cent of a bridge.
+    const tippable = base + vehicleFee + overnight;
 
     const parts = [`$${base} ${town.town}`];
     if (suvFee) parts.push(`$${suvFee} SUV`);
     if (suvFeeNy) parts.push(`$${suvFeeNy} SUV (New York)`);
     if (overnight) parts.push(`$${overnight} overnight`);
+    if (toll) parts.push(`$${toll} tolls`);
     if (card) parts.push(`$${card.amount.toFixed(2)} ${card.label} fee`);
 
     return {
@@ -327,14 +366,15 @@ function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod) {
       suvFeeNy,
       sedanFeeNy: SEDAN_FEE_NY,
       overnightFee: overnight || null,
+      toll: toll || null,
+      tollEstimated: Boolean(toll),
       cardFee: card ? card.amount : null,
       cardFeeLabel: card ? card.label : null,
       cardFeeRate: card ? `${(card.rate * 100).toFixed(1)}% + $${card.fixed.toFixed(2)}` : null,
       rideFare,
       total,
       totalDisplay: `$${total.toFixed(2).replace(/\.00$/, '')}`,
-      // The tip is on the ride, not on the processor's cut.
-      tipSuggested: Math.round(rideFare * 0.2),
+      tipSuggested: Math.round(tippable * 0.2),
       display: parts.length > 1
         ? `$${total.toFixed(2).replace(/\.00$/, '')} flat (${parts.join(' + ')})`
         : `$${total.toFixed(2).replace(/\.00$/, '')} flat (${town.town}, sedan)`,
@@ -355,6 +395,8 @@ function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod) {
       suvFeeNy: null,
       sedanFeeNy: SEDAN_FEE_NY,
       overnightFee: overnight || null,
+      toll: LOCAL_TOLL || null,
+      tollEstimated: false,
       // A range has no single number to take a percentage of, so the card fee
       // is worked out once the exact fare is agreed.
       cardFee: null,
@@ -386,4 +428,5 @@ module.exports = {
   SUV_FEE_NY,
   SEDAN_FEE_NY,
   OVERNIGHT_FEE,
+  TOLLS,
 };
