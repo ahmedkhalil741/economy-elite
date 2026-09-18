@@ -33,6 +33,11 @@ function normalizePhone(phone) {
   return String(phone || '').replace(/\D/g, '').slice(-10);
 }
 
+// Whatever name we have for this customer, in order of preference.
+function who0(customer, fallbackName, phoneKey) {
+  return (customer && customer.name) || fallbackName || phoneKey;
+}
+
 async function sheetsClient() {
   const auth = new google.auth.JWT(
     process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -129,6 +134,7 @@ exports.handler = async function (event) {
       return { statusCode: 200, body: JSON.stringify({ success: true, status: wanted, pointsChanged: false }) };
     }
 
+
     const key = normalizePhone(phone || row.phone);
     if (!key) {
       return { statusCode: 200, body: JSON.stringify({ success: true, status: wanted, pointsChanged: false, note: 'No phone number on this ride, so no customer to credit.' }) };
@@ -190,12 +196,25 @@ exports.handler = async function (event) {
     const discountOnRide = parseFloat(row.discount) || 0;
     const alreadySpent = parseFloat(row.discount_spent) || 0;
 
+    // Without a discount_spent column there is nothing recording what was
+    // actually taken, so an un-complete cannot put back the right amount. It
+    // refuses to guess — refunding the whole discount would over-credit anyone
+    // whose spend was capped by their balance — but it says so out loud rather
+    // than quietly returning nothing, which is the failure nobody notices.
+    const canRecordSpend = bookings.keys.includes('discount_spent');
     let spent = 0;
     let refunded = 0;
+    let spendWarning = null;
     if (nowCompleted) {
       spent = Math.round(Math.min(discountOnRide, Math.max(0, balanceBefore)) * 100) / 100;
+      if (spent && !canRecordSpend) {
+        spendWarning = `$${spent} of credit was spent on this ride, but the Bookings tab has no "discount_spent" column, so it cannot be given back if this ride is later cancelled. Add that column to the header row.`;
+      }
     } else if (wasCompleted) {
       refunded = alreadySpent;
+      if (!refunded && discountOnRide && !canRecordSpend) {
+        spendWarning = `This ride had a $${discountOnRide} discount, but the Bookings tab has no "discount_spent" column, so there is no record of how much credit was actually taken and none has been given back. Check ${who0(c, name, key)}'s balance by hand.`;
+      }
     }
 
     const creditOwed = Math.max(0,
@@ -331,18 +350,21 @@ exports.handler = async function (event) {
     let emailed = null;
     const becameLoyal = previousStatus !== L.STATUS_LOYAL && status_ === L.STATUS_LOYAL;
 
-    if (credit || becameLoyal || spent || (referral && referral.amount)) {
+    if (credit || becameLoyal || spent || spendWarning || (referral && referral.amount)) {
       const subject = becameLoyal
         ? `⭐ New Loyal Customer – ${who}`
         : credit
           ? `${who} earned a $${credit.amount} credit`
-          : `${who} used $${spent} of their credit`;
+          : spent
+            ? `${who} used $${spent} of their credit`
+            : `Check ${who}'s credit balance`;
       const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.7;color:#111">
         <p style="margin:0 0 12px"><strong>${who}</strong> — ${key}</p>
         <p style="margin:0 0 12px">${L.standingLine({ name: who, status: status_, activity, points, completedRides })}</p>
         ${credit ? `<p style="margin:0 0 12px"><strong>Earned: $${credit.amount}</strong> — ${credit.reason}.<br>Balance owed: <strong>$${creditOwed}</strong>.</p>` : ''}
         ${spent ? `<p style="margin:0 0 12px"><strong>Used: $${spent}</strong> of their credit on this ride${discountOnRide > spent ? ` (the discount was $${discountOnRide} — the rest was simply a lower price, not credit)` : ''}.<br>Balance left: <strong>$${creditOwed}</strong>.</p>` : ''}
         ${referral && referral.amount ? `<p style="margin:0 0 12px;padding:10px 12px;background:#f5f2ea;border-radius:6px"><strong>${referral.name}</strong> referred them — <strong>$${referral.amount}</strong> credit added, balance now <strong>$${referral.owed}</strong>.</p>` : ''}
+        ${spendWarning ? `<p style="margin:0 0 12px;padding:10px 12px;background:#fdf0ee;border-left:3px solid #a05;border-radius:4px;color:#a05"><strong>Needs attention:</strong> ${spendWarning}</p>` : ''}
         ${referral && referral.unmatched ? `<p style="margin:0 0 12px;color:#a05">Referred by "${referral.unmatched}" — no customer with that number, so no referral credit was given.</p>` : ''}
         <p style="margin:0;color:#555;font-size:13px">Nothing has been sent to the customer. Send the offer yourself when you're ready, then adjust <code>credit_owed</code> in the Customers tab.</p>
       </div>`;
@@ -361,6 +383,7 @@ exports.handler = async function (event) {
           creditOwed, creditEarned: credit ? credit.amount : 0,
           creditSpent: spent, creditReturned: refunded,
           discountOnRide,
+          spendWarning,
           standing: L.standingLine({ name: who, status: status_, activity, points, completedRides }),
         },
         referral,
