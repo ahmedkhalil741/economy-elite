@@ -120,6 +120,12 @@ exports.handler = async function (event) {
           // discount here is also the only way to see, without opening the
           // sheet, that those columns are actually receiving values.
           zone: r.zone || '',
+          // The stored parts of the price, so the driver can be told what the
+          // fare, the tolls and the card fee are without anything being
+          // recalculated. Recalculating is how a driver once got quoted the
+          // SUV price for a sedan booking.
+          toll: r.toll && r.toll !== 'N/A' ? r.toll : '',
+          cardFee: r.card_fee && r.card_fee !== 'N/A' ? r.card_fee : '',
           discount: r.discount && r.discount !== 'N/A' ? r.discount : '',
           discountReason: r.discount_reason && r.discount_reason !== 'N/A' ? r.discount_reason : '',
           discountSpent: r.discount_spent && r.discount_spent !== 'N/A' ? r.discount_spent : '',

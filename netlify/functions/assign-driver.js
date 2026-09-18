@@ -101,6 +101,7 @@ exports.handler = async function (event) {
 
   try {
     const { token, driverKey, notify, rowNumber, fare: storedFare, when: storedWhen,
+            toll: storedToll, cardFee: storedCardFee,
             pickup, dropoff, dateTime, name, phone, vehicle,
             passengers, carSeats, flight, temp, elderly, notes, payMethod } = JSON.parse(event.body);
 
@@ -132,6 +133,46 @@ exports.handler = async function (event) {
       ? { matched: true, totalDisplay: /^[\d.]+$/.test(fareText) ? `$${fareText}` : fareText, display: fareText }
       : estimateFare(pickup, dropoff, vehicle, dateTime, payMethod);
 
+    // ---- what the driver is told about money ----
+    //
+    // Four lines: fare, tolls, card fee, total. Every figure comes from the
+    // sheet — nothing is recalculated here — so a price corrected by hand is
+    // the price the driver is handed.
+    //
+    // The fare line is the TOTAL MINUS the tolls and the card fee, not the
+    // base_fare column. That matters: base_fare is deliberately the figure
+    // BEFORE any discount, so a driver adding up base + tolls + fee would get
+    // more than the total and could work out to the dollar what the customer
+    // was let off. Subtracting instead always adds up, and a discount simply
+    // isn't visible. Ahmed's rule: the discount is between him and the
+    // customer.
+    const money = (n) => `$${Number(n).toFixed(2).replace(/\.00$/, '')}`;
+    const num = (v) => {
+      const x = parseFloat(String(v == null ? '' : v).replace(/[$,]/g, ''));
+      return isFinite(x) ? x : null;
+    };
+
+    const totalNum = num(storedFare);
+    const tollNum = num(storedToll) || 0;
+    const cardNum = num(storedCardFee) || 0;
+
+    let fareLines;
+    if (totalNum !== null) {
+      const driving = Math.round((totalNum - tollNum - cardNum) * 100) / 100;
+      fareLines = [
+        `Fare: ${money(driving > 0 ? driving : 0)}`,
+        tollNum ? `Tolls: ${money(tollNum)}` : null,
+        cardNum ? `Card fee: ${money(cardNum)}` : null,
+        `TOTAL TO COLLECT: ${money(totalNum)}`,
+      ].filter(Boolean);
+    } else {
+      // A range, or a route quoted by hand — there is no single number to
+      // break apart, so say whatever the sheet says and leave it at that.
+      fareLines = [fare.matched
+        ? `Fare to collect: ${fare.totalDisplay || fare.display}`
+        : `Fare: ${fare.display}`];
+    }
+
     // ---- the ride sheet, written once and reused in all three places ----
     const sheetLines = [
       `${when}`,
@@ -144,7 +185,7 @@ exports.handler = async function (event) {
       flight ? `Flight: ${flight}` : null,
       temp && temp !== 'No preference' ? `Cabin: ${temp}` : null,
       `Payment: ${payMethod || 'not set'}`,
-      fare.matched ? `Fare to collect: ${fare.totalDisplay || fare.display}` : `Fare: ${fare.display}`,
+      ...fareLines,
       vehicle ? null : 'CHECK THE CAR — no vehicle recorded on this booking',
       notes ? `Notes: ${notes}` : null,
     ].filter(Boolean);
