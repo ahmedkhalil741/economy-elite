@@ -80,6 +80,8 @@
                     border-radius:100px;padding:7px 14px;font-family:var(--mono);font-size:0.68rem;
                     letter-spacing:0.08em;text-transform:uppercase}
   .windowbar button:hover{border-color:var(--steel);color:var(--ink)}
+  .windowbar button.on{border-color:var(--accent);color:var(--accent);background:rgba(201,169,107,0.1)}
+  .windowbar .count{color:var(--steel);text-transform:none;letter-spacing:0.04em}
   .empty{color:var(--steel);text-align:center;padding:50px 0;font-size:0.95rem}
   .hidden{display:none}
   .toprow{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:26px;flex-wrap:wrap}
@@ -128,7 +130,8 @@
 
   // Default: yesterday to a week ahead — the only rides that need anything
   // doing. Everything further out is one tap away.
-  let windowDays = '';
+  const WKEY = 'standard-dispatch-window';
+  let windowDays = sessionStorage.getItem(WKEY) || '';
 
   async function load(){
     const q = '/.netlify/functions/list-bookings?token=' + encodeURIComponent(token) +
@@ -167,25 +170,32 @@
     }
     document.getElementById('setupNotes').innerHTML = notes.join('');
 
-    // What you're looking at, and how to look wider
+    // How far ahead to look. Yesterday is always included whichever you pick,
+    // because last night's late run still needs marking in the morning.
+    const CHOICES = [
+      { val:'1',   label:'Today' },
+      { val:'',    label:'This week' },   // the default, 7 days
+      { val:'30',  label:'This month' },
+      { val:'all', label:'Everything' },
+    ];
     const bar = document.getElementById('windowBar');
-    const showingAll = data.window === 'all';
-    bar.innerHTML =
-      '<span>' + (showingAll ? 'All upcoming rides' : 'Yesterday to a week ahead') + '</span>' +
-      (showingAll
-        ? '<button id="narrow">Just this week</button>'
-        : (data.beyond > 0
-            ? '<button id="widen">Show all (' + data.beyond + ' further out)</button>'
-            : '')) ;
-    const widen = document.getElementById('widen');
-    if(widen) widen.addEventListener('click', () => { windowDays = 'all'; load().catch(()=>{}); });
-    const narrow = document.getElementById('narrow');
-    if(narrow) narrow.addEventListener('click', () => { windowDays = ''; load().catch(()=>{}); });
+    bar.innerHTML = CHOICES.map(c =>
+        '<button data-days="' + c.val + '"' + (c.val === windowDays ? ' class="on"' : '') + '>' + c.label + '</button>'
+      ).join('') +
+      (data.beyond > 0
+        ? '<span class="count">' + data.beyond + ' further out</span>'
+        : '');
+    bar.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      windowDays = b.dataset.days;
+      try { sessionStorage.setItem(WKEY, windowDays); } catch(e){}
+      load().catch(()=>{});
+    }));
 
     const list = document.getElementById('list');
     if(!data.rides.length){
-      list.innerHTML = '<p class="empty">Nothing to do' +
-        (data.beyond > 0 ? ' this week &mdash; ' + data.beyond + ' ride' + (data.beyond===1?'':'s') + ' further out.' : '.') + '</p>';
+      const scope = windowDays === '1' ? 'today' : windowDays === '30' ? 'this month' : windowDays === 'all' ? '' : 'this week';
+      list.innerHTML = '<p class="empty">Nothing to do' + (scope ? ' ' + scope : '') +
+        (data.beyond > 0 ? ' &mdash; ' + data.beyond + ' ride' + (data.beyond===1?'':'s') + ' further out.' : '.') + '</p>';
       return;
     }
 

@@ -59,7 +59,17 @@ exports.handler = async function (event) {
     const daysAhead = /^\d+$/.test(daysParam) ? Number(daysParam) : DEFAULT_DAYS_AHEAD;
 
     const cutoff = Date.now() - LOOK_BACK_HOURS * 3600 * 1000;
-    const horizon = showAll ? Infinity : Date.now() + daysAhead * 86400 * 1000;
+    // Measured to the END of the last day, not to this moment plus N days.
+    // "Today" asked at 10am must still include tonight's 9pm airport run,
+    // which "now + 24 hours" would happen to catch and "now + 1 day" at 11pm
+    // would not.
+    const endOfToday = easternToInstant(
+      new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York',
+        year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()) + 'T23:59'
+    );
+    const horizon = showAll
+      ? Infinity
+      : endOfToday.getTime() + Math.max(0, daysAhead - 1) * 86400 * 1000;
 
     // Who each customer is, so every reservation carries their standing —
     // Ahmed's spec point 6. A missing Customers tab must not take the
