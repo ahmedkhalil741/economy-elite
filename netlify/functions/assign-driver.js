@@ -47,14 +47,10 @@ async function googleAuth(scopes) {
 // A minimal, valid iCalendar file. Times are written in UTC (the trailing Z),
 // because a floating local time is the one thing phones disagree about.
 function buildIcs({ uid, startLocal, minutes, summary, description, location }) {
-  // A wall-clock Eastern time turned into a real UTC stamp. Read the naive
-  // string AS IF it were UTC, then subtract Eastern's offset on that date —
-  // 8:00 PM Eastern in October is 8:00 PM +4h = midnight UTC.
+  // One converter for the whole codebase — see easternToInstant.
   const toUtcStamp = (localNoZone) => {
-    const asIfUtc = new Date(localNoZone.slice(0, 19).replace(' ', 'T') + 'Z');
-    const offset = easternOffsetMinutes(asIfUtc); // -240 in summer, -300 in winter
-    const real = new Date(asIfUtc.getTime() - offset * 60000);
-    return real.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    const inst = easternToInstant(String(localNoZone).slice(0, 16));
+    return (inst || new Date()).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   };
 
   const start = toUtcStamp(startLocal);
@@ -103,7 +99,8 @@ exports.handler = async function (event) {
   const steps = { sheet: 'skipped', calendar: 'skipped', email: 'skipped' };
 
   try {
-    const { token, driverKey, pickup, dropoff, dateTime, name, phone, vehicle,
+    const { token, driverKey, rowNumber, fare: storedFare, when: storedWhen,
+            pickup, dropoff, dateTime, name, phone, vehicle,
             passengers, carSeats, flight, temp, elderly, notes, payMethod } = JSON.parse(event.body);
 
     if (token !== expected) return { statusCode: 401, body: JSON.stringify({ error: 'Wrong passcode.' }) };
@@ -115,8 +112,19 @@ exports.handler = async function (event) {
     const driver = findDriver(driverKey);
     if (!driver) return { statusCode: 404, body: JSON.stringify({ error: `No driver called "${driverKey}". Check the DRIVERS setting.` }) };
 
-    const when = formatRequestedDateTime(dateTime);
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod);
+    const when = storedWhen || formatRequestedDateTime(dateTime);
+
+    // THE BUG THIS REPLACES: the ride sheet re-calculated the fare from
+    // scratch. estimateFare treats anything that isn't exactly "sedan" as an
+    // SUV, so a blank vehicle cell put the SUV price in the driver's hand for
+    // a ride the customer was quoted as a sedan — $110 against $75 — and any
+    // fare corrected by hand in the sheet was thrown away. The number the
+    // customer agreed to is the one in the sheet. Only fall back to
+    // calculating when the sheet has nothing.
+    const fareText = String(storedFare || '').trim();
+    const fare = fareText
+      ? { matched: true, totalDisplay: /^[\d.]+$/.test(fareText) ? `$${fareText}` : fareText, display: fareText }
+      : estimateFare(pickup, dropoff, vehicle, dateTime, payMethod);
 
     // ---- the ride sheet, written once and reused in all three places ----
     const sheetLines = [
@@ -131,6 +139,7 @@ exports.handler = async function (event) {
       temp && temp !== 'No preference' ? `Cabin: ${temp}` : null,
       `Payment: ${payMethod || 'not set'}`,
       fare.matched ? `Fare to collect: ${fare.totalDisplay || fare.display}` : `Fare: ${fare.display}`,
+      vehicle ? null : 'CHECK THE CAR — no vehicle recorded on this booking',
       notes ? `Notes: ${notes}` : null,
     ].filter(Boolean);
 
@@ -143,14 +152,28 @@ exports.handler = async function (event) {
       if (!keys.includes('driver')) {
         steps.sheet = 'no "driver" column in the Bookings tab — add one and it will fill in next time';
       } else {
-        // Match on the three things that identify a ride. The sheet stores the
-        // pickup time already formatted, so compare on that.
-        const idx = rows.findIndex((row) => {
-          const r = rowToObject(keys, row);
-          return r.pickup === pickup && r.dropoff === dropoff && r.requested_datetime === when;
-        });
+        // Use the row number the dispatch page was looking at.
+        //
+        // THE BUG THIS REPLACES: this used to re-find the row by matching
+        // pickup + drop-off + time with findIndex, which returns the FIRST
+        // match. Two customers going Summit -> Newark at 11:00 is not exotic,
+        // and a double-click on the booking form produces two identical rows
+        // by itself. The driver was then written onto the wrong person's ride
+        // and the page reported success in green.
+        let idx = Number.isInteger(rowNumber) && rowNumber >= 2 ? rowNumber - 2 : -1;
+
+        // Trust it, but check: if the sheet has been re-sorted since the page
+        // loaded, that number points at somebody else. Verify the row still
+        // holds this ride before writing to it.
+        if (idx >= 0 && idx < rows.length) {
+          const r = rowToObject(keys, rows[idx]);
+          if (r.pickup !== pickup || r.dropoff !== dropoff) idx = -1;
+        } else {
+          idx = -1;
+        }
+
         if (idx === -1) {
-          steps.sheet = 'no matching row found — the ride may have been entered by hand';
+          steps.sheet = 'the sheet has changed since this page loaded — refresh and try again';
         } else {
           const updated = buildRow(keys, { driver: driver.name }, rows[idx]);
           await sheets.spreadsheets.values.update({
@@ -180,11 +203,30 @@ exports.handler = async function (event) {
         singleEvents: true,
         maxResults: 50,
       });
-      const match = (list.data.items || []).find((e) =>
-        (e.summary || '').includes(pickup.slice(0, 20)) || (e.description || '').includes(dropoff.slice(0, 20)));
+      // THE BUG THIS REPLACES: matching on the first 20 characters of the
+      // pickup, with OR. Two rides from the same street matched each other;
+      // "Terminal B" and "Terminal C" at Newark share their first 20
+      // characters; and a short pickup like "Summit, NJ" also matched an
+      // unrelated event that was DROPPING someone at Summit. The wrong ride
+      // got retitled and the page said "updated".
+      //
+      // Now: the start time has to be the same minute, and BOTH ends have to
+      // appear. add-to-calendar writes the summary as
+      // "The Standard ride for NAME: PICKUP → DROPOFF", so both are in there.
+      const wantStart = pivot.getTime();
+      const candidates = (list.data.items || []).filter((e) => {
+        const hay = `${e.summary || ''} ${e.description || ''}`;
+        if (!hay.includes(pickup) || !hay.includes(dropoff)) return false;
+        const started = e.start && (e.start.dateTime || e.start.date);
+        return started ? Math.abs(new Date(started).getTime() - wantStart) < 60000 : false;
+      });
+      // More than one identical event is a duplicate booking, not a choice to
+      // make silently — say so rather than picking one.
+      const match = candidates.length === 1 ? candidates[0] : null;
+      if (candidates.length > 1) steps.calendar = `${candidates.length} identical entries at that time — fix them on the calendar first`;
 
       if (!match) {
-        steps.calendar = 'no matching calendar entry found';
+        if (steps.calendar === 'skipped') steps.calendar = 'no matching calendar entry found';
       } else {
         const base = (match.summary || '').replace(/\s+—\s+[^—]*$/, '');
         await calendar.events.patch({

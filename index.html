@@ -651,17 +651,17 @@
         <div class="book-row">
           <div class="field">
             <label for="b-pickup">Pickup</label>
-            <input type="text" id="b-pickup" placeholder="Address or landmark" required>
+            <input type="text" id="b-pickup" placeholder="Address or landmark">
           </div>
           <div class="field">
             <label for="b-dropoff">Drop-off</label>
-            <input type="text" id="b-dropoff" placeholder="Address or landmark" required>
+            <input type="text" id="b-dropoff" placeholder="Address or landmark">
           </div>
         </div>
         <div class="book-row">
           <div class="field">
             <label for="b-date">Date &amp; time</label>
-            <input type="datetime-local" id="b-date" required>
+            <input type="datetime-local" id="b-date">
           </div>
           <div class="field">
             <label for="b-passengers">Passengers</label>
@@ -692,11 +692,17 @@
         <div class="book-row">
           <div class="field">
             <label for="b-name">Your name</label>
-            <input type="text" id="b-name" placeholder="First and last name" required>
+            <!-- Deliberately NOT `required`. These live in a hidden pane while
+                 step 1 is on screen, and a browser refuses to submit a form
+                 holding an invalid required control it cannot scroll to — so
+                 pressing Enter in the pickup box became a silent no-op with no
+                 message at all. Both fields are checked in the submit handler
+                 instead, which is where the error message lives anyway. -->
+            <input type="text" id="b-name" placeholder="First and last name" autocomplete="name">
           </div>
           <div class="field">
             <label for="b-phone">Phone number</label>
-            <input type="tel" id="b-phone" placeholder="(555) 000-0000" required>
+            <input type="tel" id="b-phone" placeholder="(555) 000-0000" autocomplete="tel">
           </div>
         </div>
 
@@ -865,6 +871,14 @@
                                   hour:'numeric', minute:'2-digit' });
   }
 
+  // Enter in a step-1 field means "Continue", not "submit the whole form".
+  step1.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      document.getElementById('toStep2').click();
+    }
+  });
+
   document.getElementById('toStep2').addEventListener('click', function(){
     const pickup  = document.getElementById('b-pickup').value.trim();
     const dropoff = document.getElementById('b-dropoff').value.trim();
@@ -944,8 +958,14 @@
   // by Zelle/Cash App/Venmo, confirmed with the customer directly.
   // Every submission also notifies the owner by email, adds it to the calendar,
   // and logs it to the Google Sheet for record-keeping.
+  // Without this, a second click while the first is in flight books the ride
+  // twice — two sheet rows, two calendar entries, two emails to the owner, and
+  // two rides dispatch can't tell apart.
+  let submitting = false;
+
   document.getElementById('bookForm').addEventListener('submit', function(e){
     e.preventDefault();
+    if (submitting) return;
     const msg = document.getElementById('formMsg');
     const pickup = document.getElementById('b-pickup').value;
     const dropoff = document.getElementById('b-dropoff').value;
@@ -966,6 +986,10 @@
       msg.style.color = '#E8E1D2';
       return;
     }
+
+    submitting = true;
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Sending\u2026'; }
 
     const payload = {
       name, pickup, dropoff, dateTime, phone, notes,
@@ -1026,6 +1050,8 @@
     document.querySelector('.pay-chip[data-pay="Square"]').classList.add('active');
     selectedPay = 'Square';
     document.getElementById('payNote').textContent = payNotes[selectedPay];
+    submitting = false;
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Confirm booking'; }
   });
 
   // Register service worker for PWA (installable on mobile)

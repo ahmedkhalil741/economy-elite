@@ -13,7 +13,7 @@
 
 const { google } = require('googleapis');
 const { readTab, rowToObject } = require('./_sheet');
-const { parseRequestedDateTime } = require('./_format');
+const { parseRequestedDateTime, easternToInstant } = require('./_format');
 const { allDrivers } = require('./_drivers');
 
 const SHEET_TAB = 'Bookings';
@@ -65,7 +65,11 @@ exports.handler = async function (event) {
       .filter((r) => r.pickup && r.dropoff)
       // Undated rows stay in — better a ride you have to look at than one that
       // silently vanished because its date cell was typed by hand.
-      .filter((r) => !r.dateTime || new Date(r.dateTime + ':00Z').getTime() > cutoff)
+      // `dateTime` is Eastern wall-clock. Sticking a Z on it calls it UTC and
+      // shrinks this six-hour look-back to two — a ride the driver is on RIGHT
+      // NOW then vanishes off the dispatch page. easternToInstant is the only
+      // correct way to turn a typed time into a real one.
+      .filter((r) => !r.dateTime || (easternToInstant(r.dateTime) || new Date(0)).getTime() > cutoff)
       .sort((a, b) => String(a.dateTime || '').localeCompare(String(b.dateTime || '')));
 
     let drivers = [];

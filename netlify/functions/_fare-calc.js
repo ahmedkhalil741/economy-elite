@@ -51,9 +51,12 @@ const HOURLY_MINIMUM_HOURS = 0;
 // The four destinations the table prices. LaGuardia and JFK share a column.
 const DESTINATIONS = [
   { key: 'ewr',    label: 'Newark Liberty Airport (EWR)', ny: false, test: /\bnewark\s*(liberty)?\s*(international)?\s*airport\b|\bewr\b/i },
-  { key: 'manh',   label: 'Manhattan / New York City',    ny: true,  test: /\bmanhattan\b|\bnew york,?\s*ny\b|\bnyc\b/i },
+  // "New York" on its own is how Google labels a Manhattan address once the
+  // street and the state have been stripped off ("350 5th Ave, New York, NY").
+  { key: 'manh',   label: 'Manhattan / New York City',    ny: true,  test: /\bmanhattan\b|^\s*new york\s*$|\bnew york,?\s*ny\b|\bnyc\b/i },
   { key: 'lgajfk', label: 'LaGuardia Airport (LGA)',      ny: true,  test: /\blaguardia\b|\blga\b/i },
-  { key: 'lgajfk', label: 'JFK Airport',                  ny: true,  test: /\bjfk\b|\bkennedy\s*airport\b/i },
+  // Google writes it out in full: "John F Kennedy International Airport".
+  { key: 'lgajfk', label: 'JFK Airport',                  ny: true,  test: /\bjfk\b|\bjohn f\.?\s*kennedy\b|\bkennedy\s+(international\s+)?airport\b/i },
 ];
 
 // One row per town. `names` holds every spelling worth matching — Google
@@ -152,50 +155,109 @@ function isOvernightPickup(dateTimeLocal) {
 
 // Longest match wins. "New Providence, Union County" must not price as Union,
 // and "South Bound Brook" must not price as Bound Brook.
-// Words that turn one town into a DIFFERENT town. "Orange" is on the list;
-// "East Orange" and "South Orange" are separate places that are not, and
-// quoting them at Orange's price would undercharge every single time. So a
-// match is thrown away when the word in front of it is one of these AND the
-// pair isn't itself a listed town — "West Orange" and "South Plainfield" have
-// their own rows, so they survive and win on length.
+// ---- READING AN ADDRESS -------------------------------------------------
+//
+// THE BUG THIS EXISTS TO PREVENT (found by audit, 2026-09-18): the old code
+// scanned the WHOLE address string for a town name. In New Jersey, street
+// names ARE town names, so:
+//
+//   "123 Madison Ave, Lakewood, NJ"  ->  priced as Madison, $105
+//                                        Lakewood is 55 miles away
+//   "45 Summit Ave, Hackensack, NJ"  ->  priced as Summit, $75
+//   "9 Westfield Ave, Elizabeth, NJ" ->  priced as Westfield, $85
+//   "10 Manhattan Ave, Union, NJ"    ->  priced as a MANHATTAN run, $135,
+//                                        for a six-mile local hop
+//   "Cranford, Union County, NJ"     ->  priced as Union, off the COUNTY name
+//
+// Every one of those is a wrong price on a real booking, in both directions,
+// with nothing in the sheet looking odd afterwards.
+//
+// The fix: only ever look at the parts of an address that name a PLACE.
+// Google formats addresses as comma-separated parts —
+// "24 Gales Dr, New Providence, NJ 07974, USA" — so the street is the first
+// part, and it goes in the bin along with the state, the ZIP, the country and
+// anything ending in "County".
+
 const QUALIFIERS = ['east', 'west', 'north', 'south', 'new', 'old', 'upper',
                     'lower', 'port', 'mount', 'mt', 'glen', 'little', 'big'];
 
+// Deliberately NOT including "New York": that is how Google labels a
+// Manhattan address ("350 5th Ave, New York, NY 10118"), and treating it as a
+// state name threw the whole Manhattan destination away. The state itself
+// always shows up as the two-letter "NY" in a formatted address.
+const STATES = /^(nj|ny|pa|ct|de|md|new jersey|pennsylvania|connecticut|delaware|maryland)\b/i;
+
+// The parts of an address that could name a town. Everything else is dropped.
+function placeParts(text) {
+  const raw = String(text || '').split(',').map((p) => p.trim()).filter(Boolean);
+  if (!raw.length) return [];
+
+  const kept = raw.filter((part) => {
+    if (/^(usa|united states|us)$/i.test(part)) return false;
+    if (/\bcounty\b/i.test(part)) return false;          // "Union County"
+    if (STATES.test(part)) return false;                  // "NJ 07974", "New York"
+    if (/^\d{5}(-\d{4})?$/.test(part)) return false;      // a bare ZIP
+    return true;
+  });
+
+  // Street lines, dropped by shape rather than by position: a leading house
+  // number, a unit, or a street-type word. "JFK Blvd" and "Springfield Ave"
+  // are streets as surely as "24 Gales Dr" is, and each one would otherwise
+  // be read as a place. Only dropped while something else survives — a bare
+  // "Summit" typed on its own has to keep working.
+  const street = /^\d|\b(apt|suite|ste|unit|floor|fl)\b|\b(st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|ln|lane|way|pkwy|parkway|ct|court|pl|place|ter|terrace|hwy|highway|cir|circle|trl|trail)\.?$/i;
+  const places = kept.filter((part) => !street.test(part));
+  return places.length ? places : kept;
+}
+
 function findTown(text) {
-  const hay = ` ${String(text || '').toLowerCase().replace(/\s+/g, ' ')} `;
+  const parts = placeParts(text);
+  if (!parts.length) return null;
 
   // every spelling of every town, so a qualified pair can be checked for
   const known = new Set();
   for (const row of TOWN_FARES) for (const n of row.names) known.add(n);
 
   let best = null, bestLen = 0;
-  for (const row of TOWN_FARES) {
-    for (const name of row.names) {
-      let from = 0, idx;
-      while ((idx = hay.indexOf(name, from)) !== -1) {
-        from = idx + 1;
-        const before = hay[idx - 1] || ' ';
-        const after = hay[idx + name.length] || ' ';
-        if (/[a-z]/.test(before) || /[a-z]/.test(after)) continue;  // mid-word
-        if (name.length <= bestLen) continue;
 
-        // "east orange" must not be priced as "orange"
-        const lead = hay.slice(0, idx).trim().split(' ').pop().replace(/[^a-z]/g, '');
-        if (QUALIFIERS.includes(lead) && !known.has(`${lead} ${name}`)) continue;
+  for (const part of parts) {
+    const hay = ` ${part.toLowerCase().replace(/\s+/g, ' ')} `;
+    for (const row of TOWN_FARES) {
+      for (const name of row.names) {
+        let from = 0, idx;
+        while ((idx = hay.indexOf(name, from)) !== -1) {
+          from = idx + 1;
+          const before = hay[idx - 1] || ' ';
+          const after = hay[idx + name.length] || ' ';
+          if (/[a-z]/.test(before) || /[a-z]/.test(after)) continue;  // mid-word
+          if (name.length <= bestLen) continue;
 
-        best = row; bestLen = name.length;
+          // "East Orange" must not be priced as "Orange". West Orange and
+          // North Plainfield have rows of their own, so they survive this
+          // and win on length.
+          const lead = hay.slice(0, idx).trim().split(' ').pop().replace(/[^a-z]/g, '');
+          if (QUALIFIERS.includes(lead) && !known.has(`${lead} ${name}`)) continue;
+
+          best = row; bestLen = name.length;
+        }
       }
     }
   }
   return best;
 }
 
-
 function findDestination(text) {
-  const s = String(text || '');
-  for (const d of DESTINATIONS) if (d.test.test(s)) return d;
+  // Street names carry airport names too: "100 JFK Blvd, Jersey City" is a
+  // Jersey City address, not a JFK run, and "10 Manhattan Ave, Union" is a
+  // local hop. Same filtering as findTown, for the same reason.
+  const parts = placeParts(text);
+  if (!parts.length) return null;
+  for (const dest of DESTINATIONS) {
+    if (parts.some((part) => dest.test.test(part))) return dest;
+  }
   return null;
 }
+
 
 function noMatch(overnight, note) {
   return {
@@ -314,6 +376,7 @@ module.exports = {
   isOvernightPickup,
   findTown,
   findDestination,
+  placeParts,
   TOWN_FARES,
   DESTINATIONS,
   LOCAL_RANGE,

@@ -100,16 +100,26 @@ function easternOffsetMinutes(date = new Date()) {
 
 // A naive Eastern wall-clock string ("2026-09-17T22:39") as a real instant.
 //
-// This is the bug that made the dispatch page report "no matching calendar
-// entry found" for a ride that was plainly sitting on the calendar: searching
-// for 22:39 UTC when the event is at 22:39 EASTERN misses it by four hours.
-// Anything that compares a typed time against a real timestamp has to come
-// through here.
+// BUG ONE (fixed): searching for an event at "22:39 UTC" when it sits at
+// "22:39 Eastern" misses it by four hours. Anything comparing a typed time
+// against a real timestamp has to come through here.
+//
+// BUG TWO (fixed): asking for the offset at the naive-as-UTC instant reads it
+// four or five hours early, which lands on the WRONG SIDE of a daylight-saving
+// change twice a year. On 8 March 2026 every pickup between about 03:00 and
+// 07:00 came out an hour wrong — which is exactly the early airport run. So
+// the offset is applied, then re-read at the corrected instant and applied
+// again if it disagrees.
 function easternToInstant(dateTimeLocal) {
   const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(dateTimeLocal || ''));
   if (!m) return null;
-  const asIfUtc = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]));
-  return new Date(asIfUtc.getTime() - easternOffsetMinutes(asIfUtc) * 60000);
+  const naive = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+
+  const first = easternOffsetMinutes(new Date(naive));
+  let instant = new Date(naive - first * 60000);
+  const second = easternOffsetMinutes(instant);
+  if (second !== first) instant = new Date(naive - second * 60000);
+  return instant;
 }
 
 module.exports = { easternOffsetMinutes, easternToInstant, formatRequestedDateTime, parseRequestedDateTime, formatTimestamp, shiftLocalDateTime, easternToday };

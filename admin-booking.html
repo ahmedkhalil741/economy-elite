@@ -111,6 +111,13 @@
 
     <div class="row">
       <div class="field">
+        <label for="a-vehicle">Vehicle</label>
+        <select id="a-vehicle">
+          <option value="SUV" selected>SUV</option>
+          <option value="Sedan">Sedan</option>
+        </select>
+      </div>
+      <div class="field">
         <label for="a-passengers">Passengers</label>
         <select id="a-passengers">
           <option value="1">1</option><option value="2">2</option>
@@ -233,8 +240,14 @@
 
   // ---- Submit: same four functions the main site calls, with Source set
   // to whatever was picked above instead of always "Web". ----
+  // A second click while the first save is in flight writes the booking twice:
+  // two sheet rows, two calendar entries, two emails. Two identical rows are
+  // also what makes dispatch unable to tell them apart.
+  let saving = false;
+
   document.getElementById('bookForm').addEventListener('submit', function(e){
     e.preventDefault();
+    if (saving) return;
     const msg = document.getElementById('formMsg');
 
     const payload = {
@@ -251,6 +264,7 @@
       elderly: document.getElementById('a-elderly').checked,
       contact15: document.getElementById('a-contact15').checked,
       notes: document.getElementById('a-notes').value,
+      vehicle: document.getElementById('a-vehicle').value,
       payMethod: selectedPay,
     };
 
@@ -261,6 +275,9 @@
     }
 
     const endpoints = ['send-booking-notification', 'add-to-calendar', 'log-booking', 'save-customer'];
+    saving = true;
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.dataset.label = submitBtn.textContent; submitBtn.textContent = 'Saving\u2026'; }
     Promise.all(endpoints.map(fn =>
       fetch('/.netlify/functions/' + fn, {
         method: 'POST',
@@ -274,7 +291,13 @@
       document.getElementById('a-contact15').checked = true;
       document.querySelectorAll('.pay-chip').forEach(c => c.classList.remove('active'));
       document.getElementById('payOptions').firstElementChild.classList.add('active');
-      selectedPay = 'Pay in car (card or cash)';
+      document.getElementById('a-vehicle').value = 'SUV';
+      // Must match a data-pay value, or the next booking's card fee is silently
+      // dropped — 'Pay in car (card or cash)' is not a payment method the fee
+      // table knows, so cardFeeFor returned null for it.
+      selectedPay = 'Square';
+      saving = false;
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.label || 'Save booking'; }
     });
   });
 </script>
