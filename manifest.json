@@ -1,10 +1,17 @@
 {
-  "name": "The Standard — Private Chauffeur",
+  "name": "The Standard \u2014 Private Chauffeur",
   "short_name": "The Standard",
-  "description": "Private chauffeur transportation in New Jersey — a trusted local driver, on request.",
+  "description": "Private chauffeur transportation in New Jersey \u2014 a trusted local driver, on request.",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#0B0A08",
   "theme_color": "#0B0A08",
-  "icons": []
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }

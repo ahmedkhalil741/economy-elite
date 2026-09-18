@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="The Standard">
+  <title>The Standard — Open Road</title>
+  <!--
+    THE MARK. An S traced as a road through two bends, drawn as two separate
+    curves that do not quite meet. The eye closes the gap and reads the letter
+    anyway: the mark asks for half a second of attention and pays it back.
+
+    It is deliberately not a car, a wheel, a crown or a shield, and it is not
+    a signature. The company is two vehicles now and will be more, with
+    drivers who aren't Hany — so the mark has to be the thing that stays the
+    same while the fleet and the team change around it.
+
+    currentColor on purpose: it takes the colour of whatever it sits in, so
+    one file serves cream on black, black on cream, and champagne on print
+    with no second version to keep in step.
+
+    This is the file to send a sign shop or a printer. It scales to a vehicle
+    door with no loss.
+  -->
+  <path d="M70 25C70 12 30 12 30 33C30 43 42 47.5 52 49.5"
+        stroke="currentColor" stroke-width="11" stroke-linecap="round" fill="none"/>
+  <path d="M48 52.5C58 54.5 70 57 70 67C70 88 30 88 30 75"
+        stroke="currentColor" stroke-width="11" stroke-linecap="round" fill="none"/>
+</svg>

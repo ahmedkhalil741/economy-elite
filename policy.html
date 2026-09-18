@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <title>Policy — The Standard Private Chauffeur Services</title>
 <meta name="description" content="The Standard Private Chauffeur Services — private chauffeur transportation in New Jersey. A trusted local driver, guaranteed reservations, and your preferences remembered on every ride.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230B0A08'/%3E%3Ctext x='50' y='68' font-family='Georgia,serif' font-size='60' font-weight='700' fill='%23F2EDE3' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20100%20100'%3E%3Crect%20width='100'%20height='100'%20rx='20'%20fill='%230B0A08'/%3E%3Cg%20transform='translate%2850,50%29%20scale%280.78%29%20translate%28-50,-50%29'%3E%3Cpath%20d='M70%2025C70%2012%2030%2012%2030%2033C30%2043%2042%2047.5%2052%2049.5'%20stroke='%23F2EDE3'%20stroke-width='11'%20stroke-linecap='round'%20fill='none'/%3E%3Cpath%20d='M48%2052.5C58%2054.5%2070%2057%2070%2067C70%2088%2030%2088%2030%2075'%20stroke='%23F2EDE3'%20stroke-width='11'%20stroke-linecap='round'%20fill='none'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icon.svg">
 <meta property="og:title" content="The Standard Private Chauffeur Services — Your Driver, Not Just Your Ride">
 <meta property="og:description" content="Private chauffeur transportation in New Jersey — a trusted local driver, guaranteed reservations, and your preferences remembered on every ride.">
 <meta property="og:type" content="website">
@@ -70,7 +71,11 @@
   .nav-call{color:var(--ink-dim); text-decoration:none; font-size:0.9rem; font-weight:500; padding:10px 6px; white-space:nowrap;}
   .nav-call:hover{color:var(--ink);}
   .logo{font-family:var(--display); font-weight:700; font-size:1.15rem; letter-spacing:-0.005em; display:flex; align-items:center; gap:8px;}
-  .logo .dot{width:8px; height:8px; border-radius:50%; background:var(--teal); box-shadow:0 0 12px var(--teal);}
+  /* The mark. Sized to the cap height of the wordmark beside it so the two
+     sit on one optical line, and it inherits the text colour rather than
+     carrying its own, which is what lets one drawing serve the dark header
+     and a cream print page without a second file. */
+  .logo .mark{width:22px; height:22px; flex:none; color:var(--teal);}
   .brand-sub{font-family:var(--mono); font-size:0.62rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--steel); margin-top:3px; padding-left:16px;}
   .nav-links{display:flex; gap:28px; font-size:0.92rem; color:var(--ink-dim);}
   .nav-links a{text-decoration:none; transition:color .15s;}
@@ -498,7 +503,7 @@
   <div class="nav-inner">
     <a href="index.html" style="text-decoration:none;">
       <div class="brand">
-        <div class="logo"><span class="dot"></span>The Standard</div>
+        <div class="logo"><svg class="mark" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><path d="M70 25C70 12 30 12 30 33C30 43 42 47.5 52 49.5" stroke="currentColor" stroke-width="11" stroke-linecap="round" fill="none"/><path d="M48 52.5C58 54.5 70 57 70 67C70 88 30 88 30 75" stroke="currentColor" stroke-width="11" stroke-linecap="round" fill="none"/></svg>The Standard</div>
         <div class="brand-sub">Private Chauffeur Services</div>
       </div>
     </a>
@@ -700,7 +705,7 @@
 <footer>
   <div class="wrap foot-inner">
     <div>
-      <div class="logo"><span class="dot"></span>The Standard</div>
+      <div class="logo"><svg class="mark" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><path d="M70 25C70 12 30 12 30 33C30 43 42 47.5 52 49.5" stroke="currentColor" stroke-width="11" stroke-linecap="round" fill="none"/><path d="M48 52.5C58 54.5 70 57 70 67C70 88 30 88 30 75" stroke="currentColor" stroke-width="11" stroke-linecap="round" fill="none"/></svg>The Standard</div>
       <div class="foot-fullname">Private Chauffeur Services</div>
     </div>
     <div class="foot-links">
