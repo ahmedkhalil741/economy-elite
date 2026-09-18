@@ -186,6 +186,10 @@
   #bookingView .credit-flag{font-size:0.82rem;color:#C9A96B;line-height:1.6;margin:10px 0 0;}
   #bookingView .qtotal{display:flex;align-items:center;justify-content:space-between;gap:12px;
           padding-top:14px;margin-top:6px;border-top:1px solid #332D26;}
+  #bookingView .qtip{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+          padding-top:10px;margin-top:2px;font-size:0.84rem;color:#8A8272;}
+  #bookingView .qtip .qk{font-size:0.84rem;color:#8A8272;}
+  #bookingView .qtipval{font-family:'IBM Plex Mono',monospace;color:#B5ADA0;}
   #bookingView .qreset{background:none;border:0;color:#8A8272;font-family:'IBM Plex Mono',monospace;
           font-size:0.66rem;letter-spacing:0.08em;text-transform:uppercase;padding:10px 0 0;
           cursor:pointer;text-decoration:underline;text-underline-offset:3px;}
@@ -408,6 +412,13 @@
       <div class="qtotal">
         <span class="qk">Total</span>
         <span class="quote-amount" id="quoteAmount">&mdash;</span>
+      </div>
+      <!-- Under the total on purpose, and labelled as not included. A tip is
+           the customer's decision and is never part of what gets collected;
+           putting it above the total would have somebody adding it in. -->
+      <div class="qtip" id="tipLine" hidden>
+        <span class="qk">Suggested tip &mdash; 20% of the fare, not the tolls</span>
+        <span class="qtipval" id="tipValue"></span>
       </div>
       <div class="quote-detail" id="quoteDetail">Fill in the pickup and drop-off.</div>
       <p class="credit-flag" id="creditFlag" hidden></p>
@@ -922,6 +933,14 @@
         document.getElementById('cardLabel').textContent =
           selectedPay === 'Cash' || selectedPay === 'Zelle' ? 'Card fee (none for ' + selectedPay + ')' : selectedPay + ' fee';
 
+        const tipLine = document.getElementById('tipLine');
+        if(j.matched && j.tip){
+          document.getElementById('tipValue').textContent = '$' + j.tip;
+          tipLine.hidden = false;
+        }else{
+          tipLine.hidden = true;
+        }
+
         if(j.matched){
           amount.className = 'quote-amount';
           amount.textContent = j.total || j.display;
@@ -929,7 +948,6 @@
           if(j.label) bits.push(j.label);
           if(j.discount) bits.push('<span class="tip">$' + j.discount + ' came off the fare' +
             (j.discountUnused ? ' \u2014 ' + j.discountNote : '') + '</span>');
-          if(j.tip) bits.push('<span class="tip">20% tip would be about $' + j.tip + ' &mdash; on the fare, not the tolls</span>');
           detail.innerHTML = bits.join('<br>');
         }else{
           amount.className = 'quote-amount none';
@@ -1175,6 +1193,7 @@
     document.getElementById('quoteAmount').className = 'quote-amount none';
     document.getElementById('quoteAmount').innerHTML = '&mdash;';
     document.getElementById('quoteDetail').textContent = 'Fill in the pickup and drop-off.';
+    document.getElementById('tipLine').hidden = true;
     document.getElementById('review').hidden = true;
 
     pending = null;

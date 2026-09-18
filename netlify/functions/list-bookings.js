@@ -126,6 +126,7 @@ exports.handler = async function (event) {
           // SUV price for a sedan booking.
           toll: r.toll && r.toll !== 'N/A' ? r.toll : '',
           cardFee: r.card_fee && r.card_fee !== 'N/A' ? r.card_fee : '',
+          tip: r.tip && r.tip !== 'N/A' ? r.tip : '',
           discount: r.discount && r.discount !== 'N/A' ? r.discount : '',
           discountReason: r.discount_reason && r.discount_reason !== 'N/A' ? r.discount_reason : '',
           discountSpent: r.discount_spent && r.discount_spent !== 'N/A' ? r.discount_spent : '',

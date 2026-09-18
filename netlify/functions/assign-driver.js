@@ -101,7 +101,7 @@ exports.handler = async function (event) {
 
   try {
     const { token, driverKey, notify, rowNumber, fare: storedFare, when: storedWhen,
-            toll: storedToll, cardFee: storedCardFee,
+            toll: storedToll, cardFee: storedCardFee, tip: storedTip,
             pickup, dropoff, dateTime, name, phone, vehicle,
             passengers, carSeats, flight, temp, elderly, notes, payMethod } = JSON.parse(event.body);
 
@@ -155,6 +155,7 @@ exports.handler = async function (event) {
     const totalNum = num(storedFare);
     const tollNum = num(storedToll) || 0;
     const cardNum = num(storedCardFee) || 0;
+    const tipNum = num(storedTip) || 0;
 
     let fareLines;
     if (totalNum !== null) {
@@ -164,6 +165,10 @@ exports.handler = async function (event) {
         tollNum ? `Tolls: ${money(tollNum)}` : null,
         cardNum ? `Card fee: ${money(cardNum)}` : null,
         `TOTAL TO COLLECT: ${money(totalNum)}`,
+        // Below the total, and said to be on top of it. A tip is the
+        // customer's decision and is never part of what gets collected, so
+        // putting it in the running list would invite somebody to add it in.
+        tipNum ? `Suggested tip (20%, on top, customer's choice): ${money(tipNum)}` : null,
       ].filter(Boolean);
     } else {
       // A range, or a route quoted by hand — there is no single number to
