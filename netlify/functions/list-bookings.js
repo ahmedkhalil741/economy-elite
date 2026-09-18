@@ -51,8 +51,10 @@ exports.handler = async function (event) {
     // Ahmed's spec point 6. A missing Customers tab must not take the
     // dispatch page down with it.
     const byPhone = new Map();
+    let customerColumns = [];
     try {
       const cust = await readTab(sheets, process.env.GOOGLE_SHEET_ID, CUSTOMERS_TAB);
+      customerColumns = cust.headers;
       const digits = (v) => String(v || '').replace(/\D/g, '').slice(-10);
       for (const row of cust.rows) {
         const c = rowToObject(cust.keys, row);
@@ -119,6 +121,15 @@ exports.handler = async function (event) {
         // what the sheet's header row actually says, so an empty field on the
         // dispatch card points at a missing column rather than a mystery
         sheetColumns: headers,
+        customerColumns,
+        // Named so a blank field on a card points at a missing column instead
+        // of being a mystery — the same mistake has cost hours twice already.
+        missingColumns: {
+          bookings: ['driver', 'ride_status', 'passengers', 'car_seats', 'elderly_assistance', 'email', 'referred_by']
+            .filter((k) => !keys.includes(k)),
+          customers: ['email', 'completed_rides', 'lifetime_points', 'activity', 'credit_owed', 'credit_history', 'referred_by', 'birthday']
+            .filter((k) => !customerColumns.map((h) => String(h).trim().toLowerCase().replace(/[\s-]+/g, '_')).includes(k)),
+        },
       }),
     };
   } catch (err) {

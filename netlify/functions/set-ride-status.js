@@ -173,6 +173,11 @@ exports.handler = async function (event) {
     // first ride. Only on the first: a referral is worth one credit however
     // many times that customer comes back afterwards.
     let referral = null;
+    // A missing column is the failure that looks like nothing happening, so
+    // say it out loud rather than returning a silent null.
+    if (nowCompleted && completedRides === 1 && !customers.keys.includes('referred_by')) {
+      referral = { noColumn: 'The Customers tab has no "referred_by" column, so referrals can never be credited. Add one to the header row.' };
+    }
     if (nowCompleted && completedRides === 1 && c.referred_by) {
       const refKey = normalizePhone(c.referred_by);
       const refIdx = refKey

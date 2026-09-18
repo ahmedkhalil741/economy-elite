@@ -129,6 +129,13 @@
     } else if(!data.drivers.length){
       notes.push('<div class="note"><strong>No drivers set up yet.</strong> In Netlify, add an environment variable called <code>DRIVERS</code> holding a list like <code>[{"key":"hany","name":"Hany","phone":"9084949256","email":"hany@standardnj.com"}]</code>, then redeploy.</div>');
     }
+    const miss = data.missingColumns || {};
+    if((miss.bookings||[]).length || (miss.customers||[]).length){
+      notes.push('<div class="note"><strong>Columns the sheet is missing.</strong> Anything written to one of these is silently dropped.' +
+        ((miss.bookings||[]).length ? '<br>Bookings tab: <code>' + miss.bookings.join('</code> <code>') + '</code>' : '') +
+        ((miss.customers||[]).length ? '<br>Customers tab: <code>' + miss.customers.join('</code> <code>') + '</code>' : '') +
+        '</div>');
+    }
     if(data.hasRideStatusColumn === false){
       notes.push('<div class="note"><strong>No <code>ride_status</code> column in the Bookings tab.</strong> Add one to the header row and the Completed / Cancelled / No-show buttons appear. Points are only awarded when a ride is marked Completed, so nothing counts until this exists.</div>');
     }
