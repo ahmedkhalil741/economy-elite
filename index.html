@@ -940,6 +940,9 @@
   // know about them (name, cabin temperature, car seats, elderly
   // assistance) so they don't have to repeat themselves. Fails silently if
   // the Customers sheet isn't set up yet, or no match is found.
+  // The lookup runs off the phone number, which now lives on step 2 — so a
+  // returning customer types their number and the rest of step 2 fills itself
+  // in while they're still looking at it.
   let customerLookupTimer = null;
   document.getElementById('b-phone').addEventListener('input', function(e){
     clearTimeout(customerLookupTimer);
@@ -950,13 +953,46 @@
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           if(!data || !data.found) return;
-          const nameField = document.getElementById('b-name');
-          if(!nameField.value && data.name) nameField.value = data.name;
-          if(data.temp) document.getElementById('b-temp').value = data.temp;
-          if(data.carSeats) document.getElementById('b-carseats').value = data.carSeats;
-          if(data.elderly === 'Yes') document.getElementById('b-elderly').checked = true;
+          // Only ever FILL A BLANK. If someone has already typed something
+          // different this time, that is this trip's answer and overwriting it
+          // would be the software arguing with the customer.
+          const fill = (id, value) => {
+            if(!value) return false;
+            const el = document.getElementById(id);
+            if(!el || el.value) return false;
+            el.value = value;
+            return true;
+          };
+
+          const filled = [];
+          if(fill('b-name', data.name)) filled.push('name');
+          if(fill('b-email', data.email)) filled.push('email');
+          if(data.temp && data.temp !== 'No preference'
+             && document.getElementById('b-temp').value === 'No preference'){
+            document.getElementById('b-temp').value = data.temp;
+            filled.push('cabin temperature');
+          }
+          if(data.carSeats && data.carSeats !== 'None' && data.carSeats !== '0'
+             && document.getElementById('b-carseats').value === '0'){
+            document.getElementById('b-carseats').value = data.carSeats;
+            filled.push('car seats');
+          }
+          if(data.elderly === 'Yes' && !document.getElementById('b-elderly').checked){
+            document.getElementById('b-elderly').checked = true;
+            filled.push('assistance');
+          }
+          if(data.vehicle && ['SUV','Sedan'].includes(data.vehicle)){
+            document.getElementById('b-vehicle').value = data.vehicle;
+          }
+
+          // Their loyalty standing is deliberately NOT shown. Ahmed's decision
+          // is that points stay an internal record until the programme has
+          // earned its keep — telling a customer they have 7 points is a
+          // promise the business hasn't made yet.
           const msg = document.getElementById('formMsg');
-          msg.textContent = 'Welcome back' + (data.name ? ', ' + data.name : '') + ' — we filled in your usual preferences.';
+          msg.textContent = filled.length
+            ? 'Welcome back' + (data.name ? ', ' + data.name.split(' ')[0] : '') + ' — we remembered your ' + filled.join(', ') + '.'
+            : 'Welcome back' + (data.name ? ', ' + data.name.split(' ')[0] : '') + '.';
           msg.style.color = 'var(--teal)';
         })
         .catch(() => {});
