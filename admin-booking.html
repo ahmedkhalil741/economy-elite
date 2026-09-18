@@ -53,6 +53,15 @@
   #gate{max-width:340px; margin:80px auto; text-align:center;}
   #gate input{text-align:center; font-size:1.1rem; letter-spacing:0.1em;}
   #gate button{margin-top:14px;}
+  .quote{background:#161310;border:1px solid #332D26;border-left:3px solid #C9A96B;
+         border-radius:12px;padding:18px 20px;margin:22px 0 20px;}
+  .quote-label{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;letter-spacing:0.12em;
+               text-transform:uppercase;color:#8A8272;margin-bottom:8px;}
+  .quote-amount{font-family:'IBM Plex Mono',monospace;font-size:1.9rem;font-weight:600;
+                color:#E8E1D2;letter-spacing:-0.02em;line-height:1.1;}
+  .quote-amount.none{font-size:1rem;font-weight:400;color:#B5ADA0;line-height:1.5;}
+  .quote-detail{font-size:0.85rem;color:#B5ADA0;line-height:1.7;margin-top:8px;}
+  .quote-detail .tip{color:#8A8272;}
   [hidden]{display:none !important;}
 </style>
 </head>
@@ -60,9 +69,9 @@
 
 <div id="gate">
   <div class="eyebrow">The Standard — internal</div>
-  <h1 style="font-size:1.3rem;">Enter PIN</h1>
+  <h1 style="font-size:1.3rem;">Enter passcode</h1>
   <p class="sub">This page is for logging phone, text, and email bookings only. Not for customers.</p>
-  <div class="field"><input type="password" id="pinInput" placeholder="PIN" inputmode="numeric"></div>
+  <div class="field"><input type="password" id="pinInput" placeholder="Passcode" autocomplete="current-password"></div>
   <button class="btn-primary" id="pinSubmit" type="button">Unlock</button>
   <p class="form-msg" id="pinMsg"></p>
 </div>
@@ -182,26 +191,121 @@
       </div>
     </div>
 
+    <!-- The number Ahmed reads out while the customer is still on the phone.
+         It updates as the addresses are typed, so by the time he has both
+         ends there is already a price on screen. -->
+    <div class="quote" id="quote">
+      <div class="quote-label">Price to quote</div>
+      <div class="quote-amount" id="quoteAmount">&mdash;</div>
+      <div class="quote-detail" id="quoteDetail">Fill in the pickup and drop-off.</div>
+    </div>
+
     <button type="submit" class="btn-primary">Save booking</button>
     <div class="form-msg" id="formMsg"></div>
   </form>
 </div>
 
 <script>
-  // ---- Simple PIN gate ----
-  // This is NOT real security — it's just a deterrent against someone
-  // stumbling onto the link. Anyone with the PIN (or a look at this file's
-  // source) can get in. Change ADMIN_PIN below to whatever you like.
-  const ADMIN_PIN = '2468';
-  function tryUnlock(){
-    if(document.getElementById('pinInput').value === ADMIN_PIN){
-      document.getElementById('gate').hidden = true;
-      document.getElementById('formWrap').hidden = false;
-    } else {
-      document.getElementById('pinMsg').textContent = 'Incorrect PIN.';
-      document.getElementById('pinMsg').style.color = '#E8998A';
+  // ---- The gate ----
+  // This used to compare against a PIN written in this file, which anyone who
+  // opened the page source could read. It is the same passcode as the dispatch
+  // page now, and it is checked ON THE SERVER: the fare endpoint refuses a
+  // wrong one, so typing past this box gets you a form that cannot save.
+  const KEY = 'standard-dispatch-token';
+  let token = sessionStorage.getItem(KEY) || '';
+
+  function openForm(){
+    document.getElementById('gate').hidden = true;
+    document.getElementById('formWrap').hidden = false;
+  }
+
+  async function tryUnlock(){
+    const msg = document.getElementById('pinMsg');
+    token = document.getElementById('pinInput').value.trim();
+    msg.style.color = 'var(--steel)';
+    msg.textContent = 'Checking\u2026';
+    try{
+      // Ask the server something harmless. A wrong passcode is refused there,
+      // not here.
+      const r = await fetch('/.netlify/functions/quote-fare', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ token, pickup:'', dropoff:'' })
+      });
+      if(r.status === 401) throw new Error('Wrong passcode.');
+      if(!r.ok){ const j = await r.json().catch(()=>({})); throw new Error(j.error || ('Error ' + r.status)); }
+      sessionStorage.setItem(KEY, token);
+      msg.textContent = '';
+      openForm();
+    }catch(err){
+      msg.textContent = err.message;
+      msg.style.color = '#E8998A';
     }
   }
+
+  if(token) openForm();
+  // ---- the live price ----
+  // Debounced, because it fires on every keystroke in an address field and
+  // nobody needs a quote for "24 Gal".
+  let quoteTimer = null;
+  let lastAsked = '';
+
+  function askForQuote(){
+    const pickup  = document.getElementById('a-pickup').value.trim();
+    const dropoff = document.getElementById('a-dropoff').value.trim();
+    const vehicle = document.getElementById('a-vehicle').value;
+    const dateTime = document.getElementById('a-date').value;
+    const amount = document.getElementById('quoteAmount');
+    const detail = document.getElementById('quoteDetail');
+
+    if(!pickup || !dropoff){
+      amount.className = 'quote-amount none';
+      amount.innerHTML = '&mdash;';
+      detail.textContent = 'Fill in the pickup and drop-off.';
+      return;
+    }
+
+    const asking = [pickup, dropoff, vehicle, dateTime, selectedPay].join('|');
+    if(asking === lastAsked) return;
+    lastAsked = asking;
+
+    clearTimeout(quoteTimer);
+    quoteTimer = setTimeout(async () => {
+      try{
+        const r = await fetch('/.netlify/functions/quote-fare', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ token, pickup, dropoff, vehicle, dateTime, payMethod: selectedPay })
+        });
+        const j = await r.json();
+        if(!r.ok || !j.ready) throw new Error(j.error || j.reason || 'Could not work that out.');
+
+        if(j.matched){
+          amount.className = 'quote-amount';
+          amount.textContent = j.total || j.display;
+          const bits = [];
+          if(j.label) bits.push(j.label);
+          if(j.lines && j.lines.length) bits.push(j.lines.join(' + '));
+          if(j.tip) bits.push('<span class="tip">20% tip would be about $' + j.tip + '</span>');
+          detail.innerHTML = bits.join('<br>');
+        }else{
+          // Not on the rate card. Say so in words he can repeat down the phone
+          // rather than showing a number that isn't real.
+          amount.className = 'quote-amount none';
+          amount.textContent = 'Not on the rate card \u2014 quote this one yourself.';
+          detail.innerHTML = j.display + (j.hourlyRate ? '<br><span class="tip">Hourly is $' + j.hourlyRate + '/hr, no minimum.</span>' : '');
+        }
+      }catch(err){
+        amount.className = 'quote-amount none';
+        amount.textContent = '\u2014';
+        detail.textContent = err.message;
+      }
+    }, 450);
+  }
+
+  ['a-pickup','a-dropoff','a-vehicle','a-date'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el){ el.addEventListener('input', askForQuote); el.addEventListener('change', askForQuote); }
+  });
+
   document.getElementById('pinSubmit').addEventListener('click', tryUnlock);
   document.getElementById('pinInput').addEventListener('keydown', e => { if(e.key === 'Enter') tryUnlock(); });
 
@@ -220,6 +324,7 @@
     document.querySelectorAll('.pay-chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
     selectedPay = chip.dataset.pay;
+    lastAsked = ''; askForQuote();
   });
 
   // ---- Phone lookup: prefill known preferences for a returning customer ----
@@ -306,6 +411,10 @@
       // dropped — 'Pay in car (card or cash)' is not a payment method the fee
       // table knows, so cardFeeFor returned null for it.
       selectedPay = 'Square';
+      lastAsked = '';
+      document.getElementById('quoteAmount').className = 'quote-amount none';
+      document.getElementById('quoteAmount').innerHTML = '&mdash;';
+      document.getElementById('quoteDetail').textContent = 'Fill in the pickup and drop-off.';
       saving = false;
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.label || 'Save booking'; }
     });
