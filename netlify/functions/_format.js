@@ -88,4 +88,28 @@ function parseRequestedDateTime(display) {
   return `${m[3]}-${pad(month + 1)}-${pad(Number(m[2]))}T${pad(hour)}:${m[5]}`;
 }
 
-module.exports = { formatRequestedDateTime, parseRequestedDateTime, formatTimestamp, shiftLocalDateTime, easternToday };
+// Eastern is UTC-5, or UTC-4 while daylight saving is on. Rather than ship a
+// timezone database, ask Intl what the offset actually is on that date.
+function easternOffsetMinutes(date = new Date()) {
+  const name = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', timeZoneName: 'shortOffset',
+  }).formatToParts(date).find((p) => p.type === 'timeZoneName').value; // "GMT-4"
+  const m = /GMT([+-]\d+)/.exec(name);
+  return m ? Number(m[1]) * 60 : -300;
+}
+
+// A naive Eastern wall-clock string ("2026-09-17T22:39") as a real instant.
+//
+// This is the bug that made the dispatch page report "no matching calendar
+// entry found" for a ride that was plainly sitting on the calendar: searching
+// for 22:39 UTC when the event is at 22:39 EASTERN misses it by four hours.
+// Anything that compares a typed time against a real timestamp has to come
+// through here.
+function easternToInstant(dateTimeLocal) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(dateTimeLocal || ''));
+  if (!m) return null;
+  const asIfUtc = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]));
+  return new Date(asIfUtc.getTime() - easternOffsetMinutes(asIfUtc) * 60000);
+}
+
+module.exports = { easternOffsetMinutes, easternToInstant, formatRequestedDateTime, parseRequestedDateTime, formatTimestamp, shiftLocalDateTime, easternToday };

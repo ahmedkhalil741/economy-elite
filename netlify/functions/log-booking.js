@@ -124,6 +124,11 @@ exports.handler = async function (event) {
       // legitimately N/A even on an SUV booking — which read as a
       // contradiction until this column existed.
       vehicle: isSedan ? 'Sedan' : 'SUV',
+      // A column headed "vehicle" or "car" normalises to car_type (see
+      // HEADER_ALIASES in _sheet.js), so a row keyed only `vehicle` left that
+      // column empty however it was spelled. Write both keys; whichever one
+      // the sheet actually has gets filled and the other is ignored.
+      car_type: isSedan ? 'Sedan' : 'SUV',
       // Neither of these can be known at booking time — they depend on the
       // real route and what actually happened on the road.
       toll: NA,

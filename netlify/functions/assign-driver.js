@@ -23,7 +23,7 @@ const { google } = require('googleapis');
 const { findDriver } = require('./_drivers');
 const { sendEmail } = require('./_email');
 const { readTab, buildRow, rowToObject } = require('./_sheet');
-const { formatRequestedDateTime, shiftLocalDateTime } = require('./_format');
+const { formatRequestedDateTime, shiftLocalDateTime, easternOffsetMinutes, easternToInstant } = require('./_format');
 const { estimateFare } = require('./_fare-calc');
 
 const SHEET_TAB = 'Bookings';
@@ -52,7 +52,7 @@ function buildIcs({ uid, startLocal, minutes, summary, description, location }) 
   // 8:00 PM Eastern in October is 8:00 PM +4h = midnight UTC.
   const toUtcStamp = (localNoZone) => {
     const asIfUtc = new Date(localNoZone.slice(0, 19).replace(' ', 'T') + 'Z');
-    const offset = easternOffsetMinutesFor(asIfUtc); // -240 in summer, -300 in winter
+    const offset = easternOffsetMinutes(asIfUtc); // -240 in summer, -300 in winter
     const real = new Date(asIfUtc.getTime() - offset * 60000);
     return real.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   };
@@ -88,16 +88,6 @@ function buildIcs({ uid, startLocal, minutes, summary, description, location }) 
   ];
   // iCalendar wants CRLF line endings. Some phones are forgiving; not all.
   return lines.join('\r\n');
-}
-
-// Eastern is UTC-5, or UTC-4 while daylight saving is on. Rather than ship a
-// timezone database, ask Intl what the offset actually is on that date.
-function easternOffsetMinutesFor(date) {
-  const tz = new Intl.DateTimeFormat('en-US', {
-    timeZone: BUSINESS_TIMEZONE, timeZoneName: 'shortOffset',
-  }).formatToParts(date).find((p) => p.type === 'timeZoneName').value; // "GMT-4"
-  const m = /GMT([+-]\d+)/.exec(tz);
-  return m ? Number(m[1]) * 60 : -300;
 }
 
 exports.handler = async function (event) {
@@ -180,7 +170,9 @@ exports.handler = async function (event) {
     try {
       const auth = await googleAuth(['https://www.googleapis.com/auth/calendar']);
       const calendar = google.calendar({ version: 'v3', auth });
-      const pivot = new Date(dateTime.slice(0, 16) + ':00Z');
+      // The pickup time is Eastern wall-clock; the calendar API wants real
+      // instants. Converting is not optional - see easternToInstant.
+      const pivot = easternToInstant(dateTime) || new Date(dateTime.slice(0, 16) + ':00Z');
       const list = await calendar.events.list({
         calendarId: process.env.GOOGLE_CALENDAR_ID,
         timeMin: new Date(pivot.getTime() - SEARCH_WINDOW_MINUTES * 60000).toISOString(),

@@ -42,7 +42,7 @@ exports.handler = async function (event) {
     await auth.authorize();
     const sheets = google.sheets({ version: 'v4', auth });
 
-    const { keys, rows } = await readTab(sheets, process.env.GOOGLE_SHEET_ID, SHEET_TAB);
+    const { headers, keys, rows } = await readTab(sheets, process.env.GOOGLE_SHEET_ID, SHEET_TAB);
     const cutoff = Date.now() - LOOK_BACK_HOURS * 3600 * 1000;
 
     const rides = rows
@@ -79,6 +79,9 @@ exports.handler = async function (event) {
         drivers,
         driversError,
         hasDriverColumn: keys.includes('driver'),
+        // what the sheet's header row actually says, so an empty field on the
+        // dispatch card points at a missing column rather than a mystery
+        sheetColumns: headers,
       }),
     };
   } catch (err) {
