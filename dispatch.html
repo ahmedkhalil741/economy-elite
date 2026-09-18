@@ -79,15 +79,25 @@
   /* Change the price after the fact — a renegotiation, an added stop, a route
      that turned out longer. Sits on the fare itself so it is obvious what it
      edits. */
-  /* The price, split. The card used to show one number, which is fine until
-     somebody asks why it is that number - on the phone, mid-conversation. The
-     parts are already in the sheet; this just stops them being a click away. */
-  .fare-split{display:flex;flex-wrap:wrap;gap:4px 14px;margin:10px 0 2px;
-              font-family:var(--mono);font-size:0.72rem;letter-spacing:0.04em;color:var(--steel)}
-  .fare-split .part{white-space:nowrap}
-  .fare-split .part b{font-weight:500;color:var(--dim)}
-  .fare-split .part.total b{color:var(--ink)}
-  .fare-split .part.tip{color:#6f6a5e}
+  /* The price, split line by line. It was one number, then a squeezed single
+     row; both are fine until somebody asks why it is that number while a
+     customer waits on the phone. Labels left, amounts right, in a column you
+     can read down. The parts were always in the sheet - this only stops them
+     being somewhere else. */
+  .fare-split{margin:12px 0 4px;padding:12px 14px;background:var(--raised);
+              border:1px solid var(--line);border-radius:10px;max-width:320px}
+  .fare-split .fsr{display:flex;justify-content:space-between;align-items:baseline;gap:16px;
+                   padding:3px 0;font-size:0.82rem;color:var(--dim)}
+  .fare-split .fsr .k{color:var(--steel)}
+  .fare-split .fsr .v{font-family:var(--mono);font-size:0.84rem;color:var(--dim);white-space:nowrap}
+  .fare-split .fsr.off .k,.fare-split .fsr.off .v{color:var(--accent)}
+  .fare-split .fsr.total{border-top:1px solid var(--line);margin-top:6px;padding-top:9px}
+  .fare-split .fsr.total .k{color:var(--ink)}
+  .fare-split .fsr.total .v{color:var(--ink);font-size:1rem;font-weight:600}
+  /* Below the total and outside the sum, because a tip is never collected. */
+  .fare-split .fsr.tip{margin-top:6px;padding-top:8px;border-top:1px dashed var(--line)}
+  .fare-split .fsr.tip .k,.fare-split .fsr.tip .v{color:#6f6a5e;font-size:0.76rem}
+  .fare-split .fsnote{font-size:0.7rem;color:#5f594e;line-height:1.5;margin-top:6px}
   .fare-edit{background:none;border:0;color:var(--accent);padding:0 0 0 6px;
              font-size:0.82rem;font-family:inherit;text-decoration:underline;text-underline-offset:3px}
   .fare-edit:hover{color:var(--ink)}
@@ -588,13 +598,31 @@
       const n = (v) => { const t = String(v == null ? '' : v).replace(/[$,\s]/g,''); return /^\d+(\.\d+)?$/.test(t) ? parseFloat(t) : null; };
       const cash = (v) => '$' + Number(v).toFixed(2).replace(/\.00$/, '');
       const totalN = n(r.fare), tollN = n(r.toll) || 0, cardN = n(r.cardFee) || 0, tipN = n(r.tip) || 0;
+      const discN = n(r.discount) || 0;
+      const fsr = (k, v, cls) => '<div class="fsr' + (cls ? ' ' + cls : '') + '">' +
+                                 '<span class="k">' + k + '</span>' +
+                                 '<span class="v">' + v + '</span></div>';
+      // The column has to ADD UP, or it is worse than the single number it
+      // replaced. The fare after any discount is total minus tolls and card
+      // fee; so when a discount is shown as its own line, the fare line above
+      // it must be the figure BEFORE that discount, or the reader does the
+      // subtraction twice and lands nowhere near the total.
+      const netFare = Math.max(0, totalN - tollN - cardN);
+      const grossFare = netFare + discN;
       const split = totalN === null ? '' :
         '<div class="fare-split">' +
-          '<span class="part"><b>' + cash(Math.max(0, totalN - tollN - cardN)) + '</b> fare</span>' +
-          (tollN ? '<span class="part"><b>' + cash(tollN) + '</b> tolls</span>' : '') +
-          (cardN ? '<span class="part"><b>' + cash(cardN) + '</b> card fee</span>' : '') +
-          '<span class="part total"><b>' + cash(totalN) + '</b> total</span>' +
-          (tipN ? '<span class="part tip">' + cash(tipN) + ' tip suggested</span>' : '') +
+          fsr('Fare', cash(grossFare)) +
+          // Shown because this card is yours. The driver's copy never carries it.
+          (discN ? fsr('Discount given', '&minus; ' + cash(discN) +
+                       (r.discountReason ? '' : ''), 'off') : '') +
+          (tollN ? fsr('Tolls', cash(tollN)) : '') +
+          (cardN ? fsr('Card fee', cash(cardN)) : '') +
+          fsr('Total to collect', cash(totalN), 'total') +
+          (tipN ? fsr('Suggested tip', cash(tipN), 'tip') : '') +
+          (tipN ? '<div class="fsnote">The tip is on top of the total and is the customer\'s ' +
+                  'choice &mdash; 20% of the fare, not the tolls or the card fee.</div>' : '') +
+          (discN && r.discountReason ? '<div class="fsnote">Discount: ' + esc(r.discountReason) +
+                  '. The driver is shown the total only.</div>' : '') +
         '</div>';
 
       return '<div class="ride' + (r.driver ? ' assigned' : '') + (isDone ? ' completed' : '') +
@@ -610,7 +638,7 @@
           (r.notes && r.notes !== 'N/A' ? '<br>' + esc(r.notes) : '') +
           (split ? split
                  : ' &middot; <span class="fare-val">' + esc(r.fare || 'no fare') + '</span>') +
-          '<button class="fare-edit">change</button>' +
+          '<button class="fare-edit">change the price</button>' +
         '</div>' +
         '<div class="assign-row">' +
           (r.driver ? '<span class="current">Driver: ' + esc(r.driver) + '</span>' : '') +
