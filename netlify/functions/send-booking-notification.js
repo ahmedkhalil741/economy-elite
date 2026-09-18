@@ -21,21 +21,18 @@ function fareTable(fare) {
   const rows = [];
 
   if (fare.matched && fare.total !== null) {
-    const hasExtras = Boolean(fare.suvFee || fare.suvFeeNy || fare.sedanFeeNy || fare.overnightFee || fare.toll || fare.cardFee || fare.discountApplied);
-    // With no extras the base fare IS the total — don't print the same
-    // number twice, just show the one line.
+    const shownFare = fare.fareBeforeDiscount ?? fare.fare;
+    const hasExtras = Boolean(fare.toll || fare.cardFee || fare.discountApplied);
+    // With no extras the fare IS the total — don't print the same number
+    // twice, just show the one line.
     if (hasExtras) {
-      rows.push(['Base fare', `$${fare.base}`]);
-      if (fare.suvFee) rows.push(['SUV fee', `$${fare.suvFee}`]);
-      if (fare.suvFeeNy) rows.push(['New York fee (SUV)', `$${fare.suvFeeNy}`]);
-      if (fare.sedanFeeNy) rows.push(['New York fee (sedan)', `$${fare.sedanFeeNy}`]);
-      if (fare.overnightFee) rows.push(['Overnight fee', `$${fare.overnightFee}`]);
+      rows.push(['Fare', `$${shownFare}`]);
       // This email goes to Ahmed and nobody else, so the discount is stated
       // plainly rather than folded into the fare.
       if (fare.discountApplied) rows.push(['Discount', `\u2212 $${fare.discountApplied}`]);
-      // Its own line, never folded into the base. "No surprises" only holds
-      // if the customer is told the number before the car moves.
-      if (fare.toll) rows.push(['Tolls (estimated)', `$${fare.toll}`]);
+      // Its own line, never folded into the fare. Ahmed doesn't set either of
+      // these two, which is exactly why they're shown apart.
+      if (fare.toll) rows.push(['Tolls', `$${fare.toll}`]);
       if (fare.cardFee) rows.push([`${fare.cardFeeLabel} fee (${fare.cardFeeRate})`, `$${fare.cardFee.toFixed(2)}`]);
     }
     rows.push(['Fare total', `$${fare.total}`, true]);

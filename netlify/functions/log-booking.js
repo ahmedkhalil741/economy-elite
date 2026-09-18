@@ -16,9 +16,9 @@
 // The values it knows how to fill, by header name:
 //   timestamp, requested_datetime, pickup, dropoff, name, phone,
 //   passengers, car_seats, elderly_assistance, flight, cabin_temp,
-//   text_before_ride, payment_method, notes, source, base_fare, suv_fee,
-//   sedan, vehicle, toll, discount, discount_reason, tip, overnight_trip,
-//   hourly_trip, waiting_late_fee, fare_total
+//   text_before_ride, payment_method, notes, source, zone, base_fare,
+//   card_fee, sedan, vehicle, toll, discount, discount_reason,
+//   discount_spent, tip, hourly_trip, waiting_late_fee, fare_total
 // Any column whose header isn't in that list is left alone (so your own
 // notes/status columns won't get overwritten). Any header in that list
 // that isn't in your sheet is simply skipped.
@@ -120,21 +120,20 @@ exports.handler = async function (event) {
       // Every booking starts here. Points are only awarded when this becomes
       // "Completed" on the dispatch page — see _loyalty.js.
       ride_status: 'Requested',
-      base_fare: hasNumericFare ? fare.base : NA,
-      // Exactly one of these three ever carries a number — the standard SUV
-      // fee for New Jersey, or the New York fee for the vehicle booked. The
-      // other two are "N/A", never 0, so a blank fee can't be mistaken for
-      // a charge of nothing.
+      // The whole driving charge for the vehicle booked, city premium,
+      // SUV surcharge and overnight all included. There is no longer a
+      // separate fee column for any of them — see _fare-calc.js.
+      base_fare: hasNumericFare ? (fare.fareBeforeDiscount ?? fare.fare) : NA,
+      // Which of the five the ride was: Newark, Manhattan, LaGuardia, JFK,
+      // Local, or Other. This exists so a year-end question like "how much
+      // did city work earn me" is one SUMIFS instead of a fragile text match
+      // against a free-typed address.
+      zone: fare.zone || NA,
       card_fee: orNA(fare.cardFee),
-      suv_fee: orNA(fare.suvFee),
-      suv_fee_ny: orNA(fare.suvFeeNy),
-      sedan_fee_ny: orNA(fare.sedanFeeNy),
       sedan: isSedan ? 'Yes' : 'No',
       // Says the vehicle outright so you never have to work it out from a
-      // Yes/No plus a fee column. On a local trip the fare is one
-      // all-inclusive range with no separate vehicle fee, so suv_fee is
-      // legitimately N/A even on an SUV booking — which read as a
-      // contradiction until this column existed.
+      // Yes/No. Paired with `zone`, this is what makes revenue splittable by
+      // car and by destination at year-end.
       vehicle: isSedan ? 'Sedan' : 'SUV',
       // A column headed "vehicle" or "car" normalises to car_type (see
       // HEADER_ALIASES in _sheet.js), so a row keyed only `vehicle` left that
@@ -157,8 +156,6 @@ exports.handler = async function (event) {
       // actually happened on the road.
       waiting_late_fee: NA,
       tip: orNA(fare.tipSuggested),
-      // The amount charged for an overnight pickup, "N/A" when it isn't one.
-      overnight_trip: orNA(fare.overnightFee),
       // Always N/A. The booking form has no hourly option, so a web booking
       // is never an hourly job and there is no amount to record. This used to
       // read `fare.matched ? 'No' : 'Yes'`, which was wrong twice over: it

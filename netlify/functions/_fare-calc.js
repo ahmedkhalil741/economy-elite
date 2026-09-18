@@ -40,7 +40,6 @@ function numOrNull(v) {
 // SUV surcharges. A sedan pays neither.
 const SUV_FEE = 35;        // to Newark
 const SUV_FEE_NY = 50;     // to Manhattan, LaGuardia, JFK
-const SEDAN_FEE_NY = null; // retired, see note above
 
 // Pickup between 12:00 AM and 5:59 AM.
 const OVERNIGHT_FEE = 10;
@@ -82,13 +81,13 @@ const HOURLY_MINIMUM_HOURS = 0;
 
 // The four destinations the table prices. LaGuardia and JFK share a column.
 const DESTINATIONS = [
-  { key: 'ewr',    label: 'Newark Liberty Airport (EWR)', ny: false, test: /\bnewark\s*(liberty)?\s*(international)?\s*airport\b|\bewr\b/i },
+  { key: 'ewr',    zone: 'Newark',    label: 'Newark Liberty Airport (EWR)', ny: false, test: /\bnewark\s*(liberty)?\s*(international)?\s*airport\b|\bewr\b/i },
   // "New York" on its own is how Google labels a Manhattan address once the
   // street and the state have been stripped off ("350 5th Ave, New York, NY").
-  { key: 'manh',   label: 'Manhattan / New York City',    ny: true,  test: /\bmanhattan\b|^\s*new york\s*$|\bnew york,?\s*ny\b|\bnyc\b/i },
-  { key: 'lgajfk', label: 'LaGuardia Airport (LGA)',      ny: true,  test: /\blaguardia\b|\blga\b/i },
+  { key: 'manh',   zone: 'Manhattan', label: 'Manhattan / New York City',    ny: true,  test: /\bmanhattan\b|^\s*new york\s*$|\bnew york,?\s*ny\b|\bnyc\b/i },
+  { key: 'lgajfk', zone: 'LaGuardia', label: 'LaGuardia Airport (LGA)',      ny: true,  test: /\blaguardia\b|\blga\b/i },
   // Google writes it out in full: "John F Kennedy International Airport".
-  { key: 'lgajfk', label: 'JFK Airport',                  ny: true,  test: /\bjfk\b|\bjohn f\.?\s*kennedy\b|\bkennedy\s+(international\s+)?airport\b/i },
+  { key: 'lgajfk', zone: 'JFK',       label: 'JFK Airport',                  ny: true,  test: /\bjfk\b|\bjohn f\.?\s*kennedy\b|\bkennedy\s+(international\s+)?airport\b/i },
 ];
 
 // One row per town. `names` holds every spelling worth matching — Google
@@ -96,83 +95,83 @@ const DESTINATIONS = [
 // "Seaside Hghts"). Longest match wins, so "South Bound Brook" beats
 // "Bound Brook" and "New Providence" beats "Union".
 const TOWN_FARES = [
-  { town: 'Allentown',        names: ['allentown'],                              ewr: 150, manh: 210, lgajfk: 260 },
-  { town: 'Asbury Park',      names: ['asbury park'],                            ewr: 120, manh: 180, lgajfk: 230 },
-  { town: 'Avenel',           names: ['avenel'],                                 ewr: 75,  manh: 135, lgajfk: 185 },
-  { town: 'Basking Ridge',    names: ['basking ridge'],                          ewr: 105, manh: 165, lgajfk: 215 },
-  { town: 'Bayonne',          names: ['bayonne'],                                ewr: 80,  manh: 140, lgajfk: 190 },
-  { town: 'The Hills',        names: ['the hills'],                              ewr: 110, manh: 170, lgajfk: 220 },
-  { town: 'Bedminster',       names: ['bedminster'],                             ewr: 115, manh: 175, lgajfk: 220 },
-  { town: 'Belle Mead',       names: ['belle mead', 'bellmead'],                 ewr: 130, manh: 190, lgajfk: 240 },
-  { town: 'Berkeley Heights', names: ['berkeley heights'],                       ewr: 80,  manh: 140, lgajfk: 185 },
-  { town: 'Bound Brook',      names: ['bound brook'],                            ewr: 80,  manh: 150, lgajfk: 190 },
-  { town: 'Bernardsville',    names: ['bernardsville'],                          ewr: 115, manh: 175, lgajfk: 225 },
-  { town: 'Branchburg',       names: ['branchburg'],                             ewr: 115, manh: 175, lgajfk: 225 },
-  { town: 'Bridgewater',      names: ['bridgewater'],                            ewr: 115, manh: 165, lgajfk: 215 },
-  { town: 'Chatham',          names: ['chatham'],                                ewr: 80,  manh: 140, lgajfk: 185 },
-  { town: 'Chester',          names: ['chester'],                                ewr: 145, manh: 200, lgajfk: 250 },
-  { town: 'Clinton',          names: ['clinton'],                                ewr: 150, manh: 210, lgajfk: 260 },
-  { town: 'Convent Station',  names: ['convent station'],                        ewr: 90,  manh: 150, lgajfk: 200 },
-  { town: 'Dunellen',         names: ['dunellen'],                               ewr: 85,  manh: 145, lgajfk: 195 },
-  { town: 'East Hanover',     names: ['east hanover'],                           ewr: 85,  manh: 150, lgajfk: 195 },
-  { town: 'Edison',           names: ['edison'],                                 ewr: 75,  manh: 130, lgajfk: 180 },
-  { town: 'Far Hills',        names: ['far hills'],                              ewr: 115, manh: 165, lgajfk: 225 },
-  { town: 'Flanders',         names: ['flanders'],                               ewr: 125, manh: 185, lgajfk: 235 },
-  { town: 'Flemington',       names: ['flemington'],                             ewr: 130, manh: 190, lgajfk: 240 },
-  { town: 'Florham Park',     names: ['florham park'],                           ewr: 80,  manh: 140, lgajfk: 190 },
-  { town: 'Gillette',         names: ['gillette'],                               ewr: 85,  manh: 145, lgajfk: 195 },
-  { town: 'Gladstone',        names: ['gladstone', 'gladestone'],                ewr: 130, manh: 190, lgajfk: 235 },
-  { town: 'Green Brook',      names: ['green brook', 'greenbrook'],              ewr: 90,  manh: 150, lgajfk: 195 },
-  { town: 'Green Village',    names: ['green village'],                          ewr: 95,  manh: 155, lgajfk: 200 },
-  { town: 'Hillsborough',     names: ['hillsborough'],                           ewr: 120, manh: 180, lgajfk: 230 },
-  { town: 'Hoboken',          names: ['hoboken'],                                ewr: 80,  manh: 140, lgajfk: 190 },
-  { town: 'Jersey City',      names: ['jersey city'],                            ewr: 75,  manh: 125, lgajfk: 185 },
-  { town: 'Lebanon',          names: ['lebanon'],                                ewr: 130, manh: 190, lgajfk: 240 },
-  { town: 'Liberty Corner',   names: ['liberty corner'],                         ewr: 110, manh: 170, lgajfk: 215 },
-  { town: 'Livingston',       names: ['livingston'],                             ewr: 80,  manh: 140, lgajfk: 190 },
-  { town: 'Long Valley',      names: ['long valley'],                            ewr: 95,  manh: 155, lgajfk: 205 },
-  { town: 'Madison',          names: ['madison'],                                ewr: 105, manh: 165, lgajfk: 215 },
-  { town: 'Martinsville',     names: ['martinsville'],                           ewr: 115, manh: 175, lgajfk: 225 },
-  { town: 'Meyersville',      names: ['meyersville'],                            ewr: 95,  manh: 145, lgajfk: 205 },
-  { town: 'Mendham',          names: ['mendham'],                                ewr: 125, manh: 185, lgajfk: 235 },
-  { town: 'Mountain Lakes',   names: ['mountain lakes'],                         ewr: 125, manh: 185, lgajfk: 235 },
-  { town: 'Millburn',         names: ['millburn'],                               ewr: 75,  manh: 135, lgajfk: 185 },
-  { town: 'Millington',       names: ['millington'],                             ewr: 95,  manh: 150, lgajfk: 200 },
-  { town: 'Morristown',       names: ['morristown'],                             ewr: 100, manh: 160, lgajfk: 210 },
-  { town: 'Mountainside',     names: ['mountainside'],                           ewr: 75,  manh: 135, lgajfk: 185 },
-  { town: 'Murray Hill',      names: ['murray hill', 'murray hills'],            ewr: 75,  manh: 135, lgajfk: 185 },
-  { town: 'New Brunswick',    names: ['new brunswick'],                          ewr: 95,  manh: 145, lgajfk: 205 },
-  { town: 'New Providence',   names: ['new providence'],                         ewr: 75,  manh: 135, lgajfk: 185 },
-  { town: 'New Vernon',       names: ['new vernon'],                             ewr: 95,  manh: 155, lgajfk: 205 },
-  { town: 'Plainfield',       names: ['plainfield'],       ewr: 85,  manh: 145, lgajfk: 195 },
-  { town: 'North Plainfield', names: ['north plainfield', 'n. plainfield'],      ewr: 85,  manh: 140, lgajfk: 190 },
-  { town: 'Orange',           names: ['orange'],           ewr: 80,  manh: 140, lgajfk: 190 },
-  { town: 'Oldwick',          names: ['oldwick'],                                ewr: 110, manh: 170, lgajfk: 220 },
-  { town: 'Parsippany',       names: ['parsippany'],                             ewr: 85,  manh: 145, lgajfk: 195 },
-  { town: 'Peapack',          names: ['peapack'],                                ewr: 130, manh: 190, lgajfk: 240 },
-  { town: 'Phillipsburg',     names: ['phillipsburg', 'philipsburg'],            ewr: 180, manh: 240, lgajfk: 290 },
-  { town: 'Piscataway',       names: ['piscataway'],                             ewr: 100, manh: 160, lgajfk: 210 },
-  { town: 'Princeton',        names: ['princeton'],                              ewr: 155, manh: 215, lgajfk: 265 },
-  { town: 'Sayreville',       names: ['sayreville'],                             ewr: 90,  manh: 150, lgajfk: 195 },
-  { town: 'Scotch Plains',    names: ['scotch plains', 'scotch plain'],          ewr: 80,  manh: 140, lgajfk: 190 },
-  { town: 'Seaside Heights',  names: ['seaside heights', 'seaside hghts'],       ewr: 185, manh: 245, lgajfk: 295 },
-  { town: 'Short Hills',      names: ['short hills'],                            ewr: 85,  manh: 145, lgajfk: 195 },
-  { town: 'South Bound Brook',names: ['south bound brook', 's. bound brook'],    ewr: 85,  manh: 145, lgajfk: 190 },
-  { town: 'Springfield',      names: ['springfield'],                            ewr: 75,  manh: 135, lgajfk: 185 },
-  { town: 'Somerville',       names: ['somerville'],                             ewr: 125, manh: 195, lgajfk: 235 },
-  { town: 'South Plainfield', names: ['south plainfield', 's. plainfield'],      ewr: 85,  manh: 145, lgajfk: 195 },
-  { town: 'Stirling',         names: ['stirling'],                               ewr: 90,  manh: 150, lgajfk: 200 },
-  { town: 'Summit',           names: ['summit'],                                 ewr: 75,  manh: 135, lgajfk: 185 },
-  { town: 'Trenton',          names: ['trenton'],                                ewr: 160, manh: 220, lgajfk: 270 },
-  { town: 'Toms River',       names: ['toms river'],                             ewr: 175, manh: 235, lgajfk: 285 },
-  { town: 'Union',            names: ['union'],                                  ewr: 75,  manh: 135, lgajfk: 185 },
-  { town: 'Warren',           names: ['warren'],                                 ewr: 95,  manh: 155, lgajfk: 205 },
-  { town: 'Watchung',         names: ['watchung'],                               ewr: 90,  manh: 150, lgajfk: 200 },
-  { town: 'West Orange',      names: ['west orange', 'w. orange'],               ewr: 85,  manh: 145, lgajfk: 195 },
-  { town: 'Westfield',        names: ['westfield'],                              ewr: 85,  manh: 145, lgajfk: 195 },
-  { town: 'Whippany',         names: ['whippany'],                               ewr: 85,  manh: 145, lgajfk: 195 },
-  { town: 'Whitehouse',       names: ['whitehouse station', 'whitehouse'],       ewr: 145, manh: 205, lgajfk: 255 },
-  { town: 'Woodbridge',       names: ['woodbridge'],                             ewr: 90,  manh: 150, lgajfk: 200 },
+  { town: 'Allentown',        names: ['allentown'],                              ewr: 150, manh: 245, lgajfk: 295 },
+  { town: 'Asbury Park',      names: ['asbury park'],                            ewr: 120, manh: 215, lgajfk: 265 },
+  { town: 'Avenel',           names: ['avenel'],                                 ewr: 75,  manh: 170, lgajfk: 220 },
+  { town: 'Basking Ridge',    names: ['basking ridge'],                          ewr: 105, manh: 200, lgajfk: 250 },
+  { town: 'Bayonne',          names: ['bayonne'],                                ewr: 80,  manh: 175, lgajfk: 225 },
+  { town: 'The Hills',        names: ['the hills'],                              ewr: 110, manh: 205, lgajfk: 255 },
+  { town: 'Bedminster',       names: ['bedminster'],                             ewr: 115, manh: 210, lgajfk: 255 },
+  { town: 'Belle Mead',       names: ['belle mead', 'bellmead'],                 ewr: 130, manh: 225, lgajfk: 275 },
+  { town: 'Berkeley Heights', names: ['berkeley heights'],                       ewr: 80,  manh: 175, lgajfk: 220 },
+  { town: 'Bound Brook',      names: ['bound brook'],                            ewr: 80,  manh: 185, lgajfk: 225 },
+  { town: 'Bernardsville',    names: ['bernardsville'],                          ewr: 115, manh: 210, lgajfk: 260 },
+  { town: 'Branchburg',       names: ['branchburg'],                             ewr: 115, manh: 210, lgajfk: 260 },
+  { town: 'Bridgewater',      names: ['bridgewater'],                            ewr: 115, manh: 200, lgajfk: 250 },
+  { town: 'Chatham',          names: ['chatham'],                                ewr: 80,  manh: 175, lgajfk: 220 },
+  { town: 'Chester',          names: ['chester'],                                ewr: 145, manh: 235, lgajfk: 285 },
+  { town: 'Clinton',          names: ['clinton'],                                ewr: 150, manh: 245, lgajfk: 295 },
+  { town: 'Convent Station',  names: ['convent station'],                        ewr: 90,  manh: 185, lgajfk: 235 },
+  { town: 'Dunellen',         names: ['dunellen'],                               ewr: 85,  manh: 180, lgajfk: 230 },
+  { town: 'East Hanover',     names: ['east hanover'],                           ewr: 85,  manh: 185, lgajfk: 230 },
+  { town: 'Edison',           names: ['edison'],                                 ewr: 75,  manh: 165, lgajfk: 215 },
+  { town: 'Far Hills',        names: ['far hills'],                              ewr: 115, manh: 200, lgajfk: 260 },
+  { town: 'Flanders',         names: ['flanders'],                               ewr: 125, manh: 220, lgajfk: 270 },
+  { town: 'Flemington',       names: ['flemington'],                             ewr: 130, manh: 225, lgajfk: 275 },
+  { town: 'Florham Park',     names: ['florham park'],                           ewr: 80,  manh: 175, lgajfk: 225 },
+  { town: 'Gillette',         names: ['gillette'],                               ewr: 85,  manh: 180, lgajfk: 230 },
+  { town: 'Gladstone',        names: ['gladstone', 'gladestone'],                ewr: 130, manh: 225, lgajfk: 270 },
+  { town: 'Green Brook',      names: ['green brook', 'greenbrook'],              ewr: 90,  manh: 185, lgajfk: 230 },
+  { town: 'Green Village',    names: ['green village'],                          ewr: 95,  manh: 190, lgajfk: 235 },
+  { town: 'Hillsborough',     names: ['hillsborough'],                           ewr: 120, manh: 215, lgajfk: 265 },
+  { town: 'Hoboken',          names: ['hoboken'],                                ewr: 80,  manh: 175, lgajfk: 225 },
+  { town: 'Jersey City',      names: ['jersey city'],                            ewr: 75,  manh: 160, lgajfk: 220 },
+  { town: 'Lebanon',          names: ['lebanon'],                                ewr: 130, manh: 225, lgajfk: 275 },
+  { town: 'Liberty Corner',   names: ['liberty corner'],                         ewr: 110, manh: 205, lgajfk: 250 },
+  { town: 'Livingston',       names: ['livingston'],                             ewr: 80,  manh: 175, lgajfk: 225 },
+  { town: 'Long Valley',      names: ['long valley'],                            ewr: 95,  manh: 190, lgajfk: 240 },
+  { town: 'Madison',          names: ['madison'],                                ewr: 105, manh: 200, lgajfk: 250 },
+  { town: 'Martinsville',     names: ['martinsville'],                           ewr: 115, manh: 210, lgajfk: 260 },
+  { town: 'Meyersville',      names: ['meyersville'],                            ewr: 95,  manh: 180, lgajfk: 240 },
+  { town: 'Mendham',          names: ['mendham'],                                ewr: 125, manh: 220, lgajfk: 270 },
+  { town: 'Mountain Lakes',   names: ['mountain lakes'],                         ewr: 125, manh: 220, lgajfk: 270 },
+  { town: 'Millburn',         names: ['millburn'],                               ewr: 75,  manh: 170, lgajfk: 220 },
+  { town: 'Millington',       names: ['millington'],                             ewr: 95,  manh: 185, lgajfk: 235 },
+  { town: 'Morristown',       names: ['morristown'],                             ewr: 100, manh: 195, lgajfk: 245 },
+  { town: 'Mountainside',     names: ['mountainside'],                           ewr: 75,  manh: 170, lgajfk: 220 },
+  { town: 'Murray Hill',      names: ['murray hill', 'murray hills'],            ewr: 75,  manh: 170, lgajfk: 220 },
+  { town: 'New Brunswick',    names: ['new brunswick'],                          ewr: 95,  manh: 180, lgajfk: 240 },
+  { town: 'New Providence',   names: ['new providence'],                         ewr: 75,  manh: 170, lgajfk: 220 },
+  { town: 'New Vernon',       names: ['new vernon'],                             ewr: 95,  manh: 190, lgajfk: 240 },
+  { town: 'Plainfield',       names: ['plainfield'],       ewr: 85,  manh: 180, lgajfk: 230 },
+  { town: 'North Plainfield', names: ['north plainfield', 'n. plainfield'],      ewr: 85,  manh: 175, lgajfk: 225 },
+  { town: 'Orange',           names: ['orange'],           ewr: 80,  manh: 175, lgajfk: 225 },
+  { town: 'Oldwick',          names: ['oldwick'],                                ewr: 110, manh: 205, lgajfk: 255 },
+  { town: 'Parsippany',       names: ['parsippany'],                             ewr: 85,  manh: 180, lgajfk: 230 },
+  { town: 'Peapack',          names: ['peapack'],                                ewr: 130, manh: 225, lgajfk: 275 },
+  { town: 'Phillipsburg',     names: ['phillipsburg', 'philipsburg'],            ewr: 180, manh: 275, lgajfk: 325 },
+  { town: 'Piscataway',       names: ['piscataway'],                             ewr: 100, manh: 195, lgajfk: 245 },
+  { town: 'Princeton',        names: ['princeton'],                              ewr: 155, manh: 250, lgajfk: 300 },
+  { town: 'Sayreville',       names: ['sayreville'],                             ewr: 90,  manh: 185, lgajfk: 230 },
+  { town: 'Scotch Plains',    names: ['scotch plains', 'scotch plain'],          ewr: 80,  manh: 175, lgajfk: 225 },
+  { town: 'Seaside Heights',  names: ['seaside heights', 'seaside hghts'],       ewr: 185, manh: 280, lgajfk: 330 },
+  { town: 'Short Hills',      names: ['short hills'],                            ewr: 85,  manh: 180, lgajfk: 230 },
+  { town: 'South Bound Brook',names: ['south bound brook', 's. bound brook'],    ewr: 85,  manh: 180, lgajfk: 225 },
+  { town: 'Springfield',      names: ['springfield'],                            ewr: 75,  manh: 170, lgajfk: 220 },
+  { town: 'Somerville',       names: ['somerville'],                             ewr: 125, manh: 230, lgajfk: 270 },
+  { town: 'South Plainfield', names: ['south plainfield', 's. plainfield'],      ewr: 85,  manh: 180, lgajfk: 230 },
+  { town: 'Stirling',         names: ['stirling'],                               ewr: 90,  manh: 185, lgajfk: 235 },
+  { town: 'Summit',           names: ['summit'],                                 ewr: 75,  manh: 170, lgajfk: 220 },
+  { town: 'Trenton',          names: ['trenton'],                                ewr: 160, manh: 255, lgajfk: 305 },
+  { town: 'Toms River',       names: ['toms river'],                             ewr: 175, manh: 270, lgajfk: 320 },
+  { town: 'Union',            names: ['union'],                                  ewr: 75,  manh: 170, lgajfk: 220 },
+  { town: 'Warren',           names: ['warren'],                                 ewr: 95,  manh: 190, lgajfk: 240 },
+  { town: 'Watchung',         names: ['watchung'],                               ewr: 90,  manh: 185, lgajfk: 235 },
+  { town: 'West Orange',      names: ['west orange', 'w. orange'],               ewr: 85,  manh: 180, lgajfk: 230 },
+  { town: 'Westfield',        names: ['westfield'],                              ewr: 85,  manh: 180, lgajfk: 230 },
+  { town: 'Whippany',         names: ['whippany'],                               ewr: 85,  manh: 180, lgajfk: 230 },
+  { town: 'Whitehouse',       names: ['whitehouse station', 'whitehouse'],       ewr: 145, manh: 240, lgajfk: 290 },
+  { town: 'Woodbridge',       names: ['woodbridge'],                             ewr: 90,  manh: 185, lgajfk: 235 },
 ];
 
 // Requested pickup time falls between 12:00 AM and 5:59 AM -> overnight.
@@ -291,16 +290,17 @@ function findDestination(text) {
 }
 
 
-function noMatch(overnight, note) {
+// A route with no listed price still has a destination most of the time — it
+// is the TOWN that's missing, not the airport. Carrying the zone through means
+// a hand-quoted JFK run still counts as JFK at year-end instead of landing in
+// "Other" and quietly understating what the airports earn.
+function noMatch(overnight, note, zone) {
   return {
     matched: false,
     label: null,
+    zone: zone || 'Other',
     newYork: false,
-    base: null,
-    suvFee: null,
-    suvFeeNy: null,
-    sedanFeeNy: null,
-    overnightFee: overnight || null,
+    fare: null,
     toll: null,
     tollEstimated: false,
     cardFee: null,
@@ -320,7 +320,7 @@ function noMatch(overnight, note) {
 // is given, because the routes you most often agree by phone are precisely the
 // ones with no listed price — so it has to work when the town is unknown, not
 // only when it is known.
-function agreedResult(agreed, toll, payMethod, label, setCard) {
+function agreedResult(agreed, toll, payMethod, label, setCard, zone) {
   const rideFare = agreed + toll;
   const auto = cardFeeFor(payMethod, rideFare);
   // A hand-set card fee wins, including a deliberate zero — waiving it is a
@@ -328,14 +328,13 @@ function agreedResult(agreed, toll, payMethod, label, setCard) {
   const cardAmount = setCard !== null && setCard !== undefined ? setCard : (auto ? auto.amount : null);
   const total = Math.round((rideFare + (cardAmount || 0)) * 100) / 100;
 
-  const bits = [`$${agreed} agreed`];
+  const bits = [`$${agreed} fare`];
   if (toll) bits.push(`$${toll} tolls`);
   if (cardAmount) bits.push(`$${cardAmount.toFixed(2)} ${auto ? auto.label : 'card'} fee`);
 
   return {
-    matched: true, label: label || 'Agreed by phone', newYork: false,
-    agreedFare: agreed, base: agreed, suvFee: null, suvFeeNy: null,
-    sedanFeeNy: SEDAN_FEE_NY, overnightFee: null,
+    matched: true, label: label || 'Agreed by phone', zone: zone || 'Other', newYork: false,
+    agreedFare: agreed, fare: agreed,
     toll: toll || null, tollEstimated: Boolean(toll),
     cardFee: cardAmount,
     cardFeeLabel: cardAmount ? (auto ? auto.label : 'Card') : null,
@@ -344,6 +343,7 @@ function agreedResult(agreed, toll, payMethod, label, setCard) {
     totalDisplay: `$${total.toFixed(2).replace(/\.00$/, '')}`,
     tipSuggested: Math.round(agreed * 0.2),
     display: `$${total.toFixed(2).replace(/\.00$/, '')} flat (${bits.join(' + ')})`,
+    driverDisplay: `$${total.toFixed(2).replace(/\.00$/, '')} flat (${bits.join(' + ')})`,
   };
 }
 
@@ -391,18 +391,27 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
     if (!town) {
       // No listed price — but if one was agreed on the phone, that IS the
       // price, and the toll for this destination still applies.
-      if (anySet) return agreedResult(agreed !== null ? agreed : 0, setToll !== null ? setToll : destToll, payMethod, `Agreed — ${dest.label}`, setCard);
-      return noMatch(overnight, `${dest.label} — no listed price for that town. Quote it by hand, then tell Claude the number and it gets added.${overnightNote}`);
+      if (anySet) return agreedResult(agreed !== null ? agreed : 0, setToll !== null ? setToll : destToll, payMethod, `Agreed — ${dest.label}`, setCard, dest.zone);
+      return noMatch(overnight, `${dest.label} — no listed price for that town. Quote it by hand, then tell Claude the number and it gets added.${overnightNote}`, dest.zone);
     }
 
+    // One driving charge, not a stack of fees.
+    //
+    // Ahmed's decision, 2026-09-18: the customer, the driver and the sheet all
+    // see the same four numbers — fare, tolls, card fee, total. The $35 city
+    // premium that used to be a "New York fee" now lives inside the town
+    // table, and the SUV surcharge and the overnight charge are added here and
+    // never shown apart. The reason is that a number living in two places is a
+    // number that can disagree with itself: the old sedan New York fee sat in
+    // the code AND in the table, and New York sedan trips were billed twice
+    // for weeks before anyone noticed. Tolls and the card fee stay on their
+    // own lines because Ahmed does not set them — those are pass-throughs.
     const base = town[dest.key];
-    const suvFee = isSedan ? null : (dest.ny ? null : SUV_FEE);
-    const suvFeeNy = isSedan ? null : (dest.ny ? SUV_FEE_NY : null);
-    const vehicleFee = suvFee || suvFeeNy || 0;
+    const vehicleFee = isSedan ? 0 : (dest.ny ? SUV_FEE_NY : SUV_FEE);
 
     const toll = destToll;
 
-    if (anySet) return agreedResult(agreed !== null ? agreed : (base + vehicleFee + overnight), setToll !== null ? setToll : toll, payMethod, `Agreed — ${town.town} to ${dest.label}`, setCard);
+    if (anySet) return agreedResult(agreed !== null ? agreed : (base + vehicleFee + overnight), setToll !== null ? setToll : toll, payMethod, `Agreed — ${town.town} to ${dest.label}`, setCard, dest.zone);
     const driving = base + vehicleFee + overnight;
 
     // The card fee is worked out on everything going through the card,
@@ -416,25 +425,17 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
     // cut. Nobody tips twenty per cent of a bridge.
     const tippable = driving;
 
-    const parts = agreed !== null
-      ? [`$${agreed} agreed`]
-      : [`$${base} ${town.town}`];
-    if (agreed === null && suvFee) parts.push(`$${suvFee} SUV`);
-    if (agreed === null && suvFeeNy) parts.push(`$${suvFeeNy} SUV (New York)`);
-    if (agreed === null && overnight) parts.push(`$${overnight} overnight`);
+    const parts = [`$${driving} fare`];
     if (toll) parts.push(`$${toll} tolls`);
     if (card) parts.push(`$${card.amount.toFixed(2)} ${card.label} fee`);
 
     return {
       matched: true,
       label: `${town.town} — ${dest.label}`,
+      zone: dest.zone,
       newYork: Boolean(dest.ny),
       agreedFare: agreed,
-      base: agreed !== null ? agreed : base,
-      suvFee: agreed !== null ? null : suvFee,
-      suvFeeNy: agreed !== null ? null : suvFeeNy,
-      sedanFeeNy: SEDAN_FEE_NY,
-      overnightFee: agreed !== null ? null : (overnight || null),
+      fare: driving,
       toll: toll || null,
       tollEstimated: Boolean(toll),
       cardFee: card ? card.amount : null,
@@ -444,9 +445,8 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
       total,
       totalDisplay: `$${total.toFixed(2).replace(/\.00$/, '')}`,
       tipSuggested: Math.round(tippable * 0.2),
-      display: parts.length > 1
-        ? `$${total.toFixed(2).replace(/\.00$/, '')} flat (${parts.join(' + ')})`
-        : `$${total.toFixed(2).replace(/\.00$/, '')} flat (${town.town}, sedan)`,
+      display: `$${total.toFixed(2).replace(/\.00$/, '')} flat (${parts.join(' + ')})`,
+      driverDisplay: `$${total.toFixed(2).replace(/\.00$/, '')} flat (${parts.join(' + ')})`,
     };
   }
 
@@ -455,19 +455,18 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
   const townB = findTown(dropoff);
   if (townA && townB && anySet) {
     return agreedResult(agreed !== null ? agreed : 0, setToll !== null ? setToll : 0, payMethod,
-                        `Agreed — ${townA.town} to ${townB.town}`, setCard);
+                        `Agreed — ${townA.town} to ${townB.town}`, setCard, 'Local');
   }
   if (townA && townB) {
     const [lo, hi] = LOCAL_RANGE;
     return {
       matched: true,
       label: `Local — ${townA.town} to ${townB.town}`,
+      zone: 'Local',
       newYork: false,
-      base: null,
-      suvFee: null,
-      suvFeeNy: null,
-      sedanFeeNy: SEDAN_FEE_NY,
-      overnightFee: overnight || null,
+      // A range, not a number — the overnight charge is inside the figures
+      // below rather than on a line of its own.
+      fare: null,
       toll: LOCAL_TOLL || null,
       tollEstimated: false,
       // A range has no single number to take a percentage of, so the card fee
@@ -485,7 +484,7 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
 
   // Nothing matched at all, but a price was agreed — no destination, so no
   // toll to add.
-  if (anySet) return agreedResult(agreed !== null ? agreed : 0, setToll !== null ? setToll : 0, payMethod, 'Agreed by phone', setCard);
+  if (anySet) return agreedResult(agreed !== null ? agreed : 0, setToll !== null ? setToll : 0, payMethod, 'Agreed by phone', setCard, 'Other');
 
   return noMatch(overnight, `No listed price for this route. Quote it by hand, or $${HOURLY_RATE}/hr (no minimum) if it isn't a straight A-to-B trip.${overnightNote}`);
 }
@@ -560,6 +559,7 @@ function applyDiscount(result, discountRaw, payMethod, setCard) {
       ? `${money(unused)} of the credit is more than the fare — it stays on their balance.`
       : null,
     fareBeforeDiscount: driving,
+    fare: newDriving,
     rideFare,
     cardFee: cardAmount,
     cardFeeLabel: cardAmount ? (result.cardFeeLabel || (auto ? auto.label : 'Card')) : null,
@@ -598,7 +598,6 @@ module.exports = {
   HOURLY_MINIMUM_HOURS,
   SUV_FEE,
   SUV_FEE_NY,
-  SEDAN_FEE_NY,
   OVERNIGHT_FEE,
   TOLLS,
 };

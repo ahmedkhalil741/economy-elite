@@ -34,18 +34,18 @@ exports.handler = async function (event) {
     // stated. "Seventy-five, plus thirty-five because it's the Suburban."
     const lines = [];
     if (fare.matched) {
-      if (fare.agreedFare !== null && fare.agreedFare !== undefined) {
-        lines.push(`$${fare.agreedFare} agreed with the customer`);
-      } else if (fare.base) {
-        lines.push(`$${fare.base} base fare`);
-      }
-      if (fare.suvFee) lines.push(`$${fare.suvFee} SUV`);
-      if (fare.suvFeeNy) lines.push(`$${fare.suvFeeNy} SUV into New York`);
-      if (fare.overnightFee) lines.push(`$${fare.overnightFee} overnight pickup`);
+      // Four lines, never more. The vehicle surcharge, the city premium and
+      // the overnight charge all live inside the fare now — see _fare-calc.js
+      // for why. Tolls and the card fee keep their own lines because Ahmed
+      // does not set either one.
+      const shown = fare.fareBeforeDiscount !== undefined && fare.fareBeforeDiscount !== null
+        ? fare.fareBeforeDiscount
+        : fare.fare;
+      if (shown) lines.push(`$${shown} fare`);
       // Said out loud, with a minus sign, because this line is for Ahmed and
       // for the customer. The driver never sees it — see _fare-calc.js.
       if (fare.discountApplied) lines.push(`\u2212 $${fare.discountApplied} discount`);
-      if (fare.toll) lines.push(`$${fare.toll} tolls (estimated)`);
+      if (fare.toll) lines.push(`$${fare.toll} tolls`);
       if (fare.cardFee) lines.push(`$${fare.cardFee.toFixed(2)} ${fare.cardFeeLabel} fee (${fare.cardFeeRate})`);
     }
 
@@ -55,6 +55,7 @@ exports.handler = async function (event) {
         ready: true,
         matched: fare.matched,
         label: fare.label || null,
+        zone: fare.zone || null,
         total: fare.totalDisplay || null,
         display: fare.display,
         lines,
@@ -73,9 +74,7 @@ exports.handler = async function (event) {
           // would subtract it twice.
           fare: fare.fareBeforeDiscount !== undefined && fare.fareBeforeDiscount !== null
             ? fare.fareBeforeDiscount
-            : (fare.agreedFare !== null && fare.agreedFare !== undefined
-                ? fare.agreedFare
-                : ((fare.base || 0) + (fare.suvFee || 0) + (fare.suvFeeNy || 0) + (fare.overnightFee || 0))),
+            : (fare.fare || 0),
           discount: fare.discountApplied || 0,
           toll: fare.toll || 0,
           cardFee: fare.cardFee || 0,

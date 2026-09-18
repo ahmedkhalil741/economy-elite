@@ -23,8 +23,10 @@ const HEADER_ALIASES = {
   waiting_fee: 'waiting_late_fee',
   late_fee: 'waiting_late_fee',
   waiting_late: 'waiting_late_fee',
-  overnight: 'overnight_trip',
   hourly: 'hourly_trip',
+  // The destination bucket: Newark, Manhattan, LaGuardia, JFK, Local, Other.
+  destination: 'zone',
+  city: 'zone',
   total: 'fare_total',
   payment: 'payment_method',
   rides: 'total_rides',
