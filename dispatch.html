@@ -79,6 +79,15 @@
   /* Change the price after the fact — a renegotiation, an added stop, a route
      that turned out longer. Sits on the fare itself so it is obvious what it
      edits. */
+  /* The price, split. The card used to show one number, which is fine until
+     somebody asks why it is that number - on the phone, mid-conversation. The
+     parts are already in the sheet; this just stops them being a click away. */
+  .fare-split{display:flex;flex-wrap:wrap;gap:4px 14px;margin:10px 0 2px;
+              font-family:var(--mono);font-size:0.72rem;letter-spacing:0.04em;color:var(--steel)}
+  .fare-split .part{white-space:nowrap}
+  .fare-split .part b{font-weight:500;color:var(--dim)}
+  .fare-split .part.total b{color:var(--ink)}
+  .fare-split .part.tip{color:#6f6a5e}
   .fare-edit{background:none;border:0;color:var(--accent);padding:0 0 0 6px;
              font-size:0.82rem;font-family:inherit;text-decoration:underline;text-underline-offset:3px}
   .fare-edit:hover{color:var(--ink)}
@@ -569,6 +578,25 @@
           '</div>'
         : '';
 
+      // Every figure comes straight from the sheet. The fare line is the total
+      // MINUS tolls and card fee rather than the base_fare column, for the same
+      // reason the driver's copy is: base_fare is the figure BEFORE any
+      // discount, so adding the parts up would overshoot the total and show
+      // what the customer was let off. Subtracting always reconciles.
+      // Strict on purpose — see the note in assign-driver.js. parseFloat would
+      // read a "$25-35 flat" local band as 25 and print it as a settled price.
+      const n = (v) => { const t = String(v == null ? '' : v).replace(/[$,\s]/g,''); return /^\d+(\.\d+)?$/.test(t) ? parseFloat(t) : null; };
+      const cash = (v) => '$' + Number(v).toFixed(2).replace(/\.00$/, '');
+      const totalN = n(r.fare), tollN = n(r.toll) || 0, cardN = n(r.cardFee) || 0, tipN = n(r.tip) || 0;
+      const split = totalN === null ? '' :
+        '<div class="fare-split">' +
+          '<span class="part"><b>' + cash(Math.max(0, totalN - tollN - cardN)) + '</b> fare</span>' +
+          (tollN ? '<span class="part"><b>' + cash(tollN) + '</b> tolls</span>' : '') +
+          (cardN ? '<span class="part"><b>' + cash(cardN) + '</b> card fee</span>' : '') +
+          '<span class="part total"><b>' + cash(totalN) + '</b> total</span>' +
+          (tipN ? '<span class="part tip">' + cash(tipN) + ' tip suggested</span>' : '') +
+        '</div>';
+
       return '<div class="ride' + (r.driver ? ' assigned' : '') + (isDone ? ' completed' : '') +
              (isSettled ? ' done' : '') + '" data-i="' + i + '">' +
         '<div class="ride-when">' + esc(r.when || 'time not recorded') + '</div>' +
@@ -577,10 +605,12 @@
         '<div class="ride-meta">' + tags.join('') +
           (tags.length ? '<br>' : '') +
           esc(r.name || 'no name') + (r.phone ? ' &middot; <a href="tel:' + esc(r.phone) + '">' + esc(r.phone) + '</a>' : '') +
-          (r.fare ? ' &middot; <span class="fare-val">' + esc(r.fare) + '</span>' : ' &middot; <span class="fare-val">no fare</span>') +
-          '<button class="fare-edit">change</button>' +
+          (r.zone ? ' &middot; ' + esc(r.zone) : '') +
           (r.payMethod ? ' &middot; ' + esc(r.payMethod) : '') +
           (r.notes && r.notes !== 'N/A' ? '<br>' + esc(r.notes) : '') +
+          (split ? split
+                 : ' &middot; <span class="fare-val">' + esc(r.fare || 'no fare') + '</span>') +
+          '<button class="fare-edit">change</button>' +
         '</div>' +
         '<div class="assign-row">' +
           (r.driver ? '<span class="current">Driver: ' + esc(r.driver) + '</span>' : '') +

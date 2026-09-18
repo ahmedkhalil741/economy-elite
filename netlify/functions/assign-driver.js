@@ -147,9 +147,14 @@ exports.handler = async function (event) {
     // isn't visible. Ahmed's rule: the discount is between him and the
     // customer.
     const money = (n) => `$${Number(n).toFixed(2).replace(/\.00$/, '')}`;
+    // A STRICT number, not parseFloat. parseFloat('25-35 flat') is 25, which
+    // would have quoted a local ride banded at $25-35 as a flat $25 and told
+    // the driver to collect it. A value is a price only if the WHOLE string is
+    // one, which is how a range correctly falls through to being shown as it
+    // was written.
     const num = (v) => {
-      const x = parseFloat(String(v == null ? '' : v).replace(/[$,]/g, ''));
-      return isFinite(x) ? x : null;
+      const t = String(v == null ? '' : v).replace(/[$,\s]/g, '');
+      return /^\d+(\.\d+)?$/.test(t) ? parseFloat(t) : null;
     };
 
     const totalNum = num(storedFare);
