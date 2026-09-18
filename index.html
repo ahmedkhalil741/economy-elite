@@ -435,6 +435,29 @@
   }
   .story-attr{font-family:var(--mono); font-size:0.74rem; letter-spacing:0.05em; text-transform:uppercase; color:var(--steel);}
 
+  /* HANY'S WORD — a short statement, signed. Not a pull-quote and not a
+     second logo: the signature is deliberately small and sits at the weight
+     of a name written at the bottom of a letter. */
+  .hany-word{
+    font-family:var(--display); font-style:italic; font-weight:500;
+    font-size:1.08rem; line-height:1.6; color:var(--ink);
+    border:0; margin:18px 0 20px; max-width:34em;
+  }
+  .signed{display:flex; align-items:center; gap:16px; margin-bottom:6px;}
+  /* The PNG carries its shape in its alpha channel and is already the cream
+     the page uses, so it needs no filter and no background — it sits on the
+     panel the way ink sits on paper. Fixed width, height reserved, so the
+     text underneath doesn't jump while it loads. */
+  .signed img{width:140px; height:auto; opacity:0.92;}
+  .signed-name{
+    font-family:var(--mono); font-size:0.74rem; letter-spacing:0.09em;
+    text-transform:uppercase; color:var(--ink-dim); line-height:1.7;
+  }
+  .signed-name span{display:block; color:var(--steel); font-size:0.68rem;}
+  @media (max-width:620px){
+    .signed img{width:120px;}
+  }
+
   /* SERVICES */
   .services{padding:64px 0; border-bottom:1px solid var(--line);}
   .service-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:18px;}
@@ -586,6 +609,16 @@
       <h2>24+ years serving our community</h2>
       <p>For more than 24 years, Hany has driven people around New Providence and the surrounding towns. Many of his riders are his neighbors, and he drives them the way he'd drive his own family.</p>
       <p>Every driver on the team holds to that same standard — someone who knows you and looks out for you, not just another fare.</p>
+      <blockquote class="hany-word">
+        &ldquo;For more than 24 years, my goal has been simple &mdash; take care of every passenger the way I would take care of my own family.&rdquo;
+      </blockquote>
+      <div class="signed">
+        <img src="hany-signature.png"
+             srcset="hany-signature.png 1x, hany-signature@2x.png 2x"
+             alt="Hany's signature" width="140" height="49" loading="lazy">
+        <div class="signed-name">Hany<span>Founder, The Standard</span></div>
+      </div>
+
       <details class="story">
         <summary>Read Hany's story</summary>
         <div class="story-body">
