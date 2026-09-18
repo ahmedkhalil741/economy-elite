@@ -314,26 +314,28 @@ function noMatch(overnight, note) {
 // is given, because the routes you most often agree by phone are precisely the
 // ones with no listed price — so it has to work when the town is unknown, not
 // only when it is known.
-function agreedResult(agreed, toll, payMethod, label) {
+function agreedResult(agreed, toll, payMethod, label, setCard) {
   const rideFare = agreed + toll;
-  const card = cardFeeFor(payMethod, rideFare);
-  const total = Math.round((rideFare + (card ? card.amount : 0)) * 100) / 100;
+  const auto = cardFeeFor(payMethod, rideFare);
+  // A hand-set card fee wins, including a deliberate zero — waiving it is a
+  // real decision and has to be expressible.
+  const cardAmount = setCard !== null && setCard !== undefined ? setCard : (auto ? auto.amount : null);
+  const total = Math.round((rideFare + (cardAmount || 0)) * 100) / 100;
 
   const bits = [`$${agreed} agreed`];
   if (toll) bits.push(`$${toll} tolls`);
-  if (card) bits.push(`$${card.amount.toFixed(2)} ${card.label} fee`);
+  if (cardAmount) bits.push(`$${cardAmount.toFixed(2)} ${auto ? auto.label : 'card'} fee`);
 
   return {
     matched: true, label: label || 'Agreed by phone', newYork: false,
     agreedFare: agreed, base: agreed, suvFee: null, suvFeeNy: null,
     sedanFeeNy: SEDAN_FEE_NY, overnightFee: null,
     toll: toll || null, tollEstimated: Boolean(toll),
-    cardFee: card ? card.amount : null,
-    cardFeeLabel: card ? card.label : null,
-    cardFeeRate: card ? `${(card.rate * 100).toFixed(1)}% + $${card.fixed.toFixed(2)}` : null,
+    cardFee: cardAmount,
+    cardFeeLabel: cardAmount ? (auto ? auto.label : 'Card') : null,
+    cardFeeRate: cardAmount && auto ? `${(auto.rate * 100).toFixed(1)}% + $${auto.fixed.toFixed(2)}` : null,
     rideFare, total,
     totalDisplay: `$${total.toFixed(2).replace(/\.00$/, '')}`,
-    // The tip is on the driving only — never on the toll or the card fee.
     tipSuggested: Math.round(agreed * 0.2),
     display: `$${total.toFixed(2).replace(/\.00$/, '')} flat (${bits.join(' + ')})`,
   };
@@ -344,9 +346,24 @@ function agreedResult(agreed, toll, payMethod, label) {
 // toll or the card fee, because those are pass-throughs: the bridge and Square
 // charge what they charge whatever was agreed. They are added on top and shown
 // separately, so the number Ahmed typed stays visible as the number he typed.
-function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, agreedFare) {
-  const agreed = (agreedFare === 0 || agreedFare) && !isNaN(parseFloat(agreedFare))
-    ? Math.max(0, parseFloat(agreedFare)) : null;
+// `overrides` lets a person replace ANY line of the bill, not just the total:
+//   { fare, toll, cardFee }
+// Each is optional. Whatever is left out is calculated as normal, so changing
+// the toll alone leaves the rate card in charge of the fare, and waiving the
+// card fee leaves everything else untouched.
+//
+// This started life as a single "agreed fare" number. That was not enough:
+// Ahmed's real tolls differ from the table, customers get the card fee waived,
+// and a price settled on the phone still needs the toll on top. A plain number
+// is still accepted and means { fare }.
+function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
+  const num = (v) => ((v === 0 || v) && !isNaN(parseFloat(v))) ? Math.max(0, parseFloat(v)) : null;
+  const ov = (typeof overrides === 'object' && overrides !== null) ? overrides : { fare: overrides };
+  const setFare = num(ov.fare);
+  const setToll = num(ov.toll);
+  const setCard = num(ov.cardFee);
+  const anySet = setFare !== null || setToll !== null || setCard !== null;
+  const agreed = setFare;
   const isSedan = (vehicle || '').trim().toLowerCase() === 'sedan';
   const overnight = isOvernightPickup(dateTime) ? OVERNIGHT_FEE : 0;
   const overnightNote = overnight ? ` + $${overnight} overnight` : '';
@@ -369,7 +386,7 @@ function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, agreedFare)
     if (!town) {
       // No listed price — but if one was agreed on the phone, that IS the
       // price, and the toll for this destination still applies.
-      if (agreed !== null) return agreedResult(agreed, destToll, payMethod, `Agreed — ${dest.label}`);
+      if (anySet) return agreedResult(agreed !== null ? agreed : 0, setToll !== null ? setToll : destToll, payMethod, `Agreed — ${dest.label}`, setCard);
       return noMatch(overnight, `${dest.label} — no listed price for that town. Quote it by hand, then tell Claude the number and it gets added.${overnightNote}`);
     }
 
@@ -380,7 +397,7 @@ function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, agreedFare)
 
     const toll = destToll;
 
-    if (agreed !== null) return agreedResult(agreed, toll, payMethod, `Agreed — ${town.town} to ${dest.label}`);
+    if (anySet) return agreedResult(agreed !== null ? agreed : (base + vehicleFee + overnight), setToll !== null ? setToll : toll, payMethod, `Agreed — ${town.town} to ${dest.label}`, setCard);
     const driving = base + vehicleFee + overnight;
 
     // The card fee is worked out on everything going through the card,
@@ -431,8 +448,9 @@ function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, agreedFare)
   // No airport or Manhattan involved. Both ends listed towns -> local rate.
   const townA = findTown(pickup);
   const townB = findTown(dropoff);
-  if (townA && townB && agreed !== null) {
-    return agreedResult(agreed, 0, payMethod, `Agreed — ${townA.town} to ${townB.town}`);
+  if (townA && townB && anySet) {
+    return agreedResult(agreed !== null ? agreed : 0, setToll !== null ? setToll : 0, payMethod,
+                        `Agreed — ${townA.town} to ${townB.town}`, setCard);
   }
   if (townA && townB) {
     const [lo, hi] = LOCAL_RANGE;
@@ -462,7 +480,7 @@ function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, agreedFare)
 
   // Nothing matched at all, but a price was agreed — no destination, so no
   // toll to add.
-  if (agreed !== null) return agreedResult(agreed, 0, payMethod, 'Agreed by phone');
+  if (anySet) return agreedResult(agreed !== null ? agreed : 0, setToll !== null ? setToll : 0, payMethod, 'Agreed by phone', setCard);
 
   return noMatch(overnight, `No listed price for this route. Quote it by hand, or $${HOURLY_RATE}/hr (no minimum) if it isn't a straight A-to-B trip.${overnightNote}`);
 }

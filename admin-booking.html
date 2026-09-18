@@ -62,6 +62,20 @@
   .quote-amount.none{font-size:1rem;font-weight:400;color:#B5ADA0;line-height:1.5;}
   .quote-detail{font-size:0.85rem;color:#B5ADA0;line-height:1.7;margin-top:8px;}
   .quote-detail .tip{color:#8A8272;}
+  .qline{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #262019;}
+  .qk{flex:1;font-size:0.88rem;color:#B5ADA0;}
+  .qd{color:#8A8272;font-family:'IBM Plex Mono',monospace;font-size:0.9rem;}
+  .qin{width:100px;background:#0B0A08;border:1px solid #332D26;color:#F2EDE3;
+       padding:7px 10px;border-radius:8px;font-family:'IBM Plex Mono',monospace;
+       font-size:0.95rem;text-align:right;}
+  .qin:focus{outline:none;border-color:#C9A96B;}
+  .qin.edited{border-color:#C9A96B;color:#E8E1D2;}
+  .qtotal{display:flex;align-items:center;justify-content:space-between;gap:12px;
+          padding-top:14px;margin-top:6px;border-top:1px solid #332D26;}
+  .qreset{background:none;border:0;color:#8A8272;font-family:'IBM Plex Mono',monospace;
+          font-size:0.66rem;letter-spacing:0.08em;text-transform:uppercase;padding:10px 0 0;
+          cursor:pointer;text-decoration:underline;text-underline-offset:3px;}
+  .qreset:hover{color:#F2EDE3;}
   .review{background:#1C1815;border:1px solid #C9A96B;border-radius:14px;padding:22px;margin-top:20px;}
   .review-title{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;letter-spacing:0.12em;
                 text-transform:uppercase;color:#C9A96B;margin-bottom:14px;}
@@ -207,18 +221,38 @@
       </div>
     </div>
 
-    <div class="field">
-      <label for="a-agreed">Agreed fare (optional &mdash; leave blank to use the calculated one)</label>
-      <input type="number" id="a-agreed" min="0" step="1" placeholder="e.g. 180 if you settled on a different price">
-    </div>
 
     <!-- The number Ahmed reads out while the customer is still on the phone.
          It updates as the addresses are typed, so by the time he has both
          ends there is already a price on screen. -->
+    <!-- Every line is editable. The boxes fill themselves in from the rate
+         card as the addresses are typed; change one and that line is yours and
+         the total follows. Leave a box alone and it stays calculated. -->
     <div class="quote" id="quote">
       <div class="quote-label">Price to quote</div>
-      <div class="quote-amount" id="quoteAmount">&mdash;</div>
+
+      <div class="qline">
+        <span class="qk">Fare</span>
+        <span class="qd">$</span>
+        <input type="number" id="a-fare" min="0" step="1" class="qin">
+      </div>
+      <div class="qline">
+        <span class="qk">Tolls</span>
+        <span class="qd">$</span>
+        <input type="number" id="a-toll" min="0" step="1" class="qin">
+      </div>
+      <div class="qline" id="cardLine">
+        <span class="qk" id="cardLabel">Card fee</span>
+        <span class="qd">$</span>
+        <input type="number" id="a-cardfee" min="0" step="0.01" class="qin">
+      </div>
+
+      <div class="qtotal">
+        <span class="qk">Total</span>
+        <span class="quote-amount" id="quoteAmount">&mdash;</span>
+      </div>
       <div class="quote-detail" id="quoteDetail">Fill in the pickup and drop-off.</div>
+      <button type="button" class="qreset" id="resetPrice">Back to the calculated price</button>
     </div>
 
     <button type="submit" class="btn-primary">Review booking</button>
@@ -277,9 +311,34 @@
   }
 
   if(token) openForm();
-  // ---- the live price ----
-  // Debounced, because it fires on every keystroke in an address field and
-  // nobody needs a quote for "24 Gal".
+  // ---- the price, calculated but editable ----
+  //
+  // Each box fills itself in from the rate card. Touch one and it becomes
+  // YOURS - marked, and left alone by every later recalculation, because the
+  // software overwriting a number a person just typed is the most annoying
+  // thing a form can do. "Back to the calculated price" hands them all back.
+  const PRICE_FIELDS = { fare:'a-fare', toll:'a-toll', cardFee:'a-cardfee' };
+  const edited = { fare:false, toll:false, cardFee:false };
+
+  function overrides(){
+    const o = {};
+    for(const k in PRICE_FIELDS){
+      if(!edited[k]) continue;
+      const v = document.getElementById(PRICE_FIELDS[k]).value.trim();
+      if(v !== '') o[k] = Number(v);
+    }
+    return Object.keys(o).length ? o : null;
+  }
+
+  function clearEdits(){
+    for(const k in PRICE_FIELDS){
+      edited[k] = false;
+      document.getElementById(PRICE_FIELDS[k]).classList.remove('edited');
+    }
+    lastAsked = '';
+    askForQuote();
+  }
+
   let quoteTimer = null;
   let lastAsked = '';
 
@@ -298,8 +357,8 @@
       return;
     }
 
-    const agreed = document.getElementById('a-agreed').value.trim();
-    const asking = [pickup, dropoff, vehicle, dateTime, selectedPay, agreed].join('|');
+    const ov = overrides();
+    const asking = [pickup, dropoff, vehicle, dateTime, selectedPay, JSON.stringify(ov)].join('|');
     if(asking === lastAsked) return;
     lastAsked = asking;
 
@@ -308,25 +367,31 @@
       try{
         const r = await fetch('/.netlify/functions/quote-fare', {
           method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ token, pickup, dropoff, vehicle, dateTime, payMethod: selectedPay,
-                                 agreedFare: agreed === '' ? null : Number(agreed) })
+          body: JSON.stringify({ token, pickup, dropoff, vehicle, dateTime,
+                                 payMethod: selectedPay, overrides: ov })
         });
         const j = await r.json();
         if(!r.ok || !j.ready) throw new Error(j.error || j.reason || 'Could not work that out.');
+
+        // Fill only the boxes the person has not taken over.
+        if(j.parts){
+          if(!edited.fare)    document.getElementById('a-fare').value = j.parts.fare || 0;
+          if(!edited.toll)    document.getElementById('a-toll').value = j.parts.toll || 0;
+          if(!edited.cardFee) document.getElementById('a-cardfee').value = (j.parts.cardFee || 0).toFixed(2);
+        }
+        document.getElementById('cardLabel').textContent =
+          selectedPay === 'Cash' || selectedPay === 'Zelle' ? 'Card fee (none for ' + selectedPay + ')' : selectedPay + ' fee';
 
         if(j.matched){
           amount.className = 'quote-amount';
           amount.textContent = j.total || j.display;
           const bits = [];
           if(j.label) bits.push(j.label);
-          if(j.lines && j.lines.length) bits.push(j.lines.join(' + '));
-          if(j.tip) bits.push('<span class="tip">20% tip would be about $' + j.tip + '</span>');
+          if(j.tip) bits.push('<span class="tip">20% tip would be about $' + j.tip + ' &mdash; on the fare, not the tolls</span>');
           detail.innerHTML = bits.join('<br>');
         }else{
-          // Not on the rate card. Say so in words he can repeat down the phone
-          // rather than showing a number that isn't real.
           amount.className = 'quote-amount none';
-          amount.textContent = 'Not on the rate card \u2014 quote this one yourself.';
+          amount.textContent = 'Not on the rate card \u2014 type the fare above.';
           detail.innerHTML = j.display + (j.hourlyRate ? '<br><span class="tip">Hourly is $' + j.hourlyRate + '/hr, no minimum.</span>' : '');
         }
       }catch(err){
@@ -337,10 +402,20 @@
     }, 450);
   }
 
-  ['a-pickup','a-dropoff','a-vehicle','a-date','a-agreed'].forEach(id => {
+  ['a-pickup','a-dropoff','a-vehicle','a-date'].forEach(id => {
     const el = document.getElementById(id);
     if(el){ el.addEventListener('input', askForQuote); el.addEventListener('change', askForQuote); }
   });
+
+  for(const k in PRICE_FIELDS){
+    document.getElementById(PRICE_FIELDS[k]).addEventListener('input', function(){
+      edited[k] = true;
+      this.classList.add('edited');
+      askForQuote();
+    });
+  }
+
+  document.getElementById('resetPrice').addEventListener('click', clearEdits);
 
   document.getElementById('pinSubmit').addEventListener('click', tryUnlock);
   document.getElementById('pinInput').addEventListener('keydown', e => { if(e.key === 'Enter') tryUnlock(); });
@@ -418,8 +493,7 @@
       contact15: document.getElementById('a-contact15').checked,
       notes: document.getElementById('a-notes').value,
       vehicle: document.getElementById('a-vehicle').value,
-      agreedFare: document.getElementById('a-agreed').value.trim() === ''
-        ? null : Number(document.getElementById('a-agreed').value),
+      overrides: overrides(),
       payMethod: selectedPay,
     };
   }
@@ -521,6 +595,7 @@
     // Must match a data-pay value, or the next booking's card fee is silently
     // dropped.
     selectedPay = 'Square';
+    for(const k in PRICE_FIELDS){ edited[k] = false; document.getElementById(PRICE_FIELDS[k]).classList.remove('edited'); }
     lastAsked = '';
     document.getElementById('quoteAmount').className = 'quote-amount none';
     document.getElementById('quoteAmount').innerHTML = '&mdash;';
