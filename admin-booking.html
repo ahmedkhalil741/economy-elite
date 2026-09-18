@@ -92,6 +92,16 @@
             padding:13px 20px;font-weight:500;font-size:0.95rem;font-family:inherit;cursor:pointer;}
   .btn-line:hover{border-color:#8A8272;background:#161310;}
   .review-note{font-size:0.78rem;color:#8A8272;margin-top:12px;line-height:1.6;}
+  /* One tap between the two internal pages. They share a passcode, so moving
+     between them never asks again. */
+  .toolbar{display:flex;gap:0;border:1px solid #332D26;border-radius:100px;overflow:hidden;
+           margin-bottom:22px;max-width:360px}
+  .toolbar a{flex:1;text-align:center;padding:11px 14px;text-decoration:none;color:#B5ADA0;
+             font-family:'IBM Plex Mono',monospace;font-size:0.7rem;letter-spacing:0.1em;
+             text-transform:uppercase;}
+  .toolbar a + a{border-left:1px solid #332D26}
+  .toolbar a:hover{color:#F2EDE3;background:#161310}
+  .toolbar a.on{background:#C9A96B;color:#0B0A08;font-weight:600}
   [hidden]{display:none !important;}
 </style>
 </head>
@@ -107,6 +117,10 @@
 </div>
 
 <div class="wrap" id="formWrap" hidden>
+  <nav class="toolbar">
+    <a href="dispatch.html">Rides</a>
+    <a href="admin-booking.html" class="on">New booking</a>
+  </nav>
   <div class="eyebrow">The Standard — internal, not for customers</div>
   <h1>Quick booking entry</h1>
   <p class="sub">Use this whenever a booking comes in by phone, text, or email. It saves to the exact same sheet as web bookings, and updates the customer's saved preferences.</p>

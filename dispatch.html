@@ -103,6 +103,16 @@
   .how button + button{border-left:1px solid var(--line)}
   .how button:hover{color:var(--ink);background:var(--raised)}
   .how button.on{background:var(--accent);color:#0B0A08;font-weight:600}
+  /* One tap between the two internal pages. They share a passcode, so moving
+     between them never asks again. */
+  .toolbar{display:flex;gap:0;border:1px solid var(--line);border-radius:100px;overflow:hidden;
+           margin-bottom:22px;max-width:360px}
+  .toolbar a{flex:1;text-align:center;padding:11px 14px;text-decoration:none;color:var(--dim);
+             font-family:var(--mono);font-size:0.7rem;letter-spacing:0.1em;
+             text-transform:uppercase;}
+  .toolbar a + a{border-left:1px solid var(--line)}
+  .toolbar a:hover{color:var(--ink);background:var(--raised)}
+  .toolbar a.on{background:var(--accent);color:#0B0A08;font-weight:600}
   .empty{color:var(--steel);text-align:center;padding:50px 0;font-size:0.95rem}
   .hidden{display:none}
   .toprow{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:26px;flex-wrap:wrap}
@@ -129,6 +139,10 @@
     </div>
     <button class="btn-line" id="refresh">Refresh</button>
   </div>
+  <nav class="toolbar">
+    <a href="dispatch.html" class="on">Rides</a>
+    <a href="admin-booking.html">New booking</a>
+  </nav>
   <div id="setupNotes"></div>
   <div id="windowBar" class="windowbar"></div>
   <div id="list"></div>
@@ -284,8 +298,6 @@
         '<div class="fare-box" hidden>' +
           '<span class="lbl">New fare</span>' +
           '<input type="number" class="fare-in" min="0" step="1" placeholder="0">' +
-          '<span class="lbl">Tolls</span>' +
-          '<input type="number" class="toll-in" min="0" step="1" placeholder="optional">' +
           '<button class="btn fare-save">Save</button>' +
           '<button class="btn-line fare-cancel">Cancel</button>' +
           '<span class="result fareres"></span>' +
@@ -320,7 +332,6 @@
       const box = saveFare.closest('.fare-box');
       const out = box.querySelector('.fareres');
       const amount = box.querySelector('.fare-in').value.trim();
-      const tollVal = box.querySelector('.toll-in').value.trim();
 
       if(amount === ''){
         out.className = 'result fareres show';
@@ -336,7 +347,7 @@
           method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ token, rowNumber: ride.rowNumber, pickup: ride.pickup,
                                  dropoff: ride.dropoff, dateTime: ride.dateTime,
-                                 fare: amount, toll: tollVal })
+                                 fare: amount })
         });
         const j = await res.json();
         if(!res.ok || j.error) throw new Error(j.error || ('Error ' + res.status));
