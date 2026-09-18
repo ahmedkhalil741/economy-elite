@@ -15,9 +15,18 @@
 // anything else kept by hand — from being wiped on the next booking.
 //
 // Columns it fills automatically:
-//   phone, name, cabin_temp, car_seats, elderly_assistance, notes,
-//   car_type, total_rides, rides_this_month, month, first_ride, last_ride,
-//   status
+//   phone, email, name, cabin_temp, car_seats, elderly_assistance, notes,
+//   car_type, referred_by, total_rides, last_booked, status, activity
+//
+// Filled by set-ride-status.js when a ride is COMPLETED, not here:
+//   completed_rides, lifetime_points, first_ride, last_ride,
+//   credit_owed, credit_history
+//
+// GONE, and safe to delete from the sheet: `month` and `rides_this_month`.
+// They existed only for the old rule where Loyal meant ten rides inside one
+// calendar month. Under the lifetime rule nothing writes them, so whatever is
+// in those cells is frozen at the day the rule changed — which is worse than
+// empty, because it still looks like data.
 // Columns to keep by hand (never overwritten):
 //   likes, dislikes, and any other column of your own
 //
