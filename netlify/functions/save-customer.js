@@ -21,37 +21,40 @@
 // Columns to keep by hand (never overwritten):
 //   likes, dislikes, and any other column of your own
 //
-// ---- STATUS ----
-// A customer's first ever ride sets them to "New". Once they take
-// LOYAL_THRESHOLD rides inside a single calendar month they become "Loyal"
-// and STAY Loyal — a quiet month doesn't demote anyone.
+// ---- STATUS AND POINTS ----
+// This file NO LONGER decides status or awards points. Booking a ride is not
+// taking one: a cancellation and a no-show used to count exactly as much as a
+// finished airport run, which is what Ahmed's loyalty specification set out to
+// stop. Points are awarded in set-ride-status.js, when a ride is actually
+// marked Completed on the dispatch page.
 //
-// rides_this_month resets on its own: the `month` column records which month
-// the count belongs to, and when a booking comes in for a different month
-// the count starts over at 1.
+// What this file does with status: sets a brand-new customer to "New" and
+// then never touches it again. The rules themselves live in _loyalty.js.
+//
+// ---- IDENTIFYING A CUSTOMER ----
+// Phone number first, email second. Both are normalised before comparing, so
+// "(908) 494-9256" and "9084949256" are the same person, and a customer who
+// books once by phone and once with an email doesn't become two profiles.
 //
 // ---- MILESTONE ALERTS ----
-// An email goes to the owner when a customer first appears, when they reach
-// HEADS_UP_THRESHOLD rides in a month, and when they become Loyal — so an
-// offer can be sent their way. Offers themselves aren't automated yet; that
-// waits on the phone/SMS work.
+// One email when somebody first appears. The rest — credits earned, reaching
+// Loyal — come from set-ride-status, because that's where they're earned.
+// Offers are never sent automatically: Ahmed is told, Ahmed decides.
 
 const { google } = require('googleapis');
 const { readTab, buildRow, rowToObject } = require('./_sheet');
 const { easternToday } = require('./_format');
 const { sendOwnerEmail } = require('./_email');
+const L = require('./_loyalty');
 
 const CUSTOMERS_TAB = 'Customers';
 
-// Rides within one calendar month.
-const HEADS_UP_THRESHOLD = 5;   // "keep an eye on this one" email
-const LOYAL_THRESHOLD = 10;     // promotes to Loyal
-
-const STATUS_NEW = 'New';
-const STATUS_LOYAL = 'Loyal';
-
 function normalizePhone(phone) {
   return (phone || '').replace(/\D/g, '').slice(-10);
+}
+
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
 }
 
 async function getSheetsClient() {
@@ -65,48 +68,19 @@ async function getSheetsClient() {
   return google.sheets({ version: 'v4', auth });
 }
 
-// Decides what the milestone email should say, or null for "nothing worth
-// interrupting them about". Only fires on the ride that actually crosses a
-// line, never on every ride afterwards.
-function milestoneFor({ isNewCustomer, ridesThisMonth, justBecameLoyal, name, phone, totalRides, month }) {
-  const who = `${name || 'A customer'} (${phone})`;
-
-  if (justBecameLoyal) {
-    return {
-      subject: `${name || 'A customer'} is now a Loyal client — ${LOYAL_THRESHOLD} rides this month`,
-      html: `
-        <h2>New Loyal client</h2>
-        <p><strong>${who}</strong> just booked their <strong>${ridesThisMonth}th ride this month</strong> (${month}), so they've been marked <strong>Loyal</strong> in the Customers tab.</p>
-        <p>Lifetime rides: <strong>${totalRides}</strong></p>
-        <p style="color:#666;">Worth reaching out with something — a thank-you, or a perk on their next ride.</p>
-      `,
-    };
-  }
-
-  if (isNewCustomer) {
-    return {
-      subject: `New customer: ${name || phone}`,
-      html: `
-        <h2>First-time customer</h2>
-        <p><strong>${who}</strong> just booked for the first time and has been added to the Customers tab as <strong>New</strong>.</p>
-        <p style="color:#666;">A welcome offer on this first ride is the easiest way to get a second one.</p>
-      `,
-    };
-  }
-
-  if (ridesThisMonth === HEADS_UP_THRESHOLD) {
-    return {
-      subject: `${name || phone} has taken ${HEADS_UP_THRESHOLD} rides this month`,
-      html: `
-        <h2>Becoming a regular</h2>
-        <p><strong>${who}</strong> is at <strong>${ridesThisMonth} rides this month</strong> (${month}). ${LOYAL_THRESHOLD - HEADS_UP_THRESHOLD} more and they become a Loyal client.</p>
-        <p>Lifetime rides: <strong>${totalRides}</strong></p>
-        <p style="color:#666;">Good moment for an offer, while they're deciding who their regular driver is.</p>
-      `,
-    };
-  }
-
-  return null;
+// The only alert this file still sends: somebody new turned up. Everything
+// else is earned by completing a ride, not by booking one.
+function newCustomerEmail({ name, phone }) {
+  const who = name ? `${name} (${phone})` : phone;
+  return {
+    subject: `🆕 New Customer – ${name || phone}`,
+    html: `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.7;color:#111">
+      <h2 style="margin:0 0 10px;font-size:18px">New customer</h2>
+      <p style="margin:0 0 12px"><strong>${who}</strong> has booked for the first time.</p>
+      <p style="margin:0 0 12px">They are <strong>New</strong> with 0 points. They become <strong>Regular</strong> and earn their first point — and a $${L.FIRST_RIDE_CREDIT} credit — once this ride is marked <strong>Completed</strong> on the dispatch page.</p>
+      <p style="margin:0;color:#555;font-size:13px">A booking is not a completed ride. Nothing is counted until you mark it.</p>
+    </div>`,
+  };
 }
 
 exports.handler = async function (event) {
@@ -115,9 +89,10 @@ exports.handler = async function (event) {
   }
 
   try {
-    const { phone, name, temp, carSeats, elderly, notes, vehicle } = JSON.parse(event.body);
+    const { phone, email, name, temp, carSeats, elderly, notes, vehicle } = JSON.parse(event.body);
     const target = normalizePhone(phone);
-    if (!target) {
+    const targetEmail = normalizeEmail(email);
+    if (!target && !targetEmail) {
       return { statusCode: 200, body: JSON.stringify({ success: false }) };
     }
 
@@ -127,42 +102,46 @@ exports.handler = async function (event) {
       throw new Error(`No header row found in the "${CUSTOMERS_TAB}" tab.`);
     }
 
-    const { date: today, yearMonth: thisMonth } = easternToday();
+    const { date: today } = easternToday();
+
+    // Phone first, then email — two ways to recognise the same person, so
+    // booking once by phone and once with an email doesn't split them into
+    // two profiles.
     const phoneIndex = keys.indexOf('phone');
-    const rowIndex = phoneIndex === -1
-      ? -1
-      : rows.findIndex((row) => normalizePhone(row[phoneIndex]) === target);
+    const emailIndex = keys.indexOf('email');
+    let rowIndex = (phoneIndex !== -1 && target)
+      ? rows.findIndex((row) => normalizePhone(row[phoneIndex]) === target)
+      : -1;
+    if (rowIndex === -1 && emailIndex !== -1 && targetEmail) {
+      rowIndex = rows.findIndex((row) => normalizeEmail(row[emailIndex]) === targetEmail);
+    }
 
     const existingRow = rowIndex === -1 ? [] : rows[rowIndex];
     const existing = rowToObject(keys, existingRow);
     const isNewCustomer = rowIndex === -1;
 
-    const totalRides = (parseInt(existing.total_rides, 10) || 0) + 1;
+    // Bookings made — kept apart from completed_rides on purpose. The gap
+    // between the two is how many rides were cancelled or no-showed, which is
+    // worth being able to see.
+    const bookingsMade = (parseInt(existing.total_rides, 10) || 0) + 1;
 
-    // The month column says which month the running count belongs to. A
-    // booking in a different month starts the count over rather than adding
-    // to last month's total.
-    const sameMonth = String(existing.month || '').trim() === thisMonth;
-    const ridesThisMonth = sameMonth ? (parseInt(existing.rides_this_month, 10) || 0) + 1 : 1;
-
-    const wasLoyal = String(existing.status || '').trim().toLowerCase() === STATUS_LOYAL.toLowerCase();
-    const justBecameLoyal = !wasLoyal && ridesThisMonth >= LOYAL_THRESHOLD;
-    const status = (wasLoyal || justBecameLoyal) ? STATUS_LOYAL : STATUS_NEW;
+    // Points are NOT touched here. A booking earns nothing.
+    const points = parseInt(existing.lifetime_points, 10) || 0;
+    const status = isNewCustomer ? L.STATUS_NEW : L.statusFor(points, existing.status);
 
     const cells = {
       phone: phone || existing.phone || '',
+      email: email || existing.email || '',
       name: name || existing.name || '',
       cabin_temp: temp || existing.cabin_temp || '',
       car_seats: carSeats || existing.car_seats || '',
       elderly_assistance: elderly ? 'Yes' : 'No',
       notes: notes || existing.notes || '',
       car_type: vehicle || existing.car_type || '',
-      total_rides: totalRides,
-      rides_this_month: ridesThisMonth,
-      month: thisMonth,
-      first_ride: existing.first_ride || today,
-      last_ride: today,
+      total_rides: bookingsMade,
+      last_booked: today,
       status,
+      activity: L.activityFor(existing.last_ride),
     };
 
     const row = buildRow(keys, cells, existingRow);
@@ -185,12 +164,9 @@ exports.handler = async function (event) {
       });
     }
 
-    // Tell the owner when something worth acting on happened. Never let a
-    // failed email undo a profile that saved fine.
-    const milestone = milestoneFor({
-      isNewCustomer, ridesThisMonth, justBecameLoyal,
-      name: cells.name, phone: cells.phone, totalRides, month: thisMonth,
-    });
+    // Only a brand-new customer is worth an email here. Never let a failed
+    // send undo a profile that saved fine.
+    const milestone = isNewCustomer ? newCustomerEmail({ name: cells.name, phone: cells.phone || cells.email }) : null;
     if (milestone) {
       try {
         await sendOwnerEmail(milestone.subject, milestone.html);
@@ -204,8 +180,9 @@ exports.handler = async function (event) {
       body: JSON.stringify({
         success: true,
         status,
-        totalRides,
-        ridesThisMonth,
+        points,
+        bookingsMade,
+        isNewCustomer,
         milestone: milestone ? milestone.subject : null,
       }),
     };
@@ -216,6 +193,4 @@ exports.handler = async function (event) {
 };
 
 // Exported so the milestone rules can be checked without touching Google.
-module.exports.milestoneFor = milestoneFor;
-module.exports.HEADS_UP_THRESHOLD = HEADS_UP_THRESHOLD;
-module.exports.LOYAL_THRESHOLD = LOYAL_THRESHOLD;
+module.exports.newCustomerEmail = newCustomerEmail;

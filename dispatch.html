@@ -58,6 +58,17 @@
   .result .bad{color:#E0A0A0}
   .result .good{color:#8fbf8f}
   .sms-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .standing{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.05em;text-transform:uppercase;
+            color:var(--steel);margin-bottom:10px}
+  .standing .loyal{color:var(--accent)}
+  .standing .owed{color:#8fbf8f}
+  .status-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line);margin-top:14px}
+  .status-row .lbl{font-family:var(--mono);font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--steel);margin-right:2px}
+  .st{background:transparent;border:1px solid var(--line);color:var(--dim);border-radius:100px;padding:7px 14px;font-size:0.82rem;font-weight:500}
+  .st:hover{border-color:var(--steel);color:var(--ink)}
+  .st.on{border-color:var(--accent);color:var(--accent);background:rgba(201,169,107,0.1)}
+  .st.done.on{border-color:#8fbf8f;color:#8fbf8f;background:rgba(143,191,143,0.1)}
+  .ride.completed{border-color:#3d5a3d}
   .empty{color:var(--steel);text-align:center;padding:50px 0;font-size:0.95rem}
   .hidden{display:none}
   .toprow{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:26px;flex-wrap:wrap}
@@ -118,6 +129,9 @@
     } else if(!data.drivers.length){
       notes.push('<div class="note"><strong>No drivers set up yet.</strong> In Netlify, add an environment variable called <code>DRIVERS</code> holding a list like <code>[{"key":"hany","name":"Hany","phone":"9084949256","email":"hany@standardnj.com"}]</code>, then redeploy.</div>');
     }
+    if(data.hasRideStatusColumn === false){
+      notes.push('<div class="note"><strong>No <code>ride_status</code> column in the Bookings tab.</strong> Add one to the header row and the Completed / Cancelled / No-show buttons appear. Points are only awarded when a ride is marked Completed, so nothing counts until this exists.</div>');
+    }
     if(!data.hasDriverColumn){
       notes.push('<div class="note">Your Bookings sheet has no <code>driver</code> column, so assignments won\'t be recorded there. Add one to the header row &mdash; anywhere you like, the code finds it by name.</div>');
     }
@@ -141,9 +155,33 @@
       const opts = ['<option value="">Choose a driver&hellip;</option>']
         .concat(data.drivers.map(d => '<option value="' + esc(d.key) + '">' + esc(d.name) + '</option>')).join('');
 
-      return '<div class="ride' + (r.driver ? ' assigned' : '') + '" data-i="' + i + '">' +
+      const c = r.customer;
+      const standing = c
+        ? '<div class="standing">' +
+            '<span class="' + (c.status === 'Loyal' ? 'loyal' : '') + '">' +
+              esc(c.status) + (c.status === 'Loyal' ? ' \u2b50' : '') + '</span>' +
+            ' &middot; ' + esc(c.activity) +
+            ' &middot; ' + c.points + ' point' + (c.points === 1 ? '' : 's') +
+            ' &middot; ' + c.completedRides + ' completed' +
+            (c.creditOwed > 0 ? ' &middot; <span class="owed">$' + c.creditOwed + ' credit owed</span>' : '') +
+          '</div>'
+        : '<div class="standing">New &middot; no profile yet</div>';
+
+      const isDone = String(r.rideStatus || '').toLowerCase() === 'completed';
+      const statusRow = data.hasRideStatusColumn
+        ? '<div class="status-row">' +
+            '<span class="lbl">After the ride</span>' +
+            '<button class="st done' + (isDone ? ' on' : '') + '" data-status="Completed">Completed</button>' +
+            '<button class="st' + (/cancel/i.test(r.rideStatus) ? ' on' : '') + '" data-status="Cancelled">Cancelled</button>' +
+            '<button class="st' + (/no-?show/i.test(r.rideStatus) ? ' on' : '') + '" data-status="No-show">No-show</button>' +
+            '<span class="result stres"></span>' +
+          '</div>'
+        : '';
+
+      return '<div class="ride' + (r.driver ? ' assigned' : '') + (isDone ? ' completed' : '') + '" data-i="' + i + '">' +
         '<div class="ride-when">' + esc(r.when || 'time not recorded') + '</div>' +
         '<div class="ride-route">' + esc(r.pickup) + '<span class="arrow">&rarr;</span>' + esc(r.dropoff) + '</div>' +
+        standing +
         '<div class="ride-meta">' + tags.join('') +
           (tags.length ? '<br>' : '') +
           esc(r.name || 'no name') + (r.phone ? ' &middot; <a href="tel:' + esc(r.phone) + '">' + esc(r.phone) + '</a>' : '') +
@@ -157,11 +195,59 @@
           '<button class="btn go">' + (r.driver ? 'Reassign' : 'Assign') + '</button>' +
         '</div>' +
         '<div class="result"></div>' +
+        statusRow +
       '</div>';
     }).join('');
   }
 
   document.addEventListener('click', async (e) => {
+    const st = e.target.closest('.st');
+    if(st){
+      const card = st.closest('.ride');
+      const ride = data.rides[Number(card.dataset.i)];
+      const out = card.querySelector('.stres');
+      const wanted = st.dataset.status;
+
+      st.disabled = true;
+      out.className = 'result stres show';
+      out.textContent = 'Saving\u2026';
+      try{
+        const res = await fetch('/.netlify/functions/set-ride-status', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ token, rowNumber: ride.rowNumber, status: wanted,
+                                 pickup: ride.pickup, dropoff: ride.dropoff,
+                                 phone: ride.phone, name: ride.name })
+        });
+        const j = await res.json();
+        if(!res.ok || j.error) throw new Error(j.error || ('Error ' + res.status));
+
+        card.querySelectorAll('.st').forEach(b => b.classList.remove('on'));
+        st.classList.add('on');
+        card.classList.toggle('completed', wanted === 'Completed');
+        ride.rideStatus = wanted;
+
+        if(j.customer){
+          out.innerHTML = '<span class="good">' + esc(j.customer.standing) + '</span>' +
+            (j.customer.creditEarned ? '<br><span class="good">Earned $' + j.customer.creditEarned +
+              ' &mdash; balance owed $' + j.customer.creditOwed + '. Send it yourself.</span>' : '');
+          const cust = card.querySelector('.standing');
+          if(cust) cust.innerHTML = '<span class="' + (j.customer.status === 'Loyal' ? 'loyal' : '') + '">' +
+            esc(j.customer.status) + (j.customer.status === 'Loyal' ? ' \u2b50' : '') + '</span>' +
+            ' &middot; ' + esc(j.customer.activity) + ' &middot; ' + j.customer.points +
+            ' point' + (j.customer.points === 1 ? '' : 's') + ' &middot; ' + j.customer.completedRides + ' completed' +
+            (j.customer.creditOwed > 0 ? ' &middot; <span class="owed">$' + j.customer.creditOwed + ' credit owed</span>' : '');
+        }else{
+          out.innerHTML = '<span class="good">Marked ' + esc(wanted) + '.</span>' +
+            (j.note ? ' <span class="bad">' + esc(j.note) + '</span>' : '');
+        }
+      }catch(err){
+        out.innerHTML = '<span class="bad">' + esc(err.message) + '</span>';
+      }finally{
+        st.disabled = false;
+      }
+      return;
+    }
+
     const go = e.target.closest('.go');
     if(!go) return;
     const card = go.closest('.ride');

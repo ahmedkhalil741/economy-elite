@@ -15,8 +15,10 @@ const { google } = require('googleapis');
 const { readTab, rowToObject } = require('./_sheet');
 const { parseRequestedDateTime, easternToInstant } = require('./_format');
 const { allDrivers } = require('./_drivers');
+const L = require('./_loyalty');
 
 const SHEET_TAB = 'Bookings';
+const CUSTOMERS_TAB = 'Customers';
 // Rides that started within the last few hours still matter — the driver may
 // be on that trip right now.
 const LOOK_BACK_HOURS = 6;
@@ -45,6 +47,32 @@ exports.handler = async function (event) {
     const { headers, keys, rows } = await readTab(sheets, process.env.GOOGLE_SHEET_ID, SHEET_TAB);
     const cutoff = Date.now() - LOOK_BACK_HOURS * 3600 * 1000;
 
+    // Who each customer is, so every reservation carries their standing —
+    // Ahmed's spec point 6. A missing Customers tab must not take the
+    // dispatch page down with it.
+    const byPhone = new Map();
+    try {
+      const cust = await readTab(sheets, process.env.GOOGLE_SHEET_ID, CUSTOMERS_TAB);
+      const digits = (v) => String(v || '').replace(/\D/g, '').slice(-10);
+      for (const row of cust.rows) {
+        const c = rowToObject(cust.keys, row);
+        const key = digits(c.phone);
+        if (!key) continue;
+        const points = parseInt(c.lifetime_points, 10) || 0;
+        const completedRides = parseInt(c.completed_rides, 10) || 0;
+        const status = L.statusFor(points, c.status);
+        const activity = L.activityFor(c.last_ride);
+        byPhone.set(key, {
+          status, activity, points, completedRides,
+          creditOwed: parseFloat(c.credit_owed) || 0,
+          firstRide: c.first_ride || '', lastRide: c.last_ride || '',
+          standing: L.standingLine({ name: c.name, status, activity, points, completedRides }),
+        });
+      }
+    } catch (err) {
+      // leave byPhone empty; the rides still list
+    }
+
     const rides = rows
       .map((row, i) => {
         const r = rowToObject(keys, row);
@@ -60,6 +88,9 @@ exports.handler = async function (event) {
           temp: r.cabin_temp || '', elderly: r.elderly_assistance || '',
           notes: r.notes || '', payMethod: r.payment_method || '',
           fare: r.fare_total || '', driver: r.driver || '',
+          email: r.email || '',
+          rideStatus: r.ride_status || '',
+          customer: byPhone.get(String(r.phone || '').replace(/\D/g, '').slice(-10)) || null,
         };
       })
       .filter((r) => r.pickup && r.dropoff)
@@ -83,6 +114,7 @@ exports.handler = async function (event) {
         drivers,
         driversError,
         hasDriverColumn: keys.includes('driver'),
+        hasRideStatusColumn: keys.includes('ride_status'),
         // what the sheet's header row actually says, so an empty field on the
         // dispatch card points at a missing column rather than a mystery
         sheetColumns: headers,

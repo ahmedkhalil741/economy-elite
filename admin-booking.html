@@ -93,6 +93,10 @@
         <input type="tel" id="a-phone" placeholder="(555) 000-0000" required>
       </div>
       <div class="field">
+        <label for="a-email">Email (optional)</label>
+        <input type="email" id="a-email" placeholder="you@example.com">
+      </div>
+      <div class="field">
         <label for="a-date">Date &amp; time</label>
         <input type="datetime-local" id="a-date" required>
       </div>
@@ -254,6 +258,7 @@
       source: document.getElementById('a-source').value,
       name: document.getElementById('a-name').value,
       phone: document.getElementById('a-phone').value,
+      email: document.getElementById('a-email').value,
       dateTime: document.getElementById('a-date').value,
       pickup: document.getElementById('a-pickup').value,
       dropoff: document.getElementById('a-dropoff').value,

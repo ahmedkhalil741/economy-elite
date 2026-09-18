@@ -706,6 +706,11 @@
           </div>
         </div>
 
+        <div class="field">
+          <label for="b-email">Email (optional)</label>
+          <input type="email" id="b-email" placeholder="you@example.com" autocomplete="email">
+        </div>
+
         <div class="book-row">
           <div class="field">
             <label for="b-vehicle">Vehicle</label>
@@ -980,6 +985,7 @@
     const contact15 = document.getElementById('b-contact15').checked;
     const notes = document.getElementById('b-notes').value;
     const passengers = document.getElementById('b-passengers').value;
+    const email = document.getElementById('b-email').value;
 
     if(!pickup.trim() || !dropoff.trim() || !dateTime || !phone.trim() || !name.trim()){
       msg.textContent = 'Please fill in your name and phone number.';
@@ -992,7 +998,7 @@
     if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Sending\u2026'; }
 
     const payload = {
-      name, pickup, dropoff, dateTime, phone, notes,
+      name, pickup, dropoff, dateTime, phone, email, notes,
       payMethod: selectedPay,
       carSeats, flight, temp, elderly, contact15, vehicle, passengers,
       source: 'Web'

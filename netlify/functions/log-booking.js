@@ -76,7 +76,7 @@ exports.handler = async function (event) {
 
   try {
     const {
-      name, pickup, dropoff, dateTime, phone, notes, payMethod,
+      name, pickup, dropoff, dateTime, phone, email, notes, payMethod,
       passengers, carSeats, flight, temp, elderly, contact15, source, vehicle,
     } = JSON.parse(event.body);
 
@@ -99,6 +99,7 @@ exports.handler = async function (event) {
       dropoff,
       name: orNA(name),
       phone: orNA(phone),
+      email: orNA(email),
       passengers: orNA(passengers),
       car_seats: (carSeats && carSeats !== '0') ? carSeats : 'None',
       elderly_assistance: elderly ? 'Yes' : 'No',
@@ -108,6 +109,9 @@ exports.handler = async function (event) {
       payment_method: orNA(payMethod),
       notes: orNA(notes),
       source: source || 'Web',
+      // Every booking starts here. Points are only awarded when this becomes
+      // "Completed" on the dispatch page — see _loyalty.js.
+      ride_status: 'Requested',
       base_fare: hasNumericFare ? fare.base : NA,
       // Exactly one of these three ever carries a number — the standard SUV
       // fee for New Jersey, or the New York fee for the vehicle booked. The
