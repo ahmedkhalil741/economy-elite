@@ -70,6 +70,10 @@
        font-size:0.95rem;text-align:right;}
   .qin:focus{outline:none;border-color:#C9A96B;}
   .qin.edited{border-color:#C9A96B;color:#E8E1D2;}
+  .qin-text{width:auto;flex:1;text-align:left;font-family:inherit;font-size:0.88rem;}
+  /* A discount is money leaving, so it reads differently from the rest. */
+  .qline.discount .qk,.qline.discount .qd{color:#C9A96B;}
+  .credit-flag{font-size:0.82rem;color:#C9A96B;line-height:1.6;margin:10px 0 0;}
   .qtotal{display:flex;align-items:center;justify-content:space-between;gap:12px;
           padding-top:14px;margin-top:6px;border-top:1px solid #332D26;}
   .qreset{background:none;border:0;color:#8A8272;font-family:'IBM Plex Mono',monospace;
@@ -250,6 +254,22 @@
         <span class="qd">$</span>
         <input type="number" id="a-fare" min="0" step="1" class="qin">
       </div>
+      <!-- Money off, for whatever reason: a loyalty credit being redeemed, a
+           referral, a discount for a regular, a job that ran short. It comes
+           off the fare and nothing else, so the tolls and the card fee stay
+           honest. If the customer has credit owed, this box fills itself in
+           the moment their phone number is recognised. -->
+      <div class="qline discount">
+        <span class="qk">Discount</span>
+        <span class="qd">&minus;$</span>
+        <input type="number" id="a-discount" min="0" step="1" class="qin">
+      </div>
+      <div class="qline" id="discountWhyLine" hidden>
+        <span class="qk">Why</span>
+        <input type="text" id="a-discount-reason" class="qin qin-text"
+               placeholder="loyalty credit, referral, goodwill…">
+      </div>
+
       <div class="qline">
         <span class="qk">Tolls</span>
         <span class="qd">$</span>
@@ -266,6 +286,7 @@
         <span class="quote-amount" id="quoteAmount">&mdash;</span>
       </div>
       <div class="quote-detail" id="quoteDetail">Fill in the pickup and drop-off.</div>
+      <p class="credit-flag" id="creditFlag" hidden></p>
       <button type="button" class="qreset" id="resetPrice">Back to the calculated price</button>
     </div>
 
@@ -331,8 +352,14 @@
   // YOURS - marked, and left alone by every later recalculation, because the
   // software overwriting a number a person just typed is the most annoying
   // thing a form can do. "Back to the calculated price" hands them all back.
-  const PRICE_FIELDS = { fare:'a-fare', toll:'a-toll', cardFee:'a-cardfee' };
-  const edited = { fare:false, toll:false, cardFee:false };
+  const PRICE_FIELDS = { fare:'a-fare', discount:'a-discount', toll:'a-toll', cardFee:'a-cardfee' };
+  const edited = { fare:false, discount:false, toll:false, cardFee:false };
+
+  // The "why" box only matters once there is something to explain.
+  function syncWhy(){
+    const v = Number(document.getElementById('a-discount').value || 0);
+    document.getElementById('discountWhyLine').hidden = !(v > 0);
+  }
 
   function overrides(){
     const o = {};
@@ -349,6 +376,9 @@
       edited[k] = false;
       document.getElementById(PRICE_FIELDS[k]).classList.remove('edited');
     }
+    document.getElementById('a-discount').value = '';
+    document.getElementById('a-discount-reason').value = '';
+    syncWhy();
     lastAsked = '';
     askForQuote();
   }
@@ -390,6 +420,7 @@
         // Fill only the boxes the person has not taken over.
         if(j.parts){
           if(!edited.fare)    document.getElementById('a-fare').value = j.parts.fare || 0;
+          if(!edited.discount) document.getElementById('a-discount').value = j.parts.discount || 0;
           if(!edited.toll)    document.getElementById('a-toll').value = j.parts.toll || 0;
           if(!edited.cardFee) document.getElementById('a-cardfee').value = (j.parts.cardFee || 0).toFixed(2);
         }
@@ -401,6 +432,8 @@
           amount.textContent = j.total || j.display;
           const bits = [];
           if(j.label) bits.push(j.label);
+          if(j.discount) bits.push('<span class="tip">$' + j.discount + ' came off the fare' +
+            (j.discountUnused ? ' \u2014 ' + j.discountNote : '') + '</span>');
           if(j.tip) bits.push('<span class="tip">20% tip would be about $' + j.tip + ' &mdash; on the fare, not the tolls</span>');
           detail.innerHTML = bits.join('<br>');
         }else{
@@ -425,6 +458,7 @@
     document.getElementById(PRICE_FIELDS[k]).addEventListener('input', function(){
       edited[k] = true;
       this.classList.add('edited');
+      if(k === 'discount') syncWhy();
       askForQuote();
     });
   }
@@ -471,6 +505,30 @@
           const msg = document.getElementById('formMsg');
           msg.textContent = 'Found a returning customer' + (data.name ? ': ' + data.name : '') + ' — preferences filled in.';
           msg.style.color = 'var(--teal)';
+
+          // Credit they're owed becomes the discount, by itself. This is the
+          // whole point of the balance existing: nobody has to remember to
+          // look it up, and it stops being a number that only goes up.
+          // It's still just a filled-in box — clear it and the ride is full
+          // price, which is what you want when they're saving it for later.
+          const owed = Number(data.creditOwed || 0);
+          const flag = document.getElementById('creditFlag');
+          if(owed > 0){
+            const box = document.getElementById('a-discount');
+            box.value = owed;
+            edited.discount = true;
+            box.classList.add('edited');
+            const why = document.getElementById('a-discount-reason');
+            if(!why.value) why.value = 'loyalty credit';
+            syncWhy();
+            flag.innerHTML = (data.name || 'This customer') + ' is owed <strong>$' + owed +
+              '</strong> \u2014 taken off this ride. Clear the discount box to save it for next time.';
+            flag.hidden = false;
+            lastAsked = ''; askForQuote();
+          }else{
+            flag.hidden = true;
+            flag.textContent = '';
+          }
         })
         .catch(() => {});
     }, 500);
@@ -508,6 +566,7 @@
       notes: document.getElementById('a-notes').value,
       vehicle: document.getElementById('a-vehicle').value,
       overrides: overrides(),
+      discountReason: document.getElementById('a-discount-reason').value,
       payMethod: selectedPay,
     };
   }
@@ -564,10 +623,14 @@
       row('Text 15 min before', yes(p.contact15)) +
       row('Notes', p.notes) +
       row('Paying by', p.payMethod) +
+      (fare && fare.discount ? row('Discount', '\u2212 $' + fare.discount +
+        (p.discountReason ? ' \u00b7 ' + p.discountReason : '')) : '') +
       (fare && fare.matched
         ? (fare.lines || []).map(l => row('', l)).join('') +
           '<div class="review-row total"><span class="k">Total</span><span class="v">' + fare.total + '</span></div>' +
-          (fare.tip ? row('Suggested tip', '$' + fare.tip) : '')
+          (fare.tip ? row('Suggested tip', '$' + fare.tip) : '') +
+          (fare.discountUnused ? row('', fare.discountNote) : '') +
+          (fare.discount ? row('', 'The driver is shown the total only \u2014 not the discount.') : '')
         : '<div class="review-row total"><span class="k">Fare</span><span class="v" style="font-size:0.95rem">Not priced \u2014 put a number in Agreed fare</span></div>');
 
     pending = p;
@@ -610,6 +673,9 @@
     // dropped.
     selectedPay = 'Square';
     for(const k in PRICE_FIELDS){ edited[k] = false; document.getElementById(PRICE_FIELDS[k]).classList.remove('edited'); }
+    document.getElementById('a-discount-reason').value = '';
+    document.getElementById('discountWhyLine').hidden = true;
+    document.getElementById('creditFlag').hidden = true;
     lastAsked = '';
     document.getElementById('quoteAmount').className = 'quote-amount none';
     document.getElementById('quoteAmount').innerHTML = '&mdash;';

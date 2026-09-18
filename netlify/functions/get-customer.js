@@ -70,6 +70,11 @@ exports.handler = async function (event) {
         totalRides: customer.total_rides || '0',
         completedRides: customer.completed_rides || '0',
         status: customer.status || '',
+        // What they are owed. The booking page uses this to fill the discount
+        // box in by itself, which is the whole reason credits stopped being a
+        // number that only ever went up.
+        creditOwed: parseFloat(customer.credit_owed) || 0,
+        lifetimePoints: parseInt(customer.lifetime_points, 10) || 0,
         likes: customer.likes || '',
         dislikes: customer.dislikes || '',
       }),

@@ -168,10 +168,42 @@ exports.handler = async function (event) {
     // credit in the first place, so that is the one to reverse.
     const reversed = !nowCompleted && wasCompleted ? L.creditEarned(pointsBefore) : null;
 
+    // ---- SPENDING the credit ----
+    //
+    // This is the half of the loyalty programme that did not exist. Credits
+    // were earned, added up, and never went anywhere — the balance only ever
+    // grew. A discount typed on the booking page is what spends them, and it
+    // is spent HERE rather than at booking time, for the same reason points
+    // are awarded here: a ride that gets cancelled should not cost the
+    // customer a credit they never got the benefit of.
+    //
+    // A discount is NOT always a redemption. Ahmed knocks money off for all
+    // sorts of reasons — a goodwill gesture, a regular he likes, a job that
+    // ran short. So only the part of the discount the customer actually had
+    // balance for comes off that balance. The rest is simply a lower price,
+    // and touches nothing.
+    //
+    // The amount actually taken is written back to the booking row, so
+    // un-completing the ride puts back exactly what was removed rather than
+    // a number recalculated from a balance that has since moved.
+    const balanceBefore = parseFloat(c.credit_owed) || 0;
+    const discountOnRide = parseFloat(row.discount) || 0;
+    const alreadySpent = parseFloat(row.discount_spent) || 0;
+
+    let spent = 0;
+    let refunded = 0;
+    if (nowCompleted) {
+      spent = Math.round(Math.min(discountOnRide, Math.max(0, balanceBefore)) * 100) / 100;
+    } else if (wasCompleted) {
+      refunded = alreadySpent;
+    }
+
     const creditOwed = Math.max(0,
-      (parseFloat(c.credit_owed) || 0)
-      + (credit ? credit.amount : 0)
-      - (reversed ? reversed.amount : 0));
+      Math.round((balanceBefore
+        + (credit ? credit.amount : 0)
+        - (reversed ? reversed.amount : 0)
+        - spent
+        + refunded) * 100) / 100);
 
     // The one-cell history is no longer appended to — it grew without limit
     // and could not be analysed. Whatever is already in it is left alone so
@@ -196,6 +228,23 @@ exports.handler = async function (event) {
       },
     });
 
+    // Record what was actually taken, on the ride that took it.
+    if ((spent || refunded) && bookings.keys.includes('discount_spent')) {
+      try {
+        await sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: `${BOOKINGS_TAB}!A${rowNumber}:${bookings.lastColumn}${rowNumber}`,
+          valueInputOption: 'USER_ENTERED',
+          requestBody: {
+            values: [buildRow(bookings.keys, {
+              ride_status: wanted,
+              discount_spent: nowCompleted ? (spent || 0) : 0,
+            }, bookings.rows[idx])],
+          },
+        });
+      } catch (err) { /* the balance is already right; this is the audit trail */ }
+    }
+
     // ---- the ledger ----
     let ledger = null;
     if (credit) {
@@ -209,6 +258,28 @@ exports.handler = async function (event) {
         date: today.date, phone: key, name: c.name || name || '',
         type: 'Reversed', amount: -reversed.amount,
         reason: `ride marked ${wanted.toLowerCase()}`,
+        balance_after: creditOwed, points_after: points,
+      });
+    }
+
+    // Spending is its own row, always, even on a ride that also earned. Two
+    // things happened and the ledger should show two things — that is the
+    // difference between a balance you can explain and one you can't.
+    let spendLedger = null;
+    if (spent) {
+      spendLedger = await logCredit(sheets, spreadsheetId, {
+        date: today.date, phone: key, name: c.name || name || '',
+        type: 'Spent', amount: -spent,
+        reason: row.discount_reason && row.discount_reason !== 'N/A'
+          ? `${row.discount_reason} — ${pickup} to ${dropoff}`
+          : `discount on ${pickup} to ${dropoff}`,
+        balance_after: creditOwed, points_after: points,
+      });
+    } else if (refunded) {
+      spendLedger = await logCredit(sheets, spreadsheetId, {
+        date: today.date, phone: key, name: c.name || name || '',
+        type: 'Spend reversed', amount: refunded,
+        reason: `ride marked ${wanted.toLowerCase()} — discount put back`,
         balance_after: creditOwed, points_after: points,
       });
     }
@@ -260,14 +331,17 @@ exports.handler = async function (event) {
     let emailed = null;
     const becameLoyal = previousStatus !== L.STATUS_LOYAL && status_ === L.STATUS_LOYAL;
 
-    if (credit || becameLoyal || (referral && referral.amount)) {
+    if (credit || becameLoyal || spent || (referral && referral.amount)) {
       const subject = becameLoyal
         ? `⭐ New Loyal Customer – ${who}`
-        : `${who} earned a $${credit.amount} credit`;
+        : credit
+          ? `${who} earned a $${credit.amount} credit`
+          : `${who} used $${spent} of their credit`;
       const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.7;color:#111">
         <p style="margin:0 0 12px"><strong>${who}</strong> — ${key}</p>
         <p style="margin:0 0 12px">${L.standingLine({ name: who, status: status_, activity, points, completedRides })}</p>
         ${credit ? `<p style="margin:0 0 12px"><strong>Earned: $${credit.amount}</strong> — ${credit.reason}.<br>Balance owed: <strong>$${creditOwed}</strong>.</p>` : ''}
+        ${spent ? `<p style="margin:0 0 12px"><strong>Used: $${spent}</strong> of their credit on this ride${discountOnRide > spent ? ` (the discount was $${discountOnRide} — the rest was simply a lower price, not credit)` : ''}.<br>Balance left: <strong>$${creditOwed}</strong>.</p>` : ''}
         ${referral && referral.amount ? `<p style="margin:0 0 12px;padding:10px 12px;background:#f5f2ea;border-radius:6px"><strong>${referral.name}</strong> referred them — <strong>$${referral.amount}</strong> credit added, balance now <strong>$${referral.owed}</strong>.</p>` : ''}
         ${referral && referral.unmatched ? `<p style="margin:0 0 12px;color:#a05">Referred by "${referral.unmatched}" — no customer with that number, so no referral credit was given.</p>` : ''}
         <p style="margin:0;color:#555;font-size:13px">Nothing has been sent to the customer. Send the offer yourself when you're ready, then adjust <code>credit_owed</code> in the Customers tab.</p>
@@ -285,10 +359,13 @@ exports.handler = async function (event) {
         customer: {
           name: who, status: status_, activity, points, completedRides,
           creditOwed, creditEarned: credit ? credit.amount : 0,
+          creditSpent: spent, creditReturned: refunded,
+          discountOnRide,
           standing: L.standingLine({ name: who, status: status_, activity, points, completedRides }),
         },
         referral,
         ledger,
+        spendLedger,
         emailed,
       }),
     };

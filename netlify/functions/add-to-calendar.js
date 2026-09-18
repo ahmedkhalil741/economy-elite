@@ -117,7 +117,11 @@ exports.handler = async function (event) {
       `Payment method: ${payMethod || 'N/A'}`,
       // Internal number, on a private calendar — confirm with the customer
       // before treating it as final.
-      `Fare (internal estimate): ${fare.display}`,
+      // driverDisplay, not display. Whoever opens this entry is on their way
+      // to collect a number, and a discount line beside it is a question the
+      // driver should never have to ask the customer. The discount is Ahmed's
+      // business and the customer's — it lives in the sheet and in his email.
+      `Fare (internal estimate): ${fare.driverDisplay || fare.display}`,
       fare.tipSuggested ? `Suggested tip (20%): $${fare.tipSuggested}` : null,
     ].filter((line) => line !== null);
 

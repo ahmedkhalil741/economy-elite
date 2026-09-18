@@ -31,6 +31,12 @@
 
 const { cardFeeFor } = require('./_card-fee');
 
+// A number, or null. Zero is a real answer — "waive the card fee" is written
+// as 0 and has to survive, so a plain falsy check would throw it away.
+function numOrNull(v) {
+  return ((v === 0 || v) && !isNaN(parseFloat(v))) ? Math.max(0, parseFloat(v)) : null;
+}
+
 // SUV surcharges. A sedan pays neither.
 const SUV_FEE = 35;        // to Newark
 const SUV_FEE_NY = 50;     // to Manhattan, LaGuardia, JFK
@@ -356,12 +362,11 @@ function agreedResult(agreed, toll, payMethod, label, setCard) {
 // Ahmed's real tolls differ from the table, customers get the card fee waived,
 // and a price settled on the phone still needs the toll on top. A plain number
 // is still accepted and means { fare }.
-function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
-  const num = (v) => ((v === 0 || v) && !isNaN(parseFloat(v))) ? Math.max(0, parseFloat(v)) : null;
+function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
   const ov = (typeof overrides === 'object' && overrides !== null) ? overrides : { fare: overrides };
-  const setFare = num(ov.fare);
-  const setToll = num(ov.toll);
-  const setCard = num(ov.cardFee);
+  const setFare = numOrNull(ov.fare);
+  const setToll = numOrNull(ov.toll);
+  const setCard = numOrNull(ov.cardFee);
   const anySet = setFare !== null || setToll !== null || setCard !== null;
   const agreed = setFare;
   const isSedan = (vehicle || '').trim().toLowerCase() === 'sedan';
@@ -483,6 +488,101 @@ function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, overrides) 
   if (anySet) return agreedResult(agreed !== null ? agreed : 0, setToll !== null ? setToll : 0, payMethod, 'Agreed by phone', setCard);
 
   return noMatch(overnight, `No listed price for this route. Quote it by hand, or $${HOURLY_RATE}/hr (no minimum) if it isn't a straight A-to-B trip.${overnightNote}`);
+}
+
+// ---- DISCOUNTS ----
+//
+// A discount comes off the DRIVING charge and off nothing else. Two rules
+// decide that, and both are about money actually moving:
+//
+//   The toll is never discounted. The bridge charges what the bridge charges,
+//   and knocking money off it means Ahmed pays the difference to the Port
+//   Authority out of his own pocket rather than giving the customer a gift.
+//
+//   The card fee is worked out AFTER the discount, never before. Square takes
+//   its percentage of what is actually swiped, so a $20 discount has to shrink
+//   the fee too. Discounting after the fee would have him handing a processor
+//   a cut of money he never collected.
+//
+// The discount can never be larger than the driving charge — a $50 credit on a
+// $35 local run takes the fare to zero and stops there. The leftover stays on
+// the customer's balance for next time rather than turning into cash.
+//
+// Two versions of the breakdown come back. `display` says the discount out
+// loud, and that one is for Ahmed. `driverDisplay` folds it silently into the
+// fare, and that is the one the driver and the calendar see, because a driver
+// reading "$15 discount" next to a number he has to collect is a question he
+// should never have to ask.
+function applyDiscount(result, discountRaw, payMethod, setCard) {
+  const asked = numOrNull(discountRaw);
+  if (!asked) return result;
+
+  // A local range or an unmatched route has no single number to take money
+  // off. Record what was asked for so nothing is silently lost, and let the
+  // price get settled first.
+  if (typeof result.rideFare !== 'number' || !isFinite(result.rideFare)) {
+    return Object.assign({}, result, {
+      discount: asked,
+      discountApplied: 0,
+      discountNote: 'Settle the fare first — a discount needs a number to come off.',
+    });
+  }
+
+  const toll = result.toll || 0;
+  const driving = Math.round((result.rideFare - toll) * 100) / 100;
+  const applied = Math.round(Math.min(asked, Math.max(0, driving)) * 100) / 100;
+  const unused = Math.round((asked - applied) * 100) / 100;
+
+  const newDriving = Math.round((driving - applied) * 100) / 100;
+  const rideFare = Math.round((newDriving + toll) * 100) / 100;
+
+  const auto = cardFeeFor(payMethod, rideFare);
+  // A hand-set card fee survives the discount. Waiving the fee is a separate
+  // decision and the discount has no business undoing it.
+  const cardAmount = (setCard !== null && setCard !== undefined)
+    ? setCard
+    : (auto ? auto.amount : null);
+  const total = Math.round((rideFare + (cardAmount || 0)) * 100) / 100;
+
+  const money = (n) => `$${Number(n).toFixed(2).replace(/\.00$/, '')}`;
+  const tail = [];
+  if (toll) tail.push(`${money(toll)} tolls`);
+  if (cardAmount) tail.push(`${money(cardAmount)} ${result.cardFeeLabel || (auto ? auto.label : 'card')} fee`);
+
+  const openWith = `${money(driving)} fare − ${money(applied)} discount`;
+  const quietly = `${money(newDriving)} fare`;
+
+  return Object.assign({}, result, {
+    discount: asked,
+    discountApplied: applied,
+    discountUnused: unused || 0,
+    discountNote: unused
+      ? `${money(unused)} of the credit is more than the fare — it stays on their balance.`
+      : null,
+    fareBeforeDiscount: driving,
+    rideFare,
+    cardFee: cardAmount,
+    cardFeeLabel: cardAmount ? (result.cardFeeLabel || (auto ? auto.label : 'Card')) : null,
+    cardFeeRate: cardAmount && auto ? `${(auto.rate * 100).toFixed(1)}% + $${auto.fixed.toFixed(2)}` : result.cardFeeRate,
+    total,
+    totalDisplay: `${money(total)} flat`,
+    // The tip follows what they actually pay for the driving, not what it
+    // would have been. Nobody tips on a discount they were given.
+    tipSuggested: Math.round(newDriving * 0.2),
+    display: `${money(total)} flat (${[openWith].concat(tail).join(' + ')})`,
+    driverDisplay: `${money(total)} flat (${[quietly].concat(tail).join(' + ')})`,
+  });
+}
+
+// The public estimator. It prices the ride exactly as it always has, then
+// takes the discount off the answer.
+function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
+  const ov = (typeof overrides === 'object' && overrides !== null) ? overrides : { fare: overrides };
+  const priced = priceRide(pickup, dropoff, vehicle, dateTime, payMethod, ov);
+  // Anything that never had a discount still needs driverDisplay, or the
+  // calendar has nothing to print.
+  const base = Object.assign({ discount: 0, discountApplied: 0, driverDisplay: priced.display }, priced);
+  return applyDiscount(base, ov.discount, payMethod, numOrNull(ov.cardFee));
 }
 
 module.exports = {

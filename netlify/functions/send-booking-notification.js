@@ -21,7 +21,7 @@ function fareTable(fare) {
   const rows = [];
 
   if (fare.matched && fare.total !== null) {
-    const hasExtras = Boolean(fare.suvFee || fare.suvFeeNy || fare.sedanFeeNy || fare.overnightFee || fare.toll || fare.cardFee);
+    const hasExtras = Boolean(fare.suvFee || fare.suvFeeNy || fare.sedanFeeNy || fare.overnightFee || fare.toll || fare.cardFee || fare.discountApplied);
     // With no extras the base fare IS the total — don't print the same
     // number twice, just show the one line.
     if (hasExtras) {
@@ -30,6 +30,9 @@ function fareTable(fare) {
       if (fare.suvFeeNy) rows.push(['New York fee (SUV)', `$${fare.suvFeeNy}`]);
       if (fare.sedanFeeNy) rows.push(['New York fee (sedan)', `$${fare.sedanFeeNy}`]);
       if (fare.overnightFee) rows.push(['Overnight fee', `$${fare.overnightFee}`]);
+      // This email goes to Ahmed and nobody else, so the discount is stated
+      // plainly rather than folded into the fare.
+      if (fare.discountApplied) rows.push(['Discount', `\u2212 $${fare.discountApplied}`]);
       // Its own line, never folded into the base. "No surprises" only holds
       // if the customer is told the number before the car moves.
       if (fare.toll) rows.push(['Tolls (estimated)', `$${fare.toll}`]);

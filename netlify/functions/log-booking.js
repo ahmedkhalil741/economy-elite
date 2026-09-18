@@ -17,8 +17,8 @@
 //   timestamp, requested_datetime, pickup, dropoff, name, phone,
 //   passengers, car_seats, elderly_assistance, flight, cabin_temp,
 //   text_before_ride, payment_method, notes, source, base_fare, suv_fee,
-//   sedan, vehicle, toll, tip, overnight_trip, hourly_trip,
-//   waiting_late_fee, fare_total
+//   sedan, vehicle, toll, discount, discount_reason, tip, overnight_trip,
+//   hourly_trip, waiting_late_fee, fare_total
 // Any column whose header isn't in that list is left alone (so your own
 // notes/status columns won't get overwritten). Any header in that list
 // that isn't in your sheet is simply skipped.
@@ -78,6 +78,7 @@ exports.handler = async function (event) {
     const {
       name, pickup, dropoff, dateTime, phone, email, notes, payMethod,
       passengers, carSeats, flight, temp, elderly, contact15, source, vehicle, referredBy, overrides,
+      discountReason,
     } = JSON.parse(event.body);
 
     if (!pickup || !dropoff) {
@@ -146,6 +147,12 @@ exports.handler = async function (event) {
       // cross nothing. Replace it with the real figure off the E-ZPass
       // statement if it differs; nothing else recalculates from it.
       toll: orNA(fare.toll),
+      // What came off the fare, and why. Written at booking time but NOT taken
+      // off the customer's balance here — that happens when the ride is marked
+      // Completed, in set-ride-status.js, so a cancelled ride never spends a
+      // credit the customer never got the benefit of.
+      discount: fare.discountApplied ? fare.discountApplied : NA,
+      discount_reason: fare.discountApplied ? orNA(discountReason) : NA,
       // This one still cannot be known at booking time — it depends on what
       // actually happened on the road.
       waiting_late_fee: NA,
