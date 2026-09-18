@@ -81,7 +81,7 @@ exports.handler = async function (event) {
   try {
     const {
       name, pickup, dropoff, dateTime, phone, notes, payMethod,
-      passengers, carSeats, flight, temp, elderly, contact15, vehicle,
+      passengers, carSeats, flight, temp, elderly, contact15, vehicle, agreedFare,
     } = JSON.parse(event.body);
 
     if (!pickup || !dropoff || !dateTime) {
@@ -99,7 +99,7 @@ exports.handler = async function (event) {
       return { statusCode: 400, body: JSON.stringify({ error: `Unrecognized date/time format: ${dateTime}` }) };
     }
 
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod);
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, agreedFare);
 
     const descLines = [
       `Customer name: ${name || 'N/A'}`,

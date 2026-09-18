@@ -21,20 +21,24 @@ exports.handler = async function (event) {
   if (!expected) return { statusCode: 503, body: JSON.stringify({ error: 'ADMIN_TOKEN is not set in Netlify.' }) };
 
   try {
-    const { token, pickup, dropoff, vehicle, dateTime, payMethod } = JSON.parse(event.body || '{}');
+    const { token, pickup, dropoff, vehicle, dateTime, payMethod, agreedFare } = JSON.parse(event.body || '{}');
     if (token !== expected) return { statusCode: 401, body: JSON.stringify({ error: 'Wrong passcode.' }) };
 
     if (!pickup || !dropoff) {
       return { statusCode: 200, body: JSON.stringify({ ready: false, reason: 'Need both a pickup and a drop-off.' }) };
     }
 
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod);
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, agreedFare);
 
     // The parts, so a price can be EXPLAINED on the phone rather than just
     // stated. "Seventy-five, plus thirty-five because it's the Suburban."
     const lines = [];
     if (fare.matched) {
-      if (fare.base) lines.push(`$${fare.base} base fare`);
+      if (fare.agreedFare !== null && fare.agreedFare !== undefined) {
+        lines.push(`$${fare.agreedFare} agreed with the customer`);
+      } else if (fare.base) {
+        lines.push(`$${fare.base} base fare`);
+      }
       if (fare.suvFee) lines.push(`$${fare.suvFee} SUV`);
       if (fare.suvFeeNy) lines.push(`$${fare.suvFeeNy} SUV into New York`);
       if (fare.overnightFee) lines.push(`$${fare.overnightFee} overnight pickup`);
@@ -53,6 +57,7 @@ exports.handler = async function (event) {
         lines,
         tip: fare.tipSuggested,
         toll: fare.toll || 0,
+        agreedFare: fare.agreedFare ?? null,
         overnight: isOvernightPickup(dateTime),
         hourlyRate: HOURLY_RATE,
       }),

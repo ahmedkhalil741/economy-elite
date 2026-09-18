@@ -310,7 +310,43 @@ function noMatch(overnight, note) {
 
 // pickup/dropoff pick the route, vehicle decides the SUV surcharge, dateTime
 // decides the overnight fee, and payMethod decides the card fee added on top.
-function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod) {
+// Builds the result for a price settled by hand. Used wherever an agreed fare
+// is given, because the routes you most often agree by phone are precisely the
+// ones with no listed price — so it has to work when the town is unknown, not
+// only when it is known.
+function agreedResult(agreed, toll, payMethod, label) {
+  const rideFare = agreed + toll;
+  const card = cardFeeFor(payMethod, rideFare);
+  const total = Math.round((rideFare + (card ? card.amount : 0)) * 100) / 100;
+
+  const bits = [`$${agreed} agreed`];
+  if (toll) bits.push(`$${toll} tolls`);
+  if (card) bits.push(`$${card.amount.toFixed(2)} ${card.label} fee`);
+
+  return {
+    matched: true, label: label || 'Agreed by phone', newYork: false,
+    agreedFare: agreed, base: agreed, suvFee: null, suvFeeNy: null,
+    sedanFeeNy: SEDAN_FEE_NY, overnightFee: null,
+    toll: toll || null, tollEstimated: Boolean(toll),
+    cardFee: card ? card.amount : null,
+    cardFeeLabel: card ? card.label : null,
+    cardFeeRate: card ? `${(card.rate * 100).toFixed(1)}% + $${card.fixed.toFixed(2)}` : null,
+    rideFare, total,
+    totalDisplay: `$${total.toFixed(2).replace(/\.00$/, '')}`,
+    // The tip is on the driving only — never on the toll or the card fee.
+    tipSuggested: Math.round(agreed * 0.2),
+    display: `$${total.toFixed(2).replace(/\.00$/, '')} flat (${bits.join(' + ')})`,
+  };
+}
+
+// `agreedFare` overrides the DRIVING charge — base, vehicle fee and overnight
+// all together — for a price settled on the phone. It does not override the
+// toll or the card fee, because those are pass-throughs: the bridge and Square
+// charge what they charge whatever was agreed. They are added on top and shown
+// separately, so the number Ahmed typed stays visible as the number he typed.
+function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, agreedFare) {
+  const agreed = (agreedFare === 0 || agreedFare) && !isNaN(parseFloat(agreedFare))
+    ? Math.max(0, parseFloat(agreedFare)) : null;
   const isSedan = (vehicle || '').trim().toLowerCase() === 'sedan';
   const overnight = isOvernightPickup(dateTime) ? OVERNIGHT_FEE : 0;
   const overnightNote = overnight ? ` + $${overnight} overnight` : '';
@@ -326,8 +362,14 @@ function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod) {
   else if (destAtPickup && !destAtDropoff) { dest = destAtPickup; townSide = dropoff; }
 
   if (dest) {
+    const tollFor = TOLLS[dest.key] || { standard: 0, overnight: 0 };
+    const destToll = overnight ? tollFor.overnight : tollFor.standard;
+
     const town = findTown(townSide);
     if (!town) {
+      // No listed price — but if one was agreed on the phone, that IS the
+      // price, and the toll for this destination still applies.
+      if (agreed !== null) return agreedResult(agreed, destToll, payMethod, `Agreed — ${dest.label}`);
       return noMatch(overnight, `${dest.label} — no listed price for that town. Quote it by hand, then tell Claude the number and it gets added.${overnightNote}`);
     }
 
@@ -336,24 +378,28 @@ function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod) {
     const suvFeeNy = isSedan ? null : (dest.ny ? SUV_FEE_NY : null);
     const vehicleFee = suvFee || suvFeeNy || 0;
 
-    const tollTable = TOLLS[dest.key] || { standard: 0, overnight: 0 };
-    const toll = overnight ? tollTable.overnight : tollTable.standard;
+    const toll = destToll;
+
+    if (agreed !== null) return agreedResult(agreed, toll, payMethod, `Agreed — ${town.town} to ${dest.label}`);
+    const driving = base + vehicleFee + overnight;
 
     // The card fee is worked out on everything going through the card,
     // INCLUDING the toll — Square takes its percentage of the whole amount
     // swiped, so leaving the toll out would quietly under-recover the fee.
-    const rideFare = base + vehicleFee + overnight + toll;
+    const rideFare = driving + toll;
     const card = cardFeeFor(payMethod, rideFare);
     const total = Math.round((rideFare + (card ? card.amount : 0)) * 100) / 100;
 
     // The tip is on the DRIVING, not on the toll and not on the processor's
     // cut. Nobody tips twenty per cent of a bridge.
-    const tippable = base + vehicleFee + overnight;
+    const tippable = driving;
 
-    const parts = [`$${base} ${town.town}`];
-    if (suvFee) parts.push(`$${suvFee} SUV`);
-    if (suvFeeNy) parts.push(`$${suvFeeNy} SUV (New York)`);
-    if (overnight) parts.push(`$${overnight} overnight`);
+    const parts = agreed !== null
+      ? [`$${agreed} agreed`]
+      : [`$${base} ${town.town}`];
+    if (agreed === null && suvFee) parts.push(`$${suvFee} SUV`);
+    if (agreed === null && suvFeeNy) parts.push(`$${suvFeeNy} SUV (New York)`);
+    if (agreed === null && overnight) parts.push(`$${overnight} overnight`);
     if (toll) parts.push(`$${toll} tolls`);
     if (card) parts.push(`$${card.amount.toFixed(2)} ${card.label} fee`);
 
@@ -361,11 +407,12 @@ function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod) {
       matched: true,
       label: `${town.town} — ${dest.label}`,
       newYork: Boolean(dest.ny),
-      base,
-      suvFee,
-      suvFeeNy,
+      agreedFare: agreed,
+      base: agreed !== null ? agreed : base,
+      suvFee: agreed !== null ? null : suvFee,
+      suvFeeNy: agreed !== null ? null : suvFeeNy,
       sedanFeeNy: SEDAN_FEE_NY,
-      overnightFee: overnight || null,
+      overnightFee: agreed !== null ? null : (overnight || null),
       toll: toll || null,
       tollEstimated: Boolean(toll),
       cardFee: card ? card.amount : null,
@@ -384,6 +431,9 @@ function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod) {
   // No airport or Manhattan involved. Both ends listed towns -> local rate.
   const townA = findTown(pickup);
   const townB = findTown(dropoff);
+  if (townA && townB && agreed !== null) {
+    return agreedResult(agreed, 0, payMethod, `Agreed — ${townA.town} to ${townB.town}`);
+  }
   if (townA && townB) {
     const [lo, hi] = LOCAL_RANGE;
     return {
@@ -409,6 +459,10 @@ function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod) {
       display: `$${lo + overnight}–${hi + overnight} flat (local, all-inclusive, either vehicle${overnight ? `, includes $${overnight} overnight` : ''})`,
     };
   }
+
+  // Nothing matched at all, but a price was agreed — no destination, so no
+  // toll to add.
+  if (agreed !== null) return agreedResult(agreed, 0, payMethod, 'Agreed by phone');
 
   return noMatch(overnight, `No listed price for this route. Quote it by hand, or $${HOURLY_RATE}/hr (no minimum) if it isn't a straight A-to-B trip.${overnightNote}`);
 }

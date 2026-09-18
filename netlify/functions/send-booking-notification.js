@@ -57,14 +57,14 @@ exports.handler = async function (event) {
   try {
     const {
       name, pickup, dropoff, dateTime, phone, notes, payMethod,
-      passengers, carSeats, flight, temp, elderly, contact15, vehicle,
+      passengers, carSeats, flight, temp, elderly, contact15, vehicle, agreedFare,
     } = JSON.parse(event.body);
 
     if (!pickup || !dropoff || !phone) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required booking details.' }) };
     }
 
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod);
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, agreedFare);
     const overnight = isOvernightPickup(dateTime);
 
     const emailBody = `

@@ -77,14 +77,14 @@ exports.handler = async function (event) {
   try {
     const {
       name, pickup, dropoff, dateTime, phone, email, notes, payMethod,
-      passengers, carSeats, flight, temp, elderly, contact15, source, vehicle, referredBy,
+      passengers, carSeats, flight, temp, elderly, contact15, source, vehicle, referredBy, agreedFare,
     } = JSON.parse(event.body);
 
     if (!pickup || !dropoff) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required booking details.' }) };
     }
 
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod);
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, agreedFare);
     const isSedan = (vehicle || '').trim().toLowerCase() === 'sedan';
 
     // Local (range) and unmatched routes don't break down into base + SUV,

@@ -62,6 +62,22 @@
   .quote-amount.none{font-size:1rem;font-weight:400;color:#B5ADA0;line-height:1.5;}
   .quote-detail{font-size:0.85rem;color:#B5ADA0;line-height:1.7;margin-top:8px;}
   .quote-detail .tip{color:#8A8272;}
+  .review{background:#1C1815;border:1px solid #C9A96B;border-radius:14px;padding:22px;margin-top:20px;}
+  .review-title{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;letter-spacing:0.12em;
+                text-transform:uppercase;color:#C9A96B;margin-bottom:14px;}
+  .review-row{display:flex;justify-content:space-between;gap:16px;padding:7px 0;
+              border-bottom:1px solid #262019;font-size:0.9rem;}
+  .review-row:last-of-type{border-bottom:0;}
+  .review-row .k{color:#8A8272;flex-shrink:0;}
+  .review-row .v{color:#F2EDE3;text-align:right;}
+  .review-row.total{border-top:1px solid #332D26;margin-top:8px;padding-top:12px;font-size:1.05rem;}
+  .review-row.total .v{font-family:'IBM Plex Mono',monospace;font-weight:600;color:#E8E1D2;font-size:1.3rem;}
+  .review-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;}
+  .review-actions button{flex:1;min-width:150px;}
+  .btn-line{background:transparent;border:1px solid #332D26;color:#F2EDE3;border-radius:100px;
+            padding:13px 20px;font-weight:500;font-size:0.95rem;font-family:inherit;cursor:pointer;}
+  .btn-line:hover{border-color:#8A8272;background:#161310;}
+  .review-note{font-size:0.78rem;color:#8A8272;margin-top:12px;line-height:1.6;}
   [hidden]{display:none !important;}
 </style>
 </head>
@@ -191,6 +207,11 @@
       </div>
     </div>
 
+    <div class="field">
+      <label for="a-agreed">Agreed fare (optional &mdash; leave blank to use the calculated one)</label>
+      <input type="number" id="a-agreed" min="0" step="1" placeholder="e.g. 180 if you settled on a different price">
+    </div>
+
     <!-- The number Ahmed reads out while the customer is still on the phone.
          It updates as the addresses are typed, so by the time he has both
          ends there is already a price on screen. -->
@@ -200,8 +221,21 @@
       <div class="quote-detail" id="quoteDetail">Fill in the pickup and drop-off.</div>
     </div>
 
-    <button type="submit" class="btn-primary">Save booking</button>
+    <button type="submit" class="btn-primary">Review booking</button>
     <div class="form-msg" id="formMsg"></div>
+
+    <!-- Nothing is written until this is confirmed. Saving fires four things
+         at once - sheet, calendar, email, customer profile - and none of them
+         can be taken back from this page, so there has to be a look first. -->
+    <div class="review" id="review" hidden>
+      <div class="review-title">About to save</div>
+      <div id="reviewBody"></div>
+      <div class="review-actions">
+        <button type="button" class="btn-line" id="backToEdit">Go back and change something</button>
+        <button type="button" class="btn-primary" id="confirmSave">Confirm &amp; save</button>
+      </div>
+      <p class="review-note">Saves to the sheet, adds it to the calendar, emails you, and updates the customer's record.</p>
+    </div>
   </form>
 </div>
 
@@ -264,7 +298,8 @@
       return;
     }
 
-    const asking = [pickup, dropoff, vehicle, dateTime, selectedPay].join('|');
+    const agreed = document.getElementById('a-agreed').value.trim();
+    const asking = [pickup, dropoff, vehicle, dateTime, selectedPay, agreed].join('|');
     if(asking === lastAsked) return;
     lastAsked = asking;
 
@@ -273,7 +308,8 @@
       try{
         const r = await fetch('/.netlify/functions/quote-fare', {
           method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ token, pickup, dropoff, vehicle, dateTime, payMethod: selectedPay })
+          body: JSON.stringify({ token, pickup, dropoff, vehicle, dateTime, payMethod: selectedPay,
+                                 agreedFare: agreed === '' ? null : Number(agreed) })
         });
         const j = await r.json();
         if(!r.ok || !j.ready) throw new Error(j.error || j.reason || 'Could not work that out.');
@@ -301,7 +337,7 @@
     }, 450);
   }
 
-  ['a-pickup','a-dropoff','a-vehicle','a-date'].forEach(id => {
+  ['a-pickup','a-dropoff','a-vehicle','a-date','a-agreed'].forEach(id => {
     const el = document.getElementById(id);
     if(el){ el.addEventListener('input', askForQuote); el.addEventListener('change', askForQuote); }
   });
@@ -358,12 +394,14 @@
   // also what makes dispatch unable to tell them apart.
   let saving = false;
 
-  document.getElementById('bookForm').addEventListener('submit', function(e){
-    e.preventDefault();
-    if (saving) return;
-    const msg = document.getElementById('formMsg');
+  // ---- gather, review, then save ----
+  // Saving fires four things at once and none of them can be undone from this
+  // page, so the button collects the booking and SHOWS it. Nothing is written
+  // until Confirm.
+  let pending = null;
 
-    const payload = {
+  function collect(){
+    return {
       source: document.getElementById('a-source').value,
       name: document.getElementById('a-name').value,
       phone: document.getElementById('a-phone').value,
@@ -380,44 +418,119 @@
       contact15: document.getElementById('a-contact15').checked,
       notes: document.getElementById('a-notes').value,
       vehicle: document.getElementById('a-vehicle').value,
+      agreedFare: document.getElementById('a-agreed').value.trim() === ''
+        ? null : Number(document.getElementById('a-agreed').value),
       payMethod: selectedPay,
     };
+  }
 
-    if(!payload.name.trim() || !payload.phone.trim() || !payload.pickup.trim() || !payload.dropoff.trim() || !payload.dateTime){
+  function prettyWhen(v){
+    if(!v) return '(no time)';
+    const d = new Date(v);
+    return isNaN(d) ? v : d.toLocaleString([], { weekday:'short', month:'short', day:'numeric',
+                                                 year:'numeric', hour:'numeric', minute:'2-digit' });
+  }
+
+  document.getElementById('bookForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    if (saving) return;
+    const msg = document.getElementById('formMsg');
+    const p = collect();
+
+    if(!p.name.trim() || !p.phone.trim() || !p.pickup.trim() || !p.dropoff.trim() || !p.dateTime){
       msg.textContent = 'Please fill in name, phone, pickup, drop-off, and date & time.';
       msg.style.color = '#E8998A';
       return;
     }
+    msg.textContent = '';
+
+    // Price it the same way the save will, so what is reviewed is what is saved.
+    let fare = null;
+    try{
+      const r = await fetch('/.netlify/functions/quote-fare', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(Object.assign({ token }, p))
+      });
+      const j = await r.json();
+      if(r.ok && j.ready) fare = j;
+    }catch(err){ /* shown as unpriced below */ }
+
+    const row = (k, v) => v ? '<div class="review-row"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>' : '';
+    const yes = (b) => b ? 'Yes' : '';
+    const seats = (p.carSeats && p.carSeats !== '0') ? p.carSeats : '';
+
+    document.getElementById('reviewBody').innerHTML =
+      row('Came in by', p.source) +
+      row('Customer', p.name) +
+      row('Phone', p.phone) +
+      row('Email', p.email) +
+      row('Referred by', p.referredBy) +
+      row('When', prettyWhen(p.dateTime)) +
+      row('Pickup', p.pickup) +
+      row('Drop-off', p.dropoff) +
+      row('Car', p.vehicle + (p.passengers ? ' \u00b7 ' + p.passengers + ' passenger' + (p.passengers === '1' ? '' : 's') : '')) +
+      row('Car seats', seats) +
+      row('Elderly assistance', yes(p.elderly)) +
+      row('Flight', p.flight) +
+      row('Cabin', p.temp && p.temp !== 'No preference' ? p.temp : '') +
+      row('Text 15 min before', yes(p.contact15)) +
+      row('Notes', p.notes) +
+      row('Paying by', p.payMethod) +
+      (fare && fare.matched
+        ? (fare.lines || []).map(l => row('', l)).join('') +
+          '<div class="review-row total"><span class="k">Total</span><span class="v">' + fare.total + '</span></div>' +
+          (fare.tip ? row('Suggested tip', '$' + fare.tip) : '')
+        : '<div class="review-row total"><span class="k">Fare</span><span class="v" style="font-size:0.95rem">Not priced \u2014 put a number in Agreed fare</span></div>');
+
+    pending = p;
+    document.getElementById('review').hidden = false;
+    document.getElementById('review').scrollIntoView({ behavior:'smooth', block:'center' });
+  });
+
+  document.getElementById('backToEdit').addEventListener('click', () => {
+    document.getElementById('review').hidden = true;
+    pending = null;
+    document.getElementById('a-pickup').scrollIntoView({ behavior:'smooth', block:'center' });
+  });
+
+  document.getElementById('confirmSave').addEventListener('click', async function(){
+    if (saving || !pending) return;
+    const msg = document.getElementById('formMsg');
+    const btn = this;
+
+    saving = true;
+    btn.disabled = true;
+    btn.textContent = 'Saving\u2026';
 
     const endpoints = ['send-booking-notification', 'add-to-calendar', 'log-booking', 'save-customer'];
-    saving = true;
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    if (submitBtn) { submitBtn.disabled = true; submitBtn.dataset.label = submitBtn.textContent; submitBtn.textContent = 'Saving\u2026'; }
-    Promise.all(endpoints.map(fn =>
+    await Promise.all(endpoints.map(fn =>
       fetch('/.netlify/functions/' + fn, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pending)
       }).catch(() => {})
-    )).then(() => {
-      msg.textContent = 'Saved — ' + payload.name + ', ' + payload.pickup + ' → ' + payload.dropoff + '.';
-      msg.style.color = 'var(--teal)';
-      e.target.reset();
-      document.getElementById('a-contact15').checked = true;
-      document.querySelectorAll('.pay-chip').forEach(c => c.classList.remove('active'));
-      document.getElementById('payOptions').firstElementChild.classList.add('active');
-      document.getElementById('a-vehicle').value = 'SUV';
-      // Must match a data-pay value, or the next booking's card fee is silently
-      // dropped — 'Pay in car (card or cash)' is not a payment method the fee
-      // table knows, so cardFeeFor returned null for it.
-      selectedPay = 'Square';
-      lastAsked = '';
-      document.getElementById('quoteAmount').className = 'quote-amount none';
-      document.getElementById('quoteAmount').innerHTML = '&mdash;';
-      document.getElementById('quoteDetail').textContent = 'Fill in the pickup and drop-off.';
-      saving = false;
-      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.label || 'Save booking'; }
-    });
+    ));
+
+    msg.textContent = 'Saved \u2014 ' + pending.name + ', ' + pending.pickup + ' \u2192 ' + pending.dropoff + '.';
+    msg.style.color = 'var(--teal)';
+
+    document.getElementById('bookForm').reset();
+    document.getElementById('a-contact15').checked = true;
+    document.querySelectorAll('.pay-chip').forEach(c => c.classList.remove('active'));
+    document.getElementById('payOptions').firstElementChild.classList.add('active');
+    document.getElementById('a-vehicle').value = 'SUV';
+    // Must match a data-pay value, or the next booking's card fee is silently
+    // dropped.
+    selectedPay = 'Square';
+    lastAsked = '';
+    document.getElementById('quoteAmount').className = 'quote-amount none';
+    document.getElementById('quoteAmount').innerHTML = '&mdash;';
+    document.getElementById('quoteDetail').textContent = 'Fill in the pickup and drop-off.';
+    document.getElementById('review').hidden = true;
+
+    pending = null;
+    saving = false;
+    btn.disabled = false;
+    btn.textContent = 'Confirm & save';
   });
 </script>
 </body>
