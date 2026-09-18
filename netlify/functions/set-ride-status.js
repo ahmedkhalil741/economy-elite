@@ -122,14 +122,32 @@ exports.handler = async function (event) {
     const status_ = L.statusFor(points, previousStatus);
     const lastRide = nowCompleted ? today.date : (c.last_ride || '');
     const firstRide = (nowCompleted && !c.first_ride) ? today.date : (c.first_ride || '');
-    const activity = L.activityFor(lastRide);
+    const activity = completedRides === 0 ? '—' : L.activityFor(lastRide);
 
-    // Credits only ever accrue; redeeming is something Ahmed does by hand and
-    // records himself. Taking a point back takes its credit back too.
+    // Credits follow the point exactly, in both directions.
+    //
+    // THE BUG THIS FIXES (caught by testing the reversal, 2026-09-18): taking
+    // a point back left the credit behind. Mark a ride Completed, then
+    // Cancelled, then Completed again — a correction anyone might make — and
+    // the customer walked away with $10 of credit for one $5 ride. Whatever
+    // completing awarded, un-completing takes back.
     const credit = nowCompleted ? L.creditEarned(points) : null;
-    const creditOwed = Math.max(0, (parseFloat(c.credit_owed) || 0) + (credit ? credit.amount : 0));
-    const creditNote = credit
-      ? [c.credit_history, `${today.date} +$${credit.amount} (${credit.reason})`].filter(Boolean).join(' · ')
+    // On the way OUT of Completed, `pointsBefore` is the total that earned the
+    // credit in the first place, so that is the one to reverse.
+    const reversed = !nowCompleted && wasCompleted ? L.creditEarned(pointsBefore) : null;
+
+    const creditOwed = Math.max(0,
+      (parseFloat(c.credit_owed) || 0)
+      + (credit ? credit.amount : 0)
+      - (reversed ? reversed.amount : 0));
+
+    const entry = credit
+      ? `${today.date} +$${credit.amount} (${credit.reason})`
+      : reversed
+        ? `${today.date} −$${reversed.amount} (${wanted.toLowerCase()} — reversed)`
+        : null;
+    const creditNote = entry
+      ? [c.credit_history, entry].filter(Boolean).join(' · ')
       : (c.credit_history || '');
 
     await sheets.spreadsheets.values.update({

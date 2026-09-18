@@ -61,7 +61,8 @@ exports.handler = async function (event) {
         const points = parseInt(c.lifetime_points, 10) || 0;
         const completedRides = parseInt(c.completed_rides, 10) || 0;
         const status = L.statusFor(points, c.status);
-        const activity = L.activityFor(c.last_ride);
+        // Never ridden yet is not the same as gone quiet.
+        const activity = completedRides === 0 ? '—' : L.activityFor(c.last_ride);
         byPhone.set(key, {
           status, activity, points, completedRides,
           creditOwed: parseFloat(c.credit_owed) || 0,
