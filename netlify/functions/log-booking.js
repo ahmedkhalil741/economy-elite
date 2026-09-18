@@ -77,7 +77,7 @@ exports.handler = async function (event) {
   try {
     const {
       name, pickup, dropoff, dateTime, phone, email, notes, payMethod,
-      passengers, carSeats, flight, temp, elderly, contact15, source, vehicle,
+      passengers, carSeats, flight, temp, elderly, contact15, source, vehicle, referredBy,
     } = JSON.parse(event.body);
 
     if (!pickup || !dropoff) {
@@ -100,6 +100,7 @@ exports.handler = async function (event) {
       name: orNA(name),
       phone: orNA(phone),
       email: orNA(email),
+      referred_by: orNA(referredBy),
       passengers: orNA(passengers),
       car_seats: (carSeats && carSeats !== '0') ? carSeats : 'None',
       elderly_assistance: elderly ? 'Yes' : 'No',

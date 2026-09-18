@@ -711,6 +711,11 @@
           <input type="email" id="b-email" placeholder="you@example.com" autocomplete="email">
         </div>
 
+        <div class="field">
+          <label for="b-referred">Referred by someone? (optional)</label>
+          <input type="text" id="b-referred" placeholder="Their name or phone number">
+        </div>
+
         <div class="book-row">
           <div class="field">
             <label for="b-vehicle">Vehicle</label>
@@ -986,6 +991,7 @@
     const notes = document.getElementById('b-notes').value;
     const passengers = document.getElementById('b-passengers').value;
     const email = document.getElementById('b-email').value;
+    const referredBy = document.getElementById('b-referred').value;
 
     if(!pickup.trim() || !dropoff.trim() || !dateTime || !phone.trim() || !name.trim()){
       msg.textContent = 'Please fill in your name and phone number.';
@@ -998,7 +1004,7 @@
     if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Sending\u2026'; }
 
     const payload = {
-      name, pickup, dropoff, dateTime, phone, email, notes,
+      name, pickup, dropoff, dateTime, phone, email, referredBy, notes,
       payMethod: selectedPay,
       carSeats, flight, temp, elderly, contact15, vehicle, passengers,
       source: 'Web'

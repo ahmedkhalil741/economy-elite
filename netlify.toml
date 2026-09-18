@@ -1,0 +1,17 @@
+# Netlify build and scheduling.
+#
+# The daily reminder is the only scheduled job. Two of the loyalty offers —
+# the win-back after 90 quiet days, and birthdays — aren't triggered by
+# anything a customer does. They're triggered by time passing, and nothing on
+# a website fires on its own, so this comes looking once a day.
+#
+# 12:00 UTC is 8 AM Eastern in summer, 7 AM in winter. Early enough to be read
+# with the first coffee, late enough not to be a 3 AM alert.
+#
+# It emails Ahmed a list. It never contacts a customer.
+
+[functions]
+  node_bundler = "esbuild"
+
+[functions."daily-reminders"]
+  schedule = "0 12 * * *"

@@ -168,12 +168,43 @@ exports.handler = async function (event) {
       },
     });
 
+    // ---- the referral ----
+    // Paid to the REFERRER, once, when the person they sent completes their
+    // first ride. Only on the first: a referral is worth one credit however
+    // many times that customer comes back afterwards.
+    let referral = null;
+    if (nowCompleted && completedRides === 1 && c.referred_by) {
+      const refKey = normalizePhone(c.referred_by);
+      const refIdx = refKey
+        ? customers.rows.findIndex((r) => normalizePhone(r[phoneCol]) === refKey)
+        : -1;
+      if (refIdx !== -1 && refIdx !== cIdx) {
+        const ref = rowToObject(customers.keys, customers.rows[refIdx]);
+        const refOwed = (parseFloat(ref.credit_owed) || 0) + L.REFERRAL_CREDIT;
+        const refNote = [ref.credit_history, `${today.date} +$${L.REFERRAL_CREDIT} (referred ${c.name || key})`]
+          .filter(Boolean).join(' · ');
+        try {
+          await sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range: `${CUSTOMERS_TAB}!A${refIdx + 2}:${customers.lastColumn}${refIdx + 2}`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: { values: [buildRow(customers.keys, { credit_owed: refOwed, credit_history: refNote }, customers.rows[refIdx])] },
+          });
+          referral = { name: ref.name || refKey, phone: refKey, amount: L.REFERRAL_CREDIT, owed: refOwed };
+        } catch (err) {
+          referral = { error: err.message };
+        }
+      } else if (refKey) {
+        referral = { unmatched: c.referred_by };
+      }
+    }
+
     // ---- tell Ahmed, so he can send the offer himself ----
     const who = c.name || name || key;
     let emailed = null;
     const becameLoyal = previousStatus !== L.STATUS_LOYAL && status_ === L.STATUS_LOYAL;
 
-    if (credit || becameLoyal) {
+    if (credit || becameLoyal || (referral && referral.amount)) {
       const subject = becameLoyal
         ? `⭐ New Loyal Customer – ${who}`
         : `${who} earned a $${credit.amount} credit`;
@@ -181,6 +212,8 @@ exports.handler = async function (event) {
         <p style="margin:0 0 12px"><strong>${who}</strong> — ${key}</p>
         <p style="margin:0 0 12px">${L.standingLine({ name: who, status: status_, activity, points, completedRides })}</p>
         ${credit ? `<p style="margin:0 0 12px"><strong>Earned: $${credit.amount}</strong> — ${credit.reason}.<br>Balance owed: <strong>$${creditOwed}</strong>.</p>` : ''}
+        ${referral && referral.amount ? `<p style="margin:0 0 12px;padding:10px 12px;background:#f5f2ea;border-radius:6px"><strong>${referral.name}</strong> referred them — <strong>$${referral.amount}</strong> credit added, balance now <strong>$${referral.owed}</strong>.</p>` : ''}
+        ${referral && referral.unmatched ? `<p style="margin:0 0 12px;color:#a05">Referred by "${referral.unmatched}" — no customer with that number, so no referral credit was given.</p>` : ''}
         <p style="margin:0;color:#555;font-size:13px">Nothing has been sent to the customer. Send the offer yourself when you're ready, then adjust <code>credit_owed</code> in the Customers tab.</p>
       </div>`;
       try { await sendOwnerEmail(subject, html); emailed = subject; }
@@ -198,6 +231,7 @@ exports.handler = async function (event) {
           creditOwed, creditEarned: credit ? credit.amount : 0,
           standing: L.standingLine({ name: who, status: status_, activity, points, completedRides }),
         },
+        referral,
         emailed,
       }),
     };

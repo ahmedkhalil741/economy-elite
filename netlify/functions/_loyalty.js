@@ -42,14 +42,16 @@ const STATUS_LOYAL = 'Loyal';
 const ACTIVE = 'Active';
 const INACTIVE = 'Inactive';
 
-// What a completed ride earns, at Ahmed's launch settings. Deliberately only
-// three: enough to be worth having, not enough to give the business away
-// before there is data to judge it by.
-const FIRST_RIDE_CREDIT = 5;   // after their first completed ride
-const LOYALTY_CREDIT = 15;     // at 10 points, and every 10 after that
-// Referral credit is specified at $10 but needs a "who referred you" field
-// that the booking form doesn't have yet. Left out on purpose rather than
-// half-built.
+// What a completed ride earns. Ahmed's settings, 2026-09-18.
+const FIRST_RIDE_CREDIT = 5;    // after their first completed ride
+const LOYALTY_CREDIT = 15;      // once, on reaching Loyal at 10 rides
+const REPEAT_CREDIT = 10;       // every 10 after that — 20, 30, 40…
+const REFERRAL_CREDIT = 10;     // to the referrer, once the new rider completes
+const WIN_BACK_CREDIT = 10;     // offered to someone who has gone quiet
+const BIRTHDAY_CREDIT = 10;     // offered on their birthday
+
+// Reaching Loyal is worth more than staying loyal, which is the point of a
+// milestone. $15 once, $10 each time after.
 
 // Loyal is a floor, not a level — once earned it is never taken away, even if
 // the sheet is edited by hand afterwards.
@@ -78,12 +80,58 @@ function creditEarned(pointsAfter) {
     return { amount: FIRST_RIDE_CREDIT, reason: 'first completed ride' };
   }
   if (pointsAfter > 0 && pointsAfter % LOYAL_POINTS === 0) {
-    return {
-      amount: LOYALTY_CREDIT,
-      reason: pointsAfter === LOYAL_POINTS ? 'reached Loyal — 10 rides' : `${pointsAfter} rides`,
-    };
+    return pointsAfter === LOYAL_POINTS
+      ? { amount: LOYALTY_CREDIT, reason: 'reached Loyal — 10 rides' }
+      : { amount: REPEAT_CREDIT, reason: `${pointsAfter} rides` };
   }
   return null;
+}
+
+// Someone has gone quiet if their last completed ride is past the 90-day line
+// but not so far past that a win-back note would be strange. Anyone further
+// gone has already been offered one — the window stops the same customer being
+// chased every single day.
+const WIN_BACK_WINDOW_DAYS = 30;
+
+function daysSince(dateStr, today = new Date()) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dateStr || ''));
+  if (!m) return null;
+  const then = Date.UTC(+m[1], +m[2] - 1, +m[3]);
+  const now = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  return Math.floor((now - then) / 86400000);
+}
+
+function justWentQuiet(lastRide, today = new Date()) {
+  const days = daysSince(lastRide, today);
+  if (days === null) return false;
+  return days > ACTIVITY_DAYS && days <= ACTIVITY_DAYS + WIN_BACK_WINDOW_DAYS;
+}
+
+// A birthday coming up in the next few days, so there is time to send
+// something before it passes. Stored as MM-DD or any date — only month and day
+// are read, and the year is ignored on purpose: a birth year is more than this
+// business needs to know.
+function birthdayWithin(birthday, days, today = new Date()) {
+  // Read whatever shape it was typed in — 9/20, 09-20, 2026-09-20, 1990-09-19,
+  // 9-20-1990. Only the month and day are used; the birth YEAR is deliberately
+  // ignored and never needed, because a customer's age is more than a car
+  // service has any business holding.
+  const nums = String(birthday || '').match(/\d+/g);
+  if (!nums || nums.length < 2) return false;
+
+  let month, day;
+  if (nums[0].length === 4 && nums.length >= 3) {       // 2026-09-20
+    month = Number(nums[1]); day = Number(nums[2]);
+  } else {                                              // 9/20, 09-20, 9-20-1990
+    month = Number(nums[0]); day = Number(nums[1]);
+  }
+  if (!month || !day || month > 12 || day > 31) return false;
+
+  for (let i = 0; i <= days; i++) {
+    const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + i));
+    if (d.getUTCMonth() + 1 === month && d.getUTCDate() === day) return true;
+  }
+  return false;
 }
 
 // The one-line summary that belongs on every reservation, so whoever is
@@ -96,6 +144,8 @@ function standingLine({ name, status, activity, points, completedRides }) {
 module.exports = {
   LOYAL_POINTS, ACTIVITY_DAYS,
   STATUS_NEW, STATUS_REGULAR, STATUS_LOYAL, ACTIVE, INACTIVE,
-  FIRST_RIDE_CREDIT, LOYALTY_CREDIT,
+  FIRST_RIDE_CREDIT, LOYALTY_CREDIT, REPEAT_CREDIT, REFERRAL_CREDIT,
+  WIN_BACK_CREDIT, BIRTHDAY_CREDIT, WIN_BACK_WINDOW_DAYS,
   statusFor, activityFor, creditEarned, standingLine,
+  daysSince, justWentQuiet, birthdayWithin,
 };

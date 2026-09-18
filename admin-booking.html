@@ -97,6 +97,10 @@
         <input type="email" id="a-email" placeholder="you@example.com">
       </div>
       <div class="field">
+        <label for="a-referred">Referred by (optional)</label>
+        <input type="text" id="a-referred" placeholder="Name or phone of whoever sent them">
+      </div>
+      <div class="field">
         <label for="a-date">Date &amp; time</label>
         <input type="datetime-local" id="a-date" required>
       </div>
@@ -259,6 +263,7 @@
       name: document.getElementById('a-name').value,
       phone: document.getElementById('a-phone').value,
       email: document.getElementById('a-email').value,
+      referredBy: document.getElementById('a-referred').value,
       dateTime: document.getElementById('a-date').value,
       pickup: document.getElementById('a-pickup').value,
       dropoff: document.getElementById('a-dropoff').value,

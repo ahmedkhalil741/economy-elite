@@ -89,7 +89,7 @@ exports.handler = async function (event) {
   }
 
   try {
-    const { phone, email, name, temp, carSeats, elderly, notes, vehicle } = JSON.parse(event.body);
+    const { phone, email, name, temp, carSeats, elderly, notes, vehicle, referredBy } = JSON.parse(event.body);
     const target = normalizePhone(phone);
     const targetEmail = normalizeEmail(email);
     if (!target && !targetEmail) {
@@ -138,6 +138,9 @@ exports.handler = async function (event) {
       elderly_assistance: elderly ? 'Yes' : 'No',
       notes: notes || existing.notes || '',
       car_type: vehicle || existing.car_type || '',
+      // Only ever set once, on the profile's first booking — a regular
+      // customer mentioning a friend later doesn't rewrite who sent them.
+      referred_by: existing.referred_by || (isNewCustomer ? (referredBy || '') : ''),
       total_rides: bookingsMade,
       last_booked: today,
       status,
