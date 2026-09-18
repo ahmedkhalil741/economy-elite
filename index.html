@@ -812,7 +812,7 @@
         <div class="field">
           <label>Payment method</label>
           <div class="pay-options" id="payOptions">
-            <button type="button" class="pay-chip active" data-pay="Square"><img src="payment-logos/square.svg" alt="" onerror="this.remove()">Square</button>
+            <button type="button" class="pay-chip active" data-pay="Card">Card</button>
             <button type="button" class="pay-chip" data-pay="Venmo"><img src="payment-logos/venmo.svg" alt="" onerror="this.remove()">Venmo</button>
             <button type="button" class="pay-chip" data-pay="Zelle"><img src="payment-logos/zelle.svg" alt="" onerror="this.remove()">Zelle</button>
             <button type="button" class="pay-chip" data-pay="Cash">Cash</button>
@@ -960,9 +960,9 @@
   });
 
   // Payment chip selection
-  let selectedPay = 'Square';
+  let selectedPay = 'Card';
   const payNotes = {
-    'Square': "Tap any card \u2014 credit, debit, or your phone \u2014 in the car at the end of your ride. A card processing fee of 2.6% + $0.15 is added, and we'll confirm your total before the ride.",
+    'Card': "Tap any card \u2014 credit, debit, or your phone \u2014 in the car at the end of your ride. A card processing fee of 2.6% + $0.15 is added, and we'll confirm your total before the ride.",
     'Venmo': "We'll send Venmo payment details by text after your booking is confirmed. A processing fee of 1.9% + $0.10 is added, and we'll confirm your total before the ride.",
     'Zelle': "We'll send Zelle payment details by text after your booking is confirmed. No processing fee.",
     'Cash': 'Pay your driver directly with cash at the end of your ride. No processing fee.'
@@ -1115,7 +1115,7 @@
       body: JSON.stringify(payload)
     }).catch(() => {});
 
-    if(selectedPay === 'Square'){
+    if(selectedPay === 'Card'){
       msg.textContent = `Reservation received — ${pickup} to ${dropoff}. We'll review your request and text you to confirm your ride and your total. You'll tap your card in the car at the end of the trip.`;
     }else{
       msg.textContent = `Reservation received — ${pickup} to ${dropoff}. We'll review your request and text you to confirm your ride, your total, and ${selectedPay} payment details.`;
@@ -1135,8 +1135,8 @@
     document.getElementById('b-contact15').checked = true;
     document.getElementById('b-vehicle').value = 'SUV';
     document.querySelectorAll('.pay-chip').forEach(c => c.classList.remove('active'));
-    document.querySelector('.pay-chip[data-pay="Square"]').classList.add('active');
-    selectedPay = 'Square';
+    document.querySelector('.pay-chip[data-pay="Card"]').classList.add('active');
+    selectedPay = 'Card';
     document.getElementById('payNote').textContent = payNotes[selectedPay];
     submitting = false;
     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Confirm booking'; }

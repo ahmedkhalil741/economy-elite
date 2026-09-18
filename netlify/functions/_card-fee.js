@@ -11,9 +11,10 @@
 // their pricing and the rate can depend on the specific account.
 //
 //   Zelle      nothing — bank to bank, no merchant fee
-//   Square     2.6% + $0.15   EVERY card is tapped in the car on the Square
+//   Card       2.6% + $0.15   EVERY card is tapped in the car on the Square
 //                             reader — credit, debit, and phone wallets like
-//                             Apple Pay all run through it at this rate
+//                             Apple Pay all run through it at this rate. The
+//                             customer only ever sees the word "Card".
 //   Venmo      1.9% + $0.10   business profile
 //   Cash       nothing
 //
@@ -36,8 +37,18 @@
 const CARD_FEES = {
   cash: null,
   zelle: null,
-  square: { rate: 0.026, fixed: 0.15, label: 'Square' },
-  'apple pay': { rate: 0.026, fixed: 0.15, label: 'Apple Pay' },
+  // "Card" is what the customer, the driver and the sheet all say now.
+  // Ahmed's decision, 2026-09-18: naming the processor told nobody anything
+  // useful and made the bill read like an advert for somebody else. Square is
+  // still what actually runs the payment, and the privacy policy still says
+  // so, because that is a disclosure rather than a label.
+  //
+  // `square` and `apple pay` stay as aliases. Every booking taken before this
+  // change has "Square" in its payment_method cell, and a stored value that
+  // no longer prices is a silent zero-fee ride.
+  card: { rate: 0.026, fixed: 0.15, label: 'Card' },
+  square: { rate: 0.026, fixed: 0.15, label: 'Card' },
+  'apple pay': { rate: 0.026, fixed: 0.15, label: 'Card' },
   venmo: { rate: 0.019, fixed: 0.10, label: 'Venmo' },
 };
 

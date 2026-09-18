@@ -360,7 +360,7 @@
     <div class="field">
       <label>Payment method</label>
       <div class="pay-options" id="payOptions">
-        <button type="button" class="pay-chip active" data-pay="Square">Square</button>
+        <button type="button" class="pay-chip active" data-pay="Card">Card</button>
         <button type="button" class="pay-chip" data-pay="Venmo">Venmo</button>
         <button type="button" class="pay-chip" data-pay="Zelle">Zelle</button>
         <button type="button" class="pay-chip" data-pay="Cash">Cash</button>
@@ -987,7 +987,7 @@
   }
 
   // ---- Payment chip selection ----
-  let selectedPay = 'Square';
+  let selectedPay = 'Card';
   document.getElementById('payOptions').addEventListener('click', e => {
     const chip = e.target.closest('.pay-chip');
     if(!chip) return;
@@ -1184,7 +1184,7 @@
     document.getElementById('a-vehicle').value = 'SUV';
     // Must match a data-pay value, or the next booking's card fee is silently
     // dropped.
-    selectedPay = 'Square';
+    selectedPay = 'Card';
     for(const k in PRICE_FIELDS){ edited[k] = false; document.getElementById(PRICE_FIELDS[k]).classList.remove('edited'); }
     document.getElementById('a-discount-reason').value = '';
     document.getElementById('discountWhyLine').hidden = true;
