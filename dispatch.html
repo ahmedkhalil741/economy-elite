@@ -1069,14 +1069,24 @@
     lastAsked = ''; askForQuote();
   });
 
-  // ---- Phone lookup: prefill known preferences for a returning customer ----
+  // ---- Look up a returning customer: prefill preferences and pull in credit ----
+  //
+  // THE NAME GOES WITH THE PHONE NUMBER. get-customer stopped answering to a
+  // number on its own on 2026-09-19, so this page quietly stopped recognising
+  // anybody the moment that shipped — no preferences, no credit balance, on
+  // the page where Ahmed takes bookings by phone. Found by testing the real
+  // form rather than the function.
+  //
+  // Either field can be typed first, so both trigger it.
   let lookupTimer = null;
-  document.getElementById('a-phone').addEventListener('input', function(e){
+  function lookupCustomerAdmin(){
+    const digits = document.getElementById('a-phone').value.replace(/\D/g, '');
+    const name = document.getElementById('a-name').value.trim();
+    if(digits.length < 10 || name.length < 2) return;
     clearTimeout(lookupTimer);
-    const digits = e.target.value.replace(/\D/g, '');
-    if(digits.length < 10) return;
     lookupTimer = setTimeout(() => {
-      fetch('/.netlify/functions/get-customer?phone=' + encodeURIComponent(digits))
+      fetch('/.netlify/functions/get-customer?phone=' + encodeURIComponent(digits) +
+            '&name=' + encodeURIComponent(name))
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           if(!data || !data.found) return;
@@ -1115,7 +1125,9 @@
         })
         .catch(() => {});
     }, 500);
-  });
+  }
+  document.getElementById('a-phone').addEventListener('input', lookupCustomerAdmin);
+  document.getElementById('a-name').addEventListener('input', lookupCustomerAdmin);
 
   // ---- Submit: same four functions the main site calls, with Source set
   // to whatever was picked above instead of always "Web". ----
