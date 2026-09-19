@@ -908,6 +908,34 @@
         <div class="step-count">Step 1 of 2 — your trip</div>
         <p class="know-hint"><strong>Booked with us before?</strong> Put in the same name and
           phone number you used last time and we'll bring up what we already know.</p>
+        <div class="book-row">
+          <div class="field">
+            <label for="b-pickup">Pickup</label>
+            <input type="text" id="b-pickup" placeholder="Address or landmark">
+          </div>
+          <div class="field">
+            <label for="b-dropoff" id="dropoffLabel">Drop-off</label>
+            <input type="text" id="b-dropoff" placeholder="Address or landmark">
+          </div>
+        </div>
+        <div class="book-row">
+          <div class="field">
+            <label for="b-date">Date &amp; time</label>
+            <input type="datetime-local" id="b-date">
+          </div>
+          <div class="field">
+            <label for="b-passengers">Passengers</label>
+            <select id="b-passengers">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7 or more</option>
+            </select>
+          </div>
+        </div>
         <div class="field">
           <label for="b-service">What's this ride for?</label>
           <select id="b-service">
@@ -938,34 +966,7 @@
           <p class="pay-note" style="margin-top:8px;">$60 an hour, no minimum, either vehicle. Not
             sure how long? Give us your best guess &mdash; we'll confirm the total before the ride.</p>
         </div>
-        <div class="book-row">
-          <div class="field">
-            <label for="b-pickup">Pickup</label>
-            <input type="text" id="b-pickup" placeholder="Address or landmark">
-          </div>
-          <div class="field">
-            <label for="b-dropoff" id="dropoffLabel">Drop-off</label>
-            <input type="text" id="b-dropoff" placeholder="Address or landmark">
-          </div>
-        </div>
-        <div class="book-row">
-          <div class="field">
-            <label for="b-date">Date &amp; time</label>
-            <input type="datetime-local" id="b-date">
-          </div>
-          <div class="field">
-            <label for="b-passengers">Passengers</label>
-            <select id="b-passengers">
-              <option value="1">1</option>
-              <option value="2" selected>2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-              <option value="6">6</option>
-              <option value="7">7 or more</option>
-            </select>
-          </div>
-        </div>
+
         <button type="button" class="btn-primary btn-block" id="toStep2">Continue →</button>
         <div class="form-msg" id="step1Msg"></div>
       </div>
