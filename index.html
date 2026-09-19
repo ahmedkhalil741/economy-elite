@@ -476,6 +476,49 @@
   }
 
   /* SERVICES */
+  /* ENTRY POINTS — the four things people actually come here for, high on the
+     page and tappable. The detailed cards further down explain each one; these
+     exist so somebody who wants an airport run can say so in one tap instead
+     of reading their way to the form. */
+  .entry{padding:34px 0 30px; border-bottom:1px solid var(--line);}
+  .entry-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px;}
+  .entry-card{
+    display:flex; flex-direction:column; gap:6px; text-decoration:none;
+    background:var(--bg-raised); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px 18px 20px; color:var(--ink); transition:border-color .15s, background .15s;
+  }
+  .entry-card:hover,.entry-card:focus-visible{border-color:var(--teal); background:var(--panel);}
+  .entry-card:focus-visible{outline:2px solid var(--teal); outline-offset:2px;}
+  .entry-card .t{font-family:var(--display); font-size:1rem; font-weight:600; line-height:1.25;}
+  .entry-card .d{font-size:0.8rem; color:var(--ink-dim); line-height:1.55;}
+  .entry-card .go{
+    margin-top:auto; padding-top:10px; font-family:var(--mono); font-size:0.64rem;
+    letter-spacing:0.12em; text-transform:uppercase; color:var(--steel);
+  }
+  .entry-card:hover .go,.entry-card:focus-visible .go{color:var(--teal);}
+
+  /* THE PROGRAMME. Stated plainly because every line of it is something the
+     system already does — points are counted when a ride is completed, credits
+     are worked out, birthdays are flagged. Nothing here is a promise the
+     business isn't already keeping. */
+  .loyalty{padding:64px 0; border-bottom:1px solid var(--line); background:var(--bg-raised);}
+  .loy-grid{display:grid; grid-template-columns:1.1fr 1fr; gap:40px; align-items:start;}
+  .loy-lead p{color:var(--ink-dim); font-size:0.95rem; line-height:1.75; margin-bottom:14px; max-width:46ch;}
+  .loy-lead p strong{color:var(--ink); font-weight:500;}
+  .loy-steps{display:flex; flex-direction:column; gap:0;}
+  .loy-step{display:grid; grid-template-columns:auto 1fr; gap:4px 18px; padding:14px 0; border-top:1px solid var(--line);}
+  .loy-step:first-child{border-top:0; padding-top:0;}
+  .loy-step .amt{
+    font-family:var(--mono); font-size:0.95rem; font-weight:600; color:var(--teal);
+    font-variant-numeric:tabular-nums; white-space:nowrap;
+  }
+  .loy-step .what{font-size:0.9rem; color:var(--ink); line-height:1.5;}
+  .loy-step .why{grid-column:2; font-size:0.82rem; color:var(--ink-dim); line-height:1.6;}
+  .loy-note{
+    margin-top:22px; font-size:0.82rem; color:var(--steel); line-height:1.7;
+    border-left:2px solid var(--line); padding-left:14px;
+  }
+
   .services{padding:64px 0; border-bottom:1px solid var(--line);}
   .service-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:18px;}
   .service-card{
@@ -557,6 +600,8 @@
   }
   @media (max-width: 620px){
     .service-grid{grid-template-columns:1fr;}
+    .entry-grid{grid-template-columns:repeat(2,1fr);}
+    .loy-grid{grid-template-columns:1fr; gap:28px;}
     .trustbar-inner{gap:10px 18px; font-size:0.68rem;}
     .trustbar-inner span:not(:last-child)::after{display:none;}
     .closer-actions .btn-primary, .closer-actions .btn-ghost{width:100%; justify-content:center;}
@@ -575,6 +620,7 @@
     <div class="nav-links">
       <a href="#hany">Meet Hany</a>
       <a href="#services">Services</a>
+      <a href="#loyalty">Rewards</a>
       <a href="#about">About</a>
       <a href="#policy">Policy</a>
       <a href="#book">Book</a>
@@ -612,6 +658,36 @@
     <span>No surge pricing</span>
     <span>Flight monitoring</span>
     <span>Book online, by text, or by phone</span>
+  </div>
+</section>
+
+<!-- The four services, as entry points rather than reading matter. Each one
+     scrolls to the form AND tells it what kind of ride this is, so the answer
+     is already filled in by the time the customer gets there. -->
+<section class="entry">
+  <div class="wrap">
+    <div class="entry-grid">
+      <a class="entry-card" href="#book" data-service="Airport transportation">
+        <span class="t">Airport transportation</span>
+        <span class="d">Newark, LaGuardia, JFK, Teterboro. We watch your flight.</span>
+        <span class="go">Book this &rarr;</span>
+      </a>
+      <a class="entry-card" href="#book" data-service="Local ride">
+        <span class="t">Local rides</span>
+        <span class="d">Dinner, an appointment, the train. One flat price.</span>
+        <span class="go">Book this &rarr;</span>
+      </a>
+      <a class="entry-card" href="#book" data-service="New York City">
+        <span class="t">NYC trips</span>
+        <span class="d">Manhattan and the boroughs, fare agreed before you get in.</span>
+        <span class="go">Book this &rarr;</span>
+      </a>
+      <a class="entry-card" href="#book" data-service="Special occasion">
+        <span class="t">Special occasions</span>
+        <span class="d">A wedding, a night out, the shore, a hospital transfer.</span>
+        <span class="go">Book this &rarr;</span>
+      </a>
+    </div>
   </div>
 </section>
 
@@ -675,6 +751,64 @@
   </div>
 </section>
 
+<!-- THE PROGRAMME. There is no sign-up and no card: the phone number on the
+     booking is the account. Everything below is already running on the back
+     end - a point is added when a ride is marked completed, the credit is
+     worked out from the count, birthdays are flagged. The one thing it does
+     not do is send money on its own; Hany sends every offer himself, and the
+     copy says so rather than implying an automatic email. -->
+<section class="loyalty" id="loyalty">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">For regulars</div>
+      <h2>Ride with us, and it counts</h2>
+    </div>
+    <div class="loy-grid">
+      <div class="loy-lead">
+        <p><strong>There is nothing to sign up for.</strong> Your phone number is the account.
+          Book once and we remember how you like to travel &mdash; the cabin warm or cool, a car
+          seat ready, a hand to the door if you need one. You never have to explain it twice.</p>
+        <p>Every completed ride earns a point, and points turn into credit off a future ride.
+          Nothing expires, and using your credit never costs you your standing.</p>
+        <p>We'll text you when you've earned something. No app, no card in your wallet,
+          no email list.</p>
+      </div>
+      <div class="loy-steps">
+        <div class="loy-step">
+          <span class="amt">$5</span>
+          <span class="what">After your first ride</span>
+          <span class="why">A thank-you for trying us, off your next trip.</span>
+        </div>
+        <div class="loy-step">
+          <span class="amt">$15</span>
+          <span class="what">At ten rides</span>
+          <span class="why">You become a Loyal customer, and you stay one. Ten rides is a
+            relationship, and it's worth more than the ones after it.</span>
+        </div>
+        <div class="loy-step">
+          <span class="amt">$10</span>
+          <span class="what">Every ten rides after that</span>
+          <span class="why">Twenty, thirty, forty. It keeps going.</span>
+        </div>
+        <div class="loy-step">
+          <span class="amt">$10</span>
+          <span class="what">When you refer someone</span>
+          <span class="why">Credited once they've taken their first ride. Tell us who sent
+            them when you book.</span>
+        </div>
+        <div class="loy-step">
+          <span class="amt">$10</span>
+          <span class="what">On your birthday</span>
+          <span class="why">Tell us the day and we'll remember. We don't need the year.</span>
+        </div>
+      </div>
+    </div>
+    <p class="loy-note">Credit comes off a future ride and isn't paid out in cash. Points are
+      counted when a ride is completed &mdash; a cancelled trip doesn't count, and doesn't cost
+      you one either.</p>
+  </div>
+</section>
+
 <section class="about" id="about">
   <div class="wrap">
     <div class="about-head">
@@ -701,6 +835,17 @@
       <!-- STEP 1 — the four things every trip needs. Everything else waits. -->
       <div class="step-pane" id="step1">
         <div class="step-count">Step 1 of 2 — your trip</div>
+        <div class="field">
+          <label for="b-service">What's this ride for?</label>
+          <select id="b-service">
+            <option value="">Choose one — or leave it and we'll work it out</option>
+            <option>Airport transportation</option>
+            <option>Local ride</option>
+            <option>New York City</option>
+            <option>Special occasion</option>
+            <option>Something else</option>
+          </select>
+        </div>
         <div class="book-row">
           <div class="field">
             <label for="b-pickup">Pickup</label>
@@ -1053,6 +1198,16 @@
     }, 600);
   });
 
+  // An entry card at the top of the page answers the first question on the
+  // form before the customer reaches it. The href does the scrolling; this
+  // only fills the box in.
+  document.querySelectorAll('.entry-card').forEach(function(card){
+    card.addEventListener('click', function(){
+      var sel = document.getElementById('b-service');
+      if (sel) sel.value = card.dataset.service || '';
+    });
+  });
+
   // Booking form submit — no online payment yet (fare isn't quoted on the site
   // anymore), so every submission is a reservation request: pay in the car, or
   // by Zelle/Cash App/Venmo, confirmed with the customer directly.
@@ -1078,7 +1233,13 @@
     const temp = document.getElementById('b-temp').value;
     const elderly = document.getElementById('b-elderly').checked;
     const contact15 = document.getElementById('b-contact15').checked;
-    const notes = document.getElementById('b-notes').value;
+    // Carried in the notes rather than a column of its own: it lands on the
+    // sheet, the calendar entry and the driver's ride sheet with no new header
+    // to add, and a value written to a column that doesn't exist is dropped
+    // silently — which has cost this project hours more than once.
+    const service = document.getElementById('b-service').value;
+    const typed = document.getElementById('b-notes').value.trim();
+    const notes = [service, typed].filter(Boolean).join(' \u2014 ');
     const passengers = document.getElementById('b-passengers').value;
     const email = document.getElementById('b-email').value;
     const referredBy = document.getElementById('b-referred').value;
