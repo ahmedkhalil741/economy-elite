@@ -502,6 +502,9 @@
      are worked out, birthdays are flagged. Nothing here is a promise the
      business isn't already keeping. */
   .loyalty{padding:64px 0; border-bottom:1px solid var(--line); background:var(--bg-raised);}
+  .loy-sub{
+    margin-top:14px; max-width:56ch; font-size:1.02rem; line-height:1.7; color:var(--ink);
+  }
   .loy-grid{display:grid; grid-template-columns:1.1fr 1fr; gap:40px; align-items:start;}
   .loy-lead p{color:var(--ink-dim); font-size:0.95rem; line-height:1.75; margin-bottom:14px; max-width:46ch;}
   .loy-lead p strong{color:var(--ink); font-weight:500;}
@@ -512,6 +515,9 @@
     font-family:var(--mono); font-size:0.95rem; font-weight:600; color:var(--teal);
     font-variant-numeric:tabular-nums; white-space:nowrap;
   }
+  /* The first row is a word, not an amount. Same column, quieter, so the eye
+     still reads a list of what you get rather than a price list. */
+  .loy-step:first-child .amt{font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--steel);}
   .loy-step .what{font-size:0.9rem; color:var(--ink); line-height:1.5;}
   .loy-step .why{grid-column:2; font-size:0.82rem; color:var(--ink-dim); line-height:1.6;}
   .loy-note{
@@ -786,20 +792,30 @@
 <section class="loyalty" id="loyalty">
   <div class="wrap">
     <div class="section-head">
-      <div class="eyebrow">For regulars</div>
+      <div class="eyebrow">The relationship</div>
       <h2>Ride with us, and it counts</h2>
+      <p class="loy-sub">The more we drive you, the better we know you. We remember how you like to
+        travel, recognize your loyalty, and make every ride feel a little more familiar.</p>
     </div>
     <div class="loy-grid">
       <div class="loy-lead">
         <p><strong>There is nothing to sign up for.</strong> Your phone number is the account.
           Book once and we remember how you like to travel &mdash; the cabin warm or cool, a car
           seat ready, a hand to the door if you need one. You never have to explain it twice.</p>
-        <p>Every completed ride earns a point, and points turn into credit off a future ride.
-          Nothing expires, and using your credit never costs you your standing.</p>
+        <p>That is the part that matters, and it starts on your second ride. <strong>The credits
+          below are how we say so out loud.</strong> Every completed ride earns a point, points turn
+          into credit off a future trip, nothing expires, and using your credit never costs you
+          your standing.</p>
         <p>We'll text you when you've earned something. No app, no card in your wallet,
           no email list.</p>
       </div>
       <div class="loy-steps">
+        <div class="loy-step">
+          <span class="amt">Always</span>
+          <span class="what">We remember you</span>
+          <span class="why">Your cabin temperature, the car seat, the Suburban or the sedan, a
+            text before we arrive. From the second ride on, it's already set.</span>
+        </div>
         <div class="loy-step">
           <span class="amt">$5</span>
           <span class="what">After your first ride</span>
