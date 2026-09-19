@@ -15,8 +15,9 @@
 // anything else kept by hand — from being wiped on the next booking.
 //
 // Columns it fills automatically:
-//   phone, email, name, cabin_temp, car_seats, elderly_assistance, notes,
-//   car_type, referred_by, total_rides, last_booked, status, activity
+//   phone, email, name, cabin_temp, car_seats, elderly_assistance,
+//   text_before_ride, payment_method, notes, car_type, referred_by,
+//   total_rides, last_booked, status, activity
 //
 // Filled by set-ride-status.js when a ride is COMPLETED, not here:
 //   completed_rides, lifetime_points, first_ride, last_ride,
@@ -98,7 +99,8 @@ exports.handler = async function (event) {
   }
 
   try {
-    const { phone, email, name, temp, carSeats, elderly, notes, vehicle, referredBy } = JSON.parse(event.body);
+    const { phone, email, name, temp, carSeats, elderly, notes, vehicle, referredBy,
+            contact15, payMethod } = JSON.parse(event.body);
     const target = normalizePhone(phone);
     const targetEmail = normalizeEmail(email);
     if (!target && !targetEmail) {
@@ -145,6 +147,11 @@ exports.handler = async function (event) {
       cabin_temp: temp || existing.cabin_temp || '',
       car_seats: carSeats || existing.car_seats || '',
       elderly_assistance: elderly ? 'Yes' : 'No',
+      // Two more things a regular should never have to say twice. Both are
+      // written from the booking they just made, because the last booking is
+      // the best statement of how somebody currently likes to travel.
+      text_before_ride: contact15 ? 'Yes' : 'No',
+      payment_method: payMethod || existing.payment_method || '',
       notes: notes || existing.notes || '',
       car_type: vehicle || existing.car_type || '',
       // Only ever set once, on the profile's first booking — a regular

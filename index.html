@@ -519,6 +519,32 @@
     border-left:2px solid var(--line); padding-left:14px;
   }
 
+  /* What a returning customer gets back for typing their real name. */
+  .known{
+    background:var(--panel); border:1px solid var(--teal); border-radius:var(--radius);
+    padding:18px 20px; margin-bottom:20px;
+  }
+  .known h4{font-family:var(--display); font-size:1.05rem; font-weight:600; margin:0 0 10px; color:var(--ink);}
+  .known .standing{
+    font-family:var(--mono); font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--steel); margin-bottom:12px;
+  }
+  .known .credit{
+    display:inline-block; font-family:var(--mono); font-size:0.88rem; font-weight:600;
+    color:#0B0A08; background:var(--teal); border-radius:100px; padding:5px 13px; margin-bottom:12px;
+  }
+  .known ul{list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:6px 8px;}
+  .known li{
+    font-size:0.78rem; color:var(--ink-dim); background:var(--bg-raised);
+    border:1px solid var(--line); border-radius:100px; padding:4px 11px;
+  }
+  .known .again{margin:12px 0 0; font-size:0.8rem; color:var(--steel); line-height:1.6;}
+  .know-hint{
+    font-size:0.85rem; color:var(--ink-dim); line-height:1.7;
+    border-left:2px solid var(--teal); padding-left:14px; margin-bottom:22px;
+  }
+  .know-hint strong{color:var(--ink); font-weight:500;}
+
   .services{padding:64px 0; border-bottom:1px solid var(--line);}
   .service-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:18px;}
   .service-card{
@@ -835,6 +861,10 @@
       <!-- STEP 1 — the four things every trip needs. Everything else waits. -->
       <div class="step-pane" id="step1">
         <div class="step-count">Step 1 of 2 — your trip</div>
+        <p class="know-hint"><strong>Booked with us before?</strong> Put in the same name and
+          phone number you used last time and we'll bring up what we already know &mdash; how you
+          like the cabin, whether you need a car seat, how you prefer to pay, and any credit
+          you've earned. We ask for both so nobody else can pull up your details.</p>
         <div class="field">
           <label for="b-service">What's this ride for?</label>
           <select id="b-service">
@@ -884,6 +914,8 @@
           <button type="button" class="step-back" id="backTo1">← Back</button>
           Step 2 of 2 — your details
         </div>
+
+        <div class="known" id="knownPanel" hidden></div>
 
         <div class="trip-recap" id="tripRecap"></div>
 
@@ -1135,23 +1167,34 @@
     document.getElementById('payNote').textContent = payNotes[selectedPay];
   });
 
-  // Look up a returning customer by phone number and prefill what we already
-  // know about them (name, cabin temperature, car seats, elderly
-  // assistance) so they don't have to repeat themselves. Fails silently if
-  // the Customers sheet isn't set up yet, or no match is found.
-  // The lookup runs off the phone number, which now lives on step 2 — so a
-  // returning customer types their number and the rest of step 2 fills itself
-  // in while they're still looking at it.
+  // Look up a returning customer and hand back everything we already know —
+  // their preferences AND what they have earned — so a regular never types the
+  // same answers twice.
+  //
+  // THE KEY IS NAME **AND** PHONE. It used to be the phone number alone, which
+  // meant anybody who typed a customer's number into this form learned their
+  // first name and how they like to travel. Now neither half works on its own,
+  // and a wrong name on a real number answers exactly like a number nobody has
+  // ever used — see get-customer.js.
+  //
+  // Both fields live on step 2, so the lookup runs as the second one is typed
+  // and the rest of the page fills in while the customer is still looking at
+  // it. Fails silently if the sheet is not set up or there is no match.
   let customerLookupTimer = null;
-  document.getElementById('b-phone').addEventListener('input', function(e){
+
+  function lookupCustomer(){
+    const name = document.getElementById('b-name').value.trim();
+    const digits = document.getElementById('b-phone').value.replace(/\D/g, '');
+    if(name.length < 2 || digits.length < 10) return;
+
     clearTimeout(customerLookupTimer);
-    const digits = e.target.value.replace(/\D/g, '');
-    if(digits.length < 10) return;
     customerLookupTimer = setTimeout(() => {
-      fetch('/.netlify/functions/get-customer?phone=' + encodeURIComponent(digits))
+      fetch('/.netlify/functions/get-customer?phone=' + encodeURIComponent(digits) +
+            '&name=' + encodeURIComponent(name))
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           if(!data || !data.found) return;
+
           // Only ever FILL A BLANK. If someone has already typed something
           // different this time, that is this trip's answer and overwriting it
           // would be the software arguing with the customer.
@@ -1163,50 +1206,84 @@
             return true;
           };
 
-          const filled = [];
-          if(fill('b-name', data.name)) filled.push('name');
-          if(fill('b-email', data.email)) filled.push('email');
+          const remembered = [];
+          if(fill('b-email', data.email)) remembered.push('your email');
           if(data.temp && data.temp !== 'No preference'
              && document.getElementById('b-temp').value === 'No preference'){
             document.getElementById('b-temp').value = data.temp;
-            filled.push('cabin temperature');
+            remembered.push('cabin ' + data.temp.toLowerCase());
           }
           if(data.carSeats && data.carSeats !== 'None' && data.carSeats !== '0'
              && document.getElementById('b-carseats').value === '0'){
             document.getElementById('b-carseats').value = data.carSeats;
-            filled.push('car seats');
+            remembered.push(data.carSeats + ' car seat' + (data.carSeats === '1' ? '' : 's'));
           }
           if(data.elderly === 'Yes' && !document.getElementById('b-elderly').checked){
             document.getElementById('b-elderly').checked = true;
-            filled.push('assistance');
+            remembered.push('help to the door');
           }
           if(data.vehicle && ['SUV','Sedan'].includes(data.vehicle)){
             document.getElementById('b-vehicle').value = data.vehicle;
+            remembered.push(data.vehicle === 'SUV' ? 'the Suburban' : 'the sedan');
+          }
+          if(data.contact15 === 'No' && document.getElementById('b-contact15').checked){
+            document.getElementById('b-contact15').checked = false;
+            remembered.push('no text before pickup');
+          }else if(data.contact15 === 'Yes'){
+            document.getElementById('b-contact15').checked = true;
+            remembered.push('a text 15 minutes before');
+          }
+          const chip = data.payMethod &&
+            document.querySelector('.pay-chip[data-pay="' + data.payMethod + '"]');
+          if(chip){
+            document.querySelectorAll('.pay-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            selectedPay = data.payMethod;
+            document.getElementById('payNote').textContent = payNotes[selectedPay] || '';
+            remembered.push('paying by ' + data.payMethod.toLowerCase());
           }
 
-          // Their loyalty standing is deliberately NOT shown. Ahmed's decision
-          // is that points stay an internal record until the programme has
-          // earned its keep — telling a customer they have 7 points is a
-          // promise the business hasn't made yet.
-          const msg = document.getElementById('formMsg');
-          msg.textContent = filled.length
-            ? 'Welcome back' + (data.name ? ', ' + data.name.split(' ')[0] : '') + ' — we remembered your ' + filled.join(', ') + '.'
-            : 'Welcome back' + (data.name ? ', ' + data.name.split(' ')[0] : '') + '.';
-          msg.style.color = 'var(--teal)';
+          // What they have earned. Shown now that the name has to match —
+          // Ahmed's decision, 2026-09-19, reversing the earlier one to keep
+          // standing internal. A customer who cannot see the programme has no
+          // reason to care about it.
+          const first = (data.name || name).split(' ')[0];
+          const rides = parseInt(data.completedRides, 10) || 0;
+          const credit = Number(data.creditOwed || 0);
+          const loyal = /loyal/i.test(data.status || '');
+
+          const bits = [];
+          bits.push('<h4>Welcome back, ' + esc(first) + '.</h4>');
+          if(rides){
+            bits.push('<div class="standing">' + rides + ' completed ride' + (rides === 1 ? '' : 's') +
+                      (loyal ? ' \u00b7 Loyal \u2b50' : '') + '</div>');
+          }
+          if(credit > 0){
+            bits.push('<div class="credit">$' + credit + ' credit waiting for you</div>');
+          }
+          if(remembered.length){
+            bits.push('<ul><li>' + remembered.map(esc).join('</li><li>') + '</li></ul>');
+            bits.push('<p class="again">Filled in for you. Change anything that\'s different today.</p>');
+          }
+          if(credit > 0){
+            bits.push('<p class="again">We\'ll take your credit off this ride when we confirm your fare.</p>');
+          }
+
+          const panel = document.getElementById('knownPanel');
+          panel.innerHTML = bits.join('');
+          panel.hidden = false;
         })
         .catch(() => {});
     }, 600);
-  });
+  }
 
-  // An entry card at the top of the page answers the first question on the
-  // form before the customer reaches it. The href does the scrolling; this
-  // only fills the box in.
-  document.querySelectorAll('.entry-card').forEach(function(card){
-    card.addEventListener('click', function(){
-      var sel = document.getElementById('b-service');
-      if (sel) sel.value = card.dataset.service || '';
-    });
-  });
+  function esc(v){
+    return String(v == null ? '' : v).replace(/[&<>"']/g, c =>
+      ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  }
+
+  document.getElementById('b-phone').addEventListener('input', lookupCustomer);
+  document.getElementById('b-name').addEventListener('input', lookupCustomer);
 
   // Booking form submit — no online payment yet (fare isn't quoted on the site
   // anymore), so every submission is a reservation request: pay in the car, or
