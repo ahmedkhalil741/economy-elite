@@ -482,6 +482,12 @@
     text-transform:uppercase; color:var(--ink-dim); line-height:1.7;
   }
   .signed-name span{display:block; color:var(--steel); font-size:0.68rem;}
+  @media (max-width:420px){
+    .entry-grid{grid-template-columns:1fr;}
+    .entry-card{padding:14px 16px 16px;}
+    .entry-card .go{padding-top:6px;}
+  }
+
   @media (max-width:620px){
     .signed img{width:120px;}
   }
@@ -492,7 +498,7 @@
      exist so somebody who wants an airport run can say so in one tap instead
      of reading their way to the form. */
   .entry{padding:34px 0 30px; border-bottom:1px solid var(--line);}
-  .entry-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px;}
+  .entry-grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px;}
   .entry-card{
     display:flex; flex-direction:column; gap:6px; text-decoration:none;
     background:var(--bg-raised); border:1px solid var(--line); border-radius:var(--radius);
@@ -562,6 +568,10 @@
     border-left:2px solid var(--teal); padding-left:14px; margin-bottom:22px;
   }
   .know-hint strong{color:var(--ink); font-weight:500;}
+
+  /* width/height on the img are there to reserve the box and stop the layout
+     jumping when it loads; these keep it responsive in spite of them. */
+  .fleet-visual img{max-width:100%; height:auto;}
 
   .services{padding:64px 0; border-bottom:1px solid var(--line);}
   .service-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:18px;}
@@ -644,7 +654,7 @@
   }
   @media (max-width: 620px){
     .service-grid{grid-template-columns:1fr;}
-    .entry-grid{grid-template-columns:repeat(2,1fr);}
+    .entry-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
     .loy-grid{grid-template-columns:1fr; gap:28px;}
     .trustbar-inner{gap:10px 18px; font-size:0.68rem;}
     .trustbar-inner span:not(:last-child)::after{display:none;}
@@ -740,7 +750,8 @@
   <div class="wrap fleet-grid">
     <div class="fleet-visual">
       <div class="fleet-tag">Founder</div>
-      <img src="hany.jpg" alt="Hany, founder of The Standard" loading="lazy">
+      <img src="hany.jpg" alt="Hany, founder of The Standard" loading="lazy"
+           width="768" height="1024" decoding="async">
     </div>
     <div class="fleet-info">
       <div class="eyebrow">Meet Hany</div>
