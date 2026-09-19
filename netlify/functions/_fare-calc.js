@@ -362,6 +362,52 @@ function agreedResult(agreed, toll, payMethod, label, setCard, zone) {
 // Ahmed's real tolls differ from the table, customers get the card fee waived,
 // and a price settled on the phone still needs the toll on top. A plain number
 // is still accepted and means { fare }.
+// A job charged BY THE HOUR rather than A to B. It is priced before the route
+// is even looked at, because the route is not what is being sold: an evening
+// held open, several stops, a driver waiting. $60 an hour, no minimum, same
+// either car.
+//
+// The tolls still apply if one end is New York — the bridge does not care how
+// the fare was worked out — so the destination is still read, only for that.
+function hourlyResult(hours, dest, payMethod, setCard) {
+  const driving = Math.round(HOURLY_RATE * hours * 100) / 100;
+  const toll = dest ? ((TOLLS[dest.key] || {}).standard || 0) : 0;
+  const rideFare = driving + toll;
+  const auto = cardFeeFor(payMethod, rideFare);
+  const cardAmount = (setCard !== null && setCard !== undefined) ? setCard : (auto ? auto.amount : null);
+  const total = Math.round((rideFare + (cardAmount || 0)) * 100) / 100;
+
+  const money = (n) => `$${Number(n).toFixed(2).replace(/\.00$/, '')}`;
+  const bits = [`${money(driving)} fare`];
+  if (toll) bits.push(`${money(toll)} tolls`);
+  if (cardAmount) bits.push(`${money(cardAmount)} ${auto ? auto.label : 'card'} fee`);
+  const shown = `${money(total)} flat (${bits.join(' + ')})`;
+
+  const hoursLabel = `${hours} hour${hours === 1 ? '' : 's'} at $${HOURLY_RATE}/hr`;
+
+  return {
+    matched: true,
+    label: `Hourly — ${hoursLabel}`,
+    zone: 'Hourly',
+    newYork: Boolean(dest && dest.ny),
+    agreedFare: null,
+    hours,
+    hourlyAmount: driving,
+    fare: driving,
+    toll: toll || null,
+    tollEstimated: Boolean(toll),
+    cardFee: cardAmount,
+    cardFeeLabel: cardAmount ? (auto ? auto.label : 'Card') : null,
+    cardFeeRate: cardAmount && auto ? `${(auto.rate * 100).toFixed(1)}% + $${auto.fixed.toFixed(2)}` : null,
+    rideFare,
+    total,
+    totalDisplay: money(total),
+    tipSuggested: Math.round(driving * 0.2),
+    display: shown,
+    driverDisplay: shown,
+  };
+}
+
 function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
   const ov = (typeof overrides === 'object' && overrides !== null) ? overrides : { fare: overrides };
   const setFare = numOrNull(ov.fare);
@@ -375,6 +421,13 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
 
   const destAtPickup = findDestination(pickup);
   const destAtDropoff = findDestination(dropoff);
+
+  // Hourly wins over the rate card. Somebody who has booked three hours is not
+  // buying a trip to an airport even if the airport is one of the stops.
+  const hours = numOrNull(ov.hours);
+  if (hours && hours > 0 && setFare === null) {
+    return hourlyResult(hours, destAtDropoff || destAtPickup, payMethod, setCard);
+  }
 
   // Exactly one end should be an airport or Manhattan. Both ends being
   // destinations (EWR to JFK) isn't in the table and gets quoted by hand.

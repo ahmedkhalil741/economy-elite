@@ -49,6 +49,13 @@ function fareTable(fare) {
     .join('');
 }
 
+// Hours are an input to the price, not a correction of one, so they travel
+// alongside the overrides rather than inside the caller's object.
+function withHours(overrides, hours) {
+  const base = (typeof overrides === 'object' && overrides !== null) ? overrides : { fare: overrides };
+  return (hours === 0 || hours) ? Object.assign({}, base, { hours }) : base;
+}
+
 exports.handler = async function (event) {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
@@ -57,14 +64,14 @@ exports.handler = async function (event) {
   try {
     const {
       name, pickup, dropoff, dateTime, phone, notes, payMethod,
-      passengers, carSeats, flight, temp, elderly, contact15, vehicle, overrides,
+      passengers, carSeats, flight, temp, elderly, contact15, vehicle, overrides, hours,
     } = JSON.parse(event.body);
 
     if (!pickup || !dropoff || !phone) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required booking details.' }) };
     }
 
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, overrides);
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, withHours(overrides, hours));
     const overnight = isOvernightPickup(dateTime);
 
     const emailBody = `

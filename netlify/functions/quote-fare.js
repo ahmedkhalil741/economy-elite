@@ -14,6 +14,13 @@
 
 const { estimateFare, isOvernightPickup, HOURLY_RATE } = require('./_fare-calc');
 
+// Hours are an input to the price, not a correction of one, so they travel
+// alongside the overrides rather than inside the caller's object.
+function withHours(overrides, hours) {
+  const base = (typeof overrides === 'object' && overrides !== null) ? overrides : { fare: overrides };
+  return (hours === 0 || hours) ? Object.assign({}, base, { hours }) : base;
+}
+
 exports.handler = async function (event) {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
@@ -21,14 +28,14 @@ exports.handler = async function (event) {
   if (!expected) return { statusCode: 503, body: JSON.stringify({ error: 'ADMIN_TOKEN is not set in Netlify.' }) };
 
   try {
-    const { token, pickup, dropoff, vehicle, dateTime, payMethod, overrides } = JSON.parse(event.body || '{}');
+    const { token, pickup, dropoff, vehicle, dateTime, payMethod, overrides, hours, } = JSON.parse(event.body || '{}');
     if (token !== expected) return { statusCode: 401, body: JSON.stringify({ error: 'Wrong passcode.' }) };
 
     if (!pickup || !dropoff) {
       return { statusCode: 200, body: JSON.stringify({ ready: false, reason: 'Need both a pickup and a drop-off.' }) };
     }
 
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, overrides);
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, withHours(overrides, hours));
 
     // The parts, so a price can be EXPLAINED on the phone rather than just
     // stated. "Seventy-five, plus thirty-five because it's the Suburban."

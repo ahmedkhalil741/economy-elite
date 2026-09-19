@@ -18,7 +18,7 @@
 //   passengers, car_seats, elderly_assistance, flight, cabin_temp,
 //   text_before_ride, payment_method, notes, source, zone, base_fare,
 //   card_fee, sedan, vehicle, toll, discount, discount_reason,
-//   discount_spent, tip, hourly_trip, waiting_late_fee, fare_total
+//   discount_spent, tip, hourly_trip, hours, waiting_late_fee, fare_total
 // Any column whose header isn't in that list is left alone (so your own
 // notes/status columns won't get overwritten). Any header in that list
 // that isn't in your sheet is simply skipped.
@@ -69,6 +69,13 @@ async function getSheetsClient() {
   return google.sheets({ version: 'v4', auth });
 }
 
+// Hours are an input to the price, not a correction of one, so they travel
+// alongside the overrides rather than inside the caller's object.
+function withHours(overrides, hours) {
+  const base = (typeof overrides === 'object' && overrides !== null) ? overrides : { fare: overrides };
+  return (hours === 0 || hours) ? Object.assign({}, base, { hours }) : base;
+}
+
 exports.handler = async function (event) {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
@@ -78,14 +85,14 @@ exports.handler = async function (event) {
     const {
       name, pickup, dropoff, dateTime, phone, email, notes, payMethod,
       passengers, carSeats, flight, temp, elderly, contact15, source, vehicle, referredBy, overrides,
-      discountReason,
+      discountReason, hours,
     } = JSON.parse(event.body);
 
     if (!pickup || !dropoff) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required booking details.' }) };
     }
 
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, overrides);
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, withHours(overrides, hours));
     const isSedan = (vehicle || '').trim().toLowerCase() === 'sedan';
 
     // Local (range) and unmatched routes don't break down into base + SUV,
@@ -156,14 +163,16 @@ exports.handler = async function (event) {
       // actually happened on the road.
       waiting_late_fee: NA,
       tip: orNA(fare.tipSuggested),
-      // Always N/A. The booking form has no hourly option, so a web booking
-      // is never an hourly job and there is no amount to record. This used to
-      // read `fare.matched ? 'No' : 'Yes'`, which was wrong twice over: it
-      // guessed "hourly" purely because a route didn't match a known zone
-      // (unmatched means unknown, not hourly), and it wrote Yes/No into a
-      // column that holds an amount everywhere else. If hourly bookings are
-      // ever offered, put the charge here and leave N/A when it isn't one.
-      hourly_trip: NA,
+      // The charge for an hourly job, and the hours it was billed for. N/A on
+      // a normal A-to-B ride, which is most of them.
+      //
+      // This column used to read `fare.matched ? 'No' : 'Yes'` and was wrong
+      // twice over: it guessed "hourly" purely because a route didn't match a
+      // known zone — unmatched means unknown, not hourly — and it wrote Yes/No
+      // into a column holding an amount everywhere else. Now the booking form
+      // actually offers hourly, it holds the amount it always should have.
+      hourly_trip: fare.hourlyAmount ? fare.hourlyAmount : NA,
+      hours: fare.hours ? fare.hours : NA,
       fare_total: hasNumericFare ? fare.total : (fare.matched ? fare.totalDisplay : fare.display),
     };
 

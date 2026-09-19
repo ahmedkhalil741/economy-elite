@@ -73,6 +73,13 @@ async function getCalendarClient() {
   return google.calendar({ version: 'v3', auth });
 }
 
+// Hours are an input to the price, not a correction of one, so they travel
+// alongside the overrides rather than inside the caller's object.
+function withHours(overrides, hours) {
+  const base = (typeof overrides === 'object' && overrides !== null) ? overrides : { fare: overrides };
+  return (hours === 0 || hours) ? Object.assign({}, base, { hours }) : base;
+}
+
 exports.handler = async function (event) {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
@@ -81,7 +88,7 @@ exports.handler = async function (event) {
   try {
     const {
       name, pickup, dropoff, dateTime, phone, notes, payMethod,
-      passengers, carSeats, flight, temp, elderly, contact15, vehicle, overrides,
+      passengers, carSeats, flight, temp, elderly, contact15, vehicle, overrides, hours,
     } = JSON.parse(event.body);
 
     if (!pickup || !dropoff || !dateTime) {
@@ -99,7 +106,7 @@ exports.handler = async function (event) {
       return { statusCode: 400, body: JSON.stringify({ error: `Unrecognized date/time format: ${dateTime}` }) };
     }
 
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, overrides);
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, withHours(overrides, hours));
 
     const descLines = [
       `Customer name: ${name || 'N/A'}`,

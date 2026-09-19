@@ -862,9 +862,7 @@
       <div class="step-pane" id="step1">
         <div class="step-count">Step 1 of 2 — your trip</div>
         <p class="know-hint"><strong>Booked with us before?</strong> Put in the same name and
-          phone number you used last time and we'll bring up what we already know &mdash; how you
-          like the cabin, whether you need a car seat, how you prefer to pay, and any credit
-          you've earned. We ask for both so nobody else can pull up your details.</p>
+          phone number you used last time and we'll bring up what we already know.</p>
         <div class="field">
           <label for="b-service">What's this ride for?</label>
           <select id="b-service">
@@ -873,8 +871,27 @@
             <option>Local ride</option>
             <option>New York City</option>
             <option>Special occasion</option>
+            <option>By the hour</option>
             <option>Something else</option>
           </select>
+        </div>
+        <!-- Only for an hourly job. A trip A to B has no hours to give, and
+             asking everybody for a number most people don't have is how a form
+             gets abandoned. -->
+        <div class="field" id="hoursField" hidden>
+          <label for="b-hours">How many hours?</label>
+          <select id="b-hours">
+            <option value="">Choose</option>
+            <option value="2">2 hours</option>
+            <option value="3">3 hours</option>
+            <option value="4">4 hours</option>
+            <option value="5">5 hours</option>
+            <option value="6">6 hours</option>
+            <option value="8">8 hours</option>
+            <option value="10">10 hours</option>
+          </select>
+          <p class="pay-note" style="margin-top:8px;">$60 an hour, no minimum, either vehicle. Not
+            sure how long? Give us your best guess &mdash; we'll confirm the total before the ride.</p>
         </div>
         <div class="book-row">
           <div class="field">
@@ -882,7 +899,7 @@
             <input type="text" id="b-pickup" placeholder="Address or landmark">
           </div>
           <div class="field">
-            <label for="b-dropoff">Drop-off</label>
+            <label for="b-dropoff" id="dropoffLabel">Drop-off</label>
             <input type="text" id="b-dropoff" placeholder="Address or landmark">
           </div>
         </div>
@@ -1126,8 +1143,19 @@
     const when    = document.getElementById('b-date').value;
     const msg     = document.getElementById('step1Msg');
 
-    if(!pickup || !dropoff || !when){
-      msg.textContent = 'Please fill in your pickup, drop-off, and date & time.';
+    const hourly = document.getElementById('b-service').value === 'By the hour';
+    const hoursVal = document.getElementById('b-hours').value;
+
+    if(hourly && !hoursVal){
+      msg.textContent = 'How many hours do you need the car for?';
+      msg.style.color = '#E8E1D2';
+      return;
+    }
+    // An hourly job can leave the drop-off blank. Everything else can't.
+    if(!pickup || (!hourly && !dropoff) || !when){
+      msg.textContent = hourly
+        ? 'Please fill in your pickup and date & time.'
+        : 'Please fill in your pickup, drop-off, and date & time.';
       msg.style.color = '#E8E1D2';
       return;
     }
@@ -1285,6 +1313,30 @@
   document.getElementById('b-phone').addEventListener('input', lookupCustomer);
   document.getElementById('b-name').addEventListener('input', lookupCustomer);
 
+  // Hourly changes what the form is asking for: hours become required, and the
+  // drop-off stops being — an evening held open often ends where it started,
+  // and the customer may genuinely not know yet.
+  function syncHourly(){
+    const hourly = document.getElementById('b-service').value === 'By the hour';
+    document.getElementById('hoursField').hidden = !hourly;
+    document.getElementById('dropoffLabel').textContent =
+      hourly ? 'Drop-off (or where you expect to end up)' : 'Drop-off';
+    document.getElementById('b-dropoff').placeholder =
+      hourly ? 'Leave blank if you are not sure yet' : 'Address or landmark';
+  }
+  document.getElementById('b-service').addEventListener('change', syncHourly);
+  syncHourly();
+
+  // An entry card at the top of the page answers the first question on the
+  // form before the customer reaches it. The href does the scrolling; this
+  // only fills the box in.
+  document.querySelectorAll('.entry-card').forEach(function(card){
+    card.addEventListener('click', function(){
+      var sel = document.getElementById('b-service');
+      if (sel) { sel.value = card.dataset.service || ''; syncHourly(); }
+    });
+  });
+
   // Booking form submit — no online payment yet (fare isn't quoted on the site
   // anymore), so every submission is a reservation request: pay in the car, or
   // by Zelle/Cash App/Venmo, confirmed with the customer directly.
@@ -1315,6 +1367,9 @@
     // to add, and a value written to a column that doesn't exist is dropped
     // silently — which has cost this project hours more than once.
     const service = document.getElementById('b-service').value;
+    const hours = service === 'By the hour'
+      ? (parseFloat(document.getElementById('b-hours').value) || null)
+      : null;
     const typed = document.getElementById('b-notes').value.trim();
     const notes = [service, typed].filter(Boolean).join(' \u2014 ');
     const passengers = document.getElementById('b-passengers').value;
@@ -1332,7 +1387,12 @@
     if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Sending\u2026'; }
 
     const payload = {
-      name, pickup, dropoff, dateTime, phone, email, referredBy, notes,
+      name, pickup,
+      // An hourly booking may genuinely not have a destination yet. The sheet,
+      // the calendar and the driver all expect something here, so say what it
+      // is rather than leaving a blank cell nobody can interpret.
+      dropoff: (dropoff || '').trim() || (hours ? 'Hourly \u2014 no set drop-off' : dropoff),
+      dateTime, phone, email, referredBy, notes, hours,
       payMethod: selectedPay,
       carSeats, flight, temp, elderly, contact15, vehicle, passengers,
       source: 'Web'
