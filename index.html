@@ -201,6 +201,17 @@
     transition:border-color .15s, background .15s;
   }
   .btn-ghost:hover{border-color:var(--steel); background:var(--bg-raised);}
+  /* Booking is the thing this page is for, so it gets a bigger button than
+     anything else on the page and nothing of equal weight beside it. Text and
+     call are still one tap away, as quiet links underneath — a customer who
+     wants to phone will find a phone number, and one who is ready to book
+     should not have to choose between three identical buttons first. */
+  .btn-lg{font-size:1.05rem; padding:17px 34px; font-weight:600;}
+  .alt-ways{
+    margin-top:14px; font-size:0.88rem; color:var(--steel);
+  }
+  .alt-ways a{color:var(--ink-dim); text-decoration:underline; text-underline-offset:3px;}
+  .alt-ways a:hover{color:var(--ink);}
 
   .trust-row{display:flex; gap:28px; flex-wrap:wrap; font-size:0.86rem; color:var(--steel);}
   .trust-row span{display:flex; align-items:center; gap:7px;}
@@ -517,7 +528,8 @@
   }
   /* The first row is a word, not an amount. Same column, quieter, so the eye
      still reads a list of what you get rather than a price list. */
-  .loy-step:first-child .amt{font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--steel);}
+  .loy-step:first-child .amt,
+  .loy-step:last-child .amt{font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--steel);}
   .loy-step .what{font-size:0.9rem; color:var(--ink); line-height:1.5;}
   .loy-step .why{grid-column:2; font-size:0.82rem; color:var(--ink-dim); line-height:1.6;}
   .loy-note{
@@ -670,9 +682,10 @@
     <h1>Your Driver.<br>Not Just Your <em>Ride</em>.</h1>
     <p class="hero-sub">Trusted private transportation in New Providence and surrounding communities for over 24 years.<br>Book online, by text, or by phone.</p>
     <div class="hero-actions">
-      <a href="#book" class="btn-primary">Book a ride →</a>
-      <a href="sms:9084949256" class="btn-ghost">Text us</a>
+      <a href="#book" class="btn-primary btn-lg">Book a ride →</a>
     </div>
+    <p class="alt-ways">or <a href="sms:9084949256">text us</a> &middot;
+      <a href="tel:9084949256">call (908) 494-9256</a></p>
   </div>
   <div class="hero-car">
     <img src="suburban-hero.jpg" alt="A black Chevrolet Suburban, the vehicle used by The Standard" loading="eager">
@@ -726,7 +739,7 @@
 <section class="fleet" id="hany">
   <div class="wrap fleet-grid">
     <div class="fleet-visual">
-      <div class="fleet-tag">Founder &amp; CEO</div>
+      <div class="fleet-tag">Founder</div>
       <img src="hany.jpg" alt="Hany, founder of The Standard" loading="lazy">
     </div>
     <div class="fleet-info">
@@ -748,7 +761,7 @@
         <summary>Read Hany's story</summary>
         <div class="story-body">
           <blockquote>"I'm not trying to make more customers — I'm trying to build real relationships. We don't just care about how the ride looks from the outside. We care about how you feel on the inside: comfortable, safe, and genuinely happy. If you're looking for luxury for its own sake, there's plenty of that around you. If you're looking for real happiness and satisfaction, we're the right choice."</blockquote>
-          <div class="story-attr">Hany — Founder &amp; CEO, The Standard</div>
+          <div class="story-attr">Hany — Founder, The Standard</div>
         </div>
       </details>
     </div>
@@ -803,9 +816,8 @@
           Book once and we remember how you like to travel &mdash; the cabin warm or cool, a car
           seat ready, a hand to the door if you need one. You never have to explain it twice.</p>
         <p>That is the part that matters, and it starts on your second ride. <strong>The credits
-          below are how we say so out loud.</strong> Every completed ride earns a point, points turn
-          into credit off a future trip, nothing expires, and using your credit never costs you
-          your standing.</p>
+          below are how we say so out loud.</strong> Every completed ride earns a point, and points
+          turn into credit off a future trip.</p>
         <p>We'll text you when you've earned something. No app, no card in your wallet,
           no email list.</p>
       </div>
@@ -824,8 +836,8 @@
         <div class="loy-step">
           <span class="amt">$15</span>
           <span class="what">At ten rides</span>
-          <span class="why">You become a Loyal customer, and you stay one. Ten rides is a
-            relationship, and it's worth more than the ones after it.</span>
+          <span class="why">You become a Loyal Customer for good &mdash; and we mark the milestone
+            with $15 toward your next ride.</span>
         </div>
         <div class="loy-step">
           <span class="amt">$10</span>
@@ -842,6 +854,12 @@
           <span class="amt">$10</span>
           <span class="what">On your birthday</span>
           <span class="why">Tell us the day and we'll remember. We don't need the year.</span>
+        </div>
+        <div class="loy-step">
+          <span class="amt">Never</span>
+          <span class="what">Your points expire</span>
+          <span class="why">They only ever go up, and spending your credit never costs you your
+            standing.</span>
         </div>
       </div>
     </div>
@@ -1041,10 +1059,10 @@
             <button type="button" class="pay-chip" data-pay="Zelle"><img src="payment-logos/zelle.svg" alt="" onerror="this.remove()">Zelle</button>
             <button type="button" class="pay-chip" data-pay="Cash">Cash</button>
           </div>
-          <div class="pay-note" id="payNote">Tap any card &mdash; credit, debit, or your phone &mdash; in the car at the end of your ride. A card processing fee of 2.6% + $0.15 is added, and we&rsquo;ll confirm your total before the ride.</div>
+          <div class="pay-note" id="payNote">Tap any card in the car at the end of the ride. A 2.6% + $0.15 processing fee applies &mdash; we&rsquo;ll confirm your total first.</div>
         </div>
 
-        <button type="submit" class="btn-primary btn-block">Confirm booking</button>
+        <button type="submit" class="btn-primary btn-block btn-lg">Confirm booking</button>
         <div class="form-msg" id="formMsg"></div>
       </div>
     </form>
@@ -1081,10 +1099,10 @@
     <h2>Ready when you are.</h2>
     <p>Reserve your next ride with The Standard.</p>
     <div class="closer-actions">
-      <a href="#book" class="btn-primary">Book online →</a>
-      <a href="sms:9084949256" class="btn-ghost">Text us</a>
-      <a href="tel:9084949256" class="btn-ghost">Call (908) 494-9256</a>
+      <a href="#book" class="btn-primary btn-lg">Book a ride →</a>
     </div>
+    <p class="alt-ways">or <a href="sms:9084949256">text us</a> &middot;
+      <a href="tel:9084949256">call (908) 494-9256</a></p>
   </div>
 </section>
 
@@ -1197,10 +1215,10 @@
   // Payment chip selection
   let selectedPay = 'Card';
   const payNotes = {
-    'Card': "Tap any card \u2014 credit, debit, or your phone \u2014 in the car at the end of your ride. A card processing fee of 2.6% + $0.15 is added, and we'll confirm your total before the ride.",
-    'Venmo': "We'll send Venmo payment details by text after your booking is confirmed. A processing fee of 1.9% + $0.10 is added, and we'll confirm your total before the ride.",
-    'Zelle': "We'll send Zelle payment details by text after your booking is confirmed. No processing fee.",
-    'Cash': 'Pay your driver directly with cash at the end of your ride. No processing fee.'
+    'Card': "Tap any card in the car at the end of the ride. A 2.6% + $0.15 processing fee applies \u2014 we'll confirm your total first.",
+    'Venmo': "We'll text you the Venmo details once your ride is confirmed. 1.9% + $0.10 processing fee.",
+    'Zelle': "We'll text you the Zelle details once your ride is confirmed. No processing fee.",
+    'Cash': 'Pay your driver at the end of the ride. No processing fee.'
   };
   document.getElementById('payOptions').addEventListener('click', e => {
     const chip = e.target.closest('.pay-chip');
@@ -1300,7 +1318,7 @@
           bits.push('<h4>Welcome back, ' + esc(first) + '.</h4>');
           if(rides){
             bits.push('<div class="standing">' + rides + ' completed ride' + (rides === 1 ? '' : 's') +
-                      (loyal ? ' \u00b7 Loyal \u2b50' : '') + '</div>');
+                      (loyal ? ' \u00b7 Loyal Customer \u2b50' : '') + '</div>');
           }
           if(credit > 0){
             bits.push('<div class="credit">$' + credit + ' credit waiting for you</div>');
