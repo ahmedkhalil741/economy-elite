@@ -45,7 +45,7 @@ const SUV_FEE_NY = 50;     // to Manhattan, LaGuardia, JFK
 const OVERNIGHT_FEE = 10;
 
 // Town to town, all-inclusive, same price either vehicle.
-const LOCAL_RANGE = [25, 35];
+const LOCAL_RANGE = [20, 35];
 
 // ---- TOLLS ----
 // Charged to the customer as their own line, never buried in the base fare.
