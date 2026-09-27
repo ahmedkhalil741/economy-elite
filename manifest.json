@@ -1,7 +1,7 @@
 {
-  "name": "The Standard \u2014 Private Chauffeur",
+  "name": "The Standard \u2014 Private Car Service",
   "short_name": "The Standard",
-  "description": "Private chauffeur transportation in New Jersey \u2014 a trusted local driver, on request.",
+  "description": "Private car service in New Jersey \u2014 a trusted local driver, on request.",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#0B0A08",
