@@ -173,7 +173,7 @@ exports.handler = async function (event) {
         // Below the total, and said to be on top of it. A tip is the
         // customer's decision and is never part of what gets collected, so
         // putting it in the running list would invite somebody to add it in.
-        tipNum ? `Suggested tip (20%, on top, customer's choice): ${money(tipNum)}` : null,
+        tipNum ? `Suggested tip: ${money(tipNum)} \u2014 that's 20% of the ${money(driving > 0 ? driving : 0)} fare` : null,
       ].filter(Boolean);
     } else {
       // A range, or a route quoted by hand — there is no single number to

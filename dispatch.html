@@ -441,7 +441,7 @@
            the customer's decision and is never part of what gets collected;
            putting it above the total would have somebody adding it in. -->
       <div class="qtip" id="tipLine" hidden>
-        <span class="qk">Suggested tip &mdash; 20% of the fare, not the tolls</span>
+        <span class="qk" id="tipNote">Suggested tip</span>
         <span class="qtipval" id="tipValue"></span>
       </div>
       <div class="quote-detail" id="quoteDetail">Fill in the pickup and drop-off.</div>
@@ -624,8 +624,8 @@
           (cardN ? fsr('Card fee', cash(cardN)) : '') +
           fsr('Total to collect', cash(totalN), 'total') +
           (tipN ? fsr('Suggested tip', cash(tipN), 'tip') : '') +
-          (tipN ? '<div class="fsnote">The tip is on top of the total and is the customer\'s ' +
-                  'choice &mdash; 20% of the fare, not the tolls or the card fee.</div>' : '') +
+          (tipN && netFare ? '<div class="fsnote">That&rsquo;s 20% of the ' + cash(netFare) +
+                  ' fare. On top of the total, and the customer&rsquo;s choice.</div>' : '') +
           (discN && r.discountReason ? '<div class="fsnote">Discount: ' + esc(r.discountReason) +
                   '. The driver is shown the total only.</div>' : '') +
         '</div>';
@@ -1008,6 +1008,11 @@
         const tipLine = document.getElementById('tipLine');
         if(j.matched && j.tip){
           document.getElementById('tipValue').textContent = '$' + j.tip;
+          // Short form, Ahmed's wording: the percentage means nothing without the
+          // number it was taken from, and the rest was noise.
+          const tipBase = j.parts && j.parts.fare;
+          document.getElementById('tipNote').textContent =
+            tipBase ? 'Suggested tip \u2014 20% of the $' + tipBase + ' fare' : 'Suggested tip';
           tipLine.hidden = false;
         }else{
           tipLine.hidden = true;

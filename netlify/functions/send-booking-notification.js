@@ -36,7 +36,7 @@ function fareTable(fare) {
       if (fare.cardFee) rows.push([`${fare.cardFeeLabel} fee (${fare.cardFeeRate})`, `$${fare.cardFee.toFixed(2)}`]);
     }
     rows.push(['Fare total', `$${fare.total}`, true]);
-    rows.push(['Suggested tip (20% of the fare, not the tolls)', `$${fare.tipSuggested}`]);
+    rows.push([`Suggested tip \u2014 20% of the $${fare.fare} fare`, `$${fare.tipSuggested}`]);
   } else if (fare.matched) {
     rows.push([fare.label, fare.totalDisplay, true]);
     if (fare.tipSuggested) rows.push(['Suggested tip (20%)', `$${fare.tipSuggested}`]);
