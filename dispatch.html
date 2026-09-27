@@ -625,7 +625,7 @@
           fsr('Total to collect', cash(totalN), 'total') +
           (tipN ? fsr('Suggested tip', cash(tipN), 'tip') : '') +
           (tipN && netFare ? '<div class="fsnote">That&rsquo;s 20% of the ' + cash(netFare) +
-                  ' fare. On top of the total, and the customer&rsquo;s choice.</div>' : '') +
+                  ' fare, and not part of the total.</div>' : '') +
           (discN && r.discountReason ? '<div class="fsnote">Discount: ' + esc(r.discountReason) +
                   '. The driver is shown the total only.</div>' : '') +
         '</div>';
