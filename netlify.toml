@@ -15,3 +15,14 @@
 
 [functions."daily-reminders"]
   schedule = "0 12 * * *"
+
+# A copy of every tab, emailed to Ahmed as CSV. The sheet is the database and
+# Google's version history only reaches back about a month, so this puts a copy
+# somewhere Google does not control.
+#
+# 11:00 UTC Monday is 7 AM Eastern in summer, 6 AM in winter - before the first
+# ride of the week, and a different hour from the daily reminder so a quiet
+# inbox is obviously a problem rather than one mail lost among others.
+
+[functions."weekly-backup"]
+  schedule = "0 11 * * 1"
