@@ -519,6 +519,41 @@
      are worked out, birthdays are flagged. Nothing here is a promise the
      business isn't already keeping. */
   .loyalty{padding:64px 0; border-bottom:1px solid var(--line); background:var(--bg-raised);}
+  /* SAMPLE FARES. A visitor's first question is "what does it cost", and the
+     old answer was "book and we'll tell you" - which reads as a service with
+     something to hide. These are the real numbers the calculator returns for
+     New Providence, so nothing here can drift from what the customer is
+     actually quoted. Tolls are shown apart because they are a pass-through,
+     not our margin, and the note says the town matters: a fare from Allentown
+     is not a fare from Summit, and a quiet promise otherwise would be a lie. */
+  .fares{border-top:1px solid var(--line);}
+  .fare-table{
+    border:1px solid var(--line); border-radius:var(--radius);
+    overflow:hidden; background:var(--panel);
+  }
+  .fare-row{
+    display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);
+    gap:12px; padding:16px 20px; align-items:baseline;
+    border-bottom:1px solid var(--line);
+  }
+  .fare-row:last-child{border-bottom:0;}
+  .fare-row.head{
+    background:var(--bg-raised); font-family:var(--mono); font-size:0.72rem;
+    letter-spacing:0.09em; text-transform:uppercase; color:var(--steel);
+  }
+  .fare-where{color:var(--ink); font-weight:500;}
+  .fare-where span{display:block; font-size:0.8rem; color:var(--steel); font-weight:400; margin-top:3px;}
+  .fare-amt{font-family:var(--display); font-size:1.15rem; color:var(--ink);}
+  .fare-amt em{display:block; font-style:normal; font-size:0.78rem; color:var(--steel); margin-top:3px;}
+  .fare-note{
+    margin-top:18px; font-size:0.84rem; color:var(--steel); line-height:1.7;
+    border-left:2px solid var(--line); padding-left:14px;
+  }
+  .fare-note strong{color:var(--ink-dim); font-weight:500;}
+  @media (max-width: 560px){
+    .fare-row{grid-template-columns:minmax(0,1fr) auto auto; gap:10px; padding:14px 16px;}
+    .fare-amt{font-size:1rem;}
+  }
   .loy-sub{
     margin-top:14px; max-width:56ch; font-size:1.02rem; line-height:1.7; color:var(--ink);
   }
@@ -674,6 +709,7 @@
     <div class="nav-links">
       <a href="#hany">Meet Hany</a>
       <a href="#services">Services</a>
+      <a href="#fares">Fares</a>
       <a href="#loyalty">Rewards</a>
       <a href="#about">About</a>
       <a href="#policy">Policy</a>
@@ -806,6 +842,48 @@
   </div>
 </section>
 
+<section class="fares" id="fares">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">What it costs</div>
+      <h2>Our airport fares</h2>
+      <p class="loy-sub">Sample one-way fares from New Providence. One flat price, agreed before
+        you ride &mdash; no surge, no meter, nothing added at the end.</p>
+    </div>
+    <div class="fare-table">
+      <div class="fare-row head">
+        <div>Destination</div><div>Sedan</div><div>SUV</div>
+      </div>
+      <div class="fare-row">
+        <div class="fare-where">Newark Liberty (EWR)<span>No tolls</span></div>
+        <div class="fare-amt">$75</div>
+        <div class="fare-amt">$110</div>
+      </div>
+      <div class="fare-row">
+        <div class="fare-where">Manhattan / New York City<span>Plus $29 tolls</span></div>
+        <div class="fare-amt">$135<em>$164 with tolls</em></div>
+        <div class="fare-amt">$185<em>$214 with tolls</em></div>
+      </div>
+      <div class="fare-row">
+        <div class="fare-where">JFK &amp; LaGuardia<span>Plus $50 tolls</span></div>
+        <div class="fare-amt">$185<em>$235 with tolls</em></div>
+        <div class="fare-amt">$235<em>$285 with tolls</em></div>
+      </div>
+      <div class="fare-row">
+        <div class="fare-where">By the hour<span>Nights out, waiting, errands</span></div>
+        <div class="fare-amt">$60<em>per hour</em></div>
+        <div class="fare-amt">$60<em>per hour</em></div>
+      </div>
+    </div>
+    <p class="fare-note"><strong>Your town sets the fare.</strong> These are from New Providence;
+      a pickup further out costs more, and a local trip around town is $25&ndash;35. Tolls are
+      quoted round trip and flat, so the number never moves while you&rsquo;re on the phone.
+      Paying by card adds Square&rsquo;s fee (2.6% + $0.15); cash, Zelle and Venmo don&rsquo;t.
+      A tip is separate and never in the total.</p>
+    <div class="lite-link"><a href="#book">Get your exact price &rarr;</a></div>
+  </div>
+</section>
+
 <!-- THE PROGRAMME. There is no sign-up and no card: the phone number on the
      booking is the account. Everything below is already running on the back
      end - a point is added when a ride is marked completed, the credit is
@@ -825,38 +903,33 @@
            feel the line running from the first ride to here. -->
       <div class="eyebrow">The relationship, over time</div>
       <h2>Ride with us, and it counts</h2>
-      <p class="loy-sub">The more we drive you, the better we know you. We remember how you like to
-        travel, recognize your loyalty, and make every ride feel a little more familiar.</p>
+      <p class="loy-sub">The more we drive you, the better we know you. Your phone number is the
+        account &mdash; there is nothing to sign up for.</p>
     </div>
     <div class="loy-grid">
       <div class="loy-lead">
-        <p><strong>The relationship starts on the first ride</strong> &mdash; the cabin how you
-          asked for it, a hand to the door, a text before we pull up. It carries into the second,
-          because by then we remember. There is nothing to sign up for: your phone number is the
-          account, and you never have to explain yourself twice.</p>
-        <p>What you see below is the same relationship further along. <strong>The credits are how
-          we say it out loud.</strong> Every completed ride earns a point, and points turn into
-          credit off a future trip.</p>
-        <p>We'll text you when you've earned something. No app, no card in your wallet,
+        <p><strong>The relationship starts on the first ride</strong> &mdash; and from the second
+          on, we already know how you travel. The credits are how we say it out loud: every
+          completed ride earns a point, and points come off a future trip.</p>
+        <p>We&rsquo;ll text you when you&rsquo;ve earned something. No app, no card in your wallet,
           no email list.</p>
       </div>
       <div class="loy-steps">
         <div class="loy-step">
           <span class="amt">Always</span>
           <span class="what">We remember you</span>
-          <span class="why">Your cabin temperature, the car seat, the Suburban or the sedan, a
-            text before we arrive. From the second ride on, it's already set.</span>
+          <span class="why">Your cabin, the car seat, the Suburban or the sedan. Set from the
+            second ride on.</span>
         </div>
         <div class="loy-step">
           <span class="amt">$5</span>
           <span class="what">After your first ride</span>
-          <span class="why">A thank-you for trying us, off your next trip.</span>
+          <span class="why">A thank-you for trying us.</span>
         </div>
         <div class="loy-step">
           <span class="amt">$15</span>
           <span class="what">At ten rides</span>
-          <span class="why">You become a Loyal Customer for good &mdash; and we mark the milestone
-            with $15 toward your next ride.</span>
+          <span class="why">You&rsquo;re a Loyal Customer for good.</span>
         </div>
         <div class="loy-step">
           <span class="amt">$10</span>
@@ -866,19 +939,17 @@
         <div class="loy-step">
           <span class="amt">$10</span>
           <span class="what">When you refer someone</span>
-          <span class="why">Credited once they've taken their first ride. Tell us who sent
-            them when you book.</span>
+          <span class="why">Once they&rsquo;ve taken their first ride. Tell us who sent them.</span>
         </div>
         <div class="loy-step">
           <span class="amt">$10</span>
           <span class="what">On your birthday</span>
-          <span class="why">Tell us the day and we'll remember. We don't need the year.</span>
+          <span class="why">Tell us the day. We don&rsquo;t need the year.</span>
         </div>
         <div class="loy-step">
           <span class="amt">Never</span>
           <span class="what">Your points expire</span>
-          <span class="why">They only ever go up, and spending your credit never costs you your
-            standing.</span>
+          <span class="why">Spending credit never costs you your standing.</span>
         </div>
       </div>
     </div>
@@ -1037,29 +1108,34 @@
         </div>
 
         <div class="care-block">
-          <div class="care-label">Looking after your passengers</div>
-          <div class="field">
-            <label for="b-temp">Cabin temperature</label>
-            <select id="b-temp">
-              <option value="No preference" selected>No preference</option>
-              <option value="Cool (68°F)">Cool (68°F)</option>
-              <option value="Comfortable (72°F)">Comfortable (72°F)</option>
-              <option value="Warm (76°F)">Warm (76°F)</option>
-            </select>
-          </div>
-          <div class="field-check">
-            <input type="checkbox" id="b-elderly">
-            <label for="b-elderly">A passenger needs elderly assistance &mdash; help to and from the door, and a hand with the seat</label>
-          </div>
           <div class="field-check">
             <input type="checkbox" id="b-contact15" checked>
             <label for="b-contact15">Text or call me 15 minutes before pickup</label>
           </div>
         </div>
 
-        <details class="extras">
-          <summary>Flight number and notes for your driver</summary>
+        <!-- One fold instead of an open care block plus a second fold. Every
+             field in here has a working default, so the form reads short and
+             nobody is asked a question they don't have an answer to. It opens
+             itself for a returning customer whose preferences we filled in,
+             because a remembered setting the customer cannot see is worse
+             than no setting at all. -->
+        <details class="extras" id="prefsBlock">
+          <summary>Preferences and details for your driver &mdash; all optional</summary>
           <div class="extras-body">
+            <div class="field">
+              <label for="b-temp">Cabin temperature</label>
+              <select id="b-temp">
+                <option value="No preference" selected>No preference</option>
+                <option value="Cool (68°F)">Cool (68°F)</option>
+                <option value="Comfortable (72°F)">Comfortable (72°F)</option>
+                <option value="Warm (76°F)">Warm (76°F)</option>
+              </select>
+            </div>
+            <div class="field-check">
+              <input type="checkbox" id="b-elderly">
+              <label for="b-elderly">A passenger needs elderly assistance &mdash; help to and from the door, and a hand with the seat</label>
+            </div>
             <div class="field">
               <label for="b-flight">Flight number (optional)</label>
               <input type="text" id="b-flight" placeholder="e.g. UA 1234, if airport pickup or drop-off">
@@ -1107,7 +1183,7 @@
       </div>
       <div class="lite-card">
         <h3>Cancel with notice, no charge</h3>
-        <p>Free more than 12 hours ahead. Inside that window a fee applies, because your driver's time was already held for you.</p>
+        <p>Free more than 12 hours ahead. Inside 12 hours it&rsquo;s $20, and inside 2 hours it&rsquo;s $50 &mdash; by then your driver&rsquo;s time was already held for you.</p>
       </div>
     </div>
     <div class="lite-link"><a href="policy.html">Read the full policy →</a></div>
@@ -1135,6 +1211,7 @@
     <div class="foot-links">
       <a href="#hany">Meet Hany</a>
       <a href="#services">Services</a>
+      <a href="#fares">Fares</a>
       <a href="policy.html">Policy</a>
       <a href="#book">Book</a>
       <a href="tel:9084949256" style="color:var(--teal);">(908) 494-9256</a>
@@ -1303,6 +1380,12 @@
           if(data.elderly === 'Yes' && !document.getElementById('b-elderly').checked){
             document.getElementById('b-elderly').checked = true;
             remembered.push('help to the door');
+          }
+          // Anything we filled in that lives inside the fold has to be visible,
+          // or the customer is trusting a setting they were never shown.
+          if((data.temp && data.temp !== 'No preference') || data.elderly === 'Yes'){
+            const pb = document.getElementById('prefsBlock');
+            if(pb) pb.open = true;
           }
           if(data.vehicle && ['SUV','Sedan'].includes(data.vehicle)){
             document.getElementById('b-vehicle').value = data.vehicle;
