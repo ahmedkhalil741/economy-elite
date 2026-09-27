@@ -557,12 +557,18 @@
   .loy-sub{
     margin-top:14px; max-width:56ch; font-size:1.02rem; line-height:1.7; color:var(--ink);
   }
-  .loy-grid{display:grid; grid-template-columns:1.1fr 1fr; gap:40px; align-items:start;}
-  .loy-lead p{color:var(--ink-dim); font-size:0.95rem; line-height:1.75; margin-bottom:14px; max-width:46ch;}
+  /* Was a 1.1fr/1fr split: two short paragraphs on the left, seven rows on the
+     right, and after the copy was cut the left column ended halfway up an
+     otherwise full page. The lead reads full width now and the ladder runs in
+     two even columns beneath it, so the section is balanced instead of
+     leaning. */
+  .loy-lead{max-width:68ch; margin-bottom:34px;}
+  .loy-grid{display:block;}
+  .loy-lead p{color:var(--ink-dim); font-size:0.95rem; line-height:1.75; margin-bottom:14px;}
   .loy-lead p strong{color:var(--ink); font-weight:500;}
-  .loy-steps{display:flex; flex-direction:column; gap:0;}
+  .loy-steps{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:0 48px;}
   .loy-step{display:grid; grid-template-columns:auto 1fr; gap:4px 18px; padding:14px 0; border-top:1px solid var(--line);}
-  .loy-step:first-child{border-top:0; padding-top:0;}
+  .loy-step:nth-child(-n+2){border-top:0; padding-top:0;}
   .loy-step .amt{
     font-family:var(--mono); font-size:0.95rem; font-weight:600; color:var(--teal);
     font-variant-numeric:tabular-nums; white-space:nowrap;
@@ -690,7 +696,9 @@
   @media (max-width: 620px){
     .service-grid{grid-template-columns:1fr;}
     .entry-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
-    .loy-grid{grid-template-columns:1fr; gap:28px;}
+    .loy-steps{grid-template-columns:1fr; gap:0;}
+    .loy-step:nth-child(-n+2){border-top:1px solid var(--line); padding-top:14px;}
+    .loy-step:first-child{border-top:0; padding-top:0;}
     .trustbar-inner{gap:10px 18px; font-size:0.68rem;}
     .trustbar-inner span:not(:last-child)::after{display:none;}
     .closer-actions .btn-primary, .closer-actions .btn-ghost{width:100%; justify-content:center;}
@@ -912,14 +920,14 @@
       <p class="loy-sub">The more we drive you, the better we know you. Your phone number is the
         account &mdash; there is nothing to sign up for.</p>
     </div>
+    <div class="loy-lead">
+      <p><strong>The relationship starts on the first ride</strong> &mdash; and from the second
+        on, we already know how you travel. The credits are how we say it out loud: every
+        completed ride earns a point, and points come off a future trip.</p>
+      <p>We&rsquo;ll text you when you&rsquo;ve earned something. No app, no card in your wallet,
+        no email list.</p>
+    </div>
     <div class="loy-grid">
-      <div class="loy-lead">
-        <p><strong>The relationship starts on the first ride</strong> &mdash; and from the second
-          on, we already know how you travel. The credits are how we say it out loud: every
-          completed ride earns a point, and points come off a future trip.</p>
-        <p>We&rsquo;ll text you when you&rsquo;ve earned something. No app, no card in your wallet,
-          no email list.</p>
-      </div>
       <div class="loy-steps">
         <div class="loy-step">
           <span class="amt">Always</span>
