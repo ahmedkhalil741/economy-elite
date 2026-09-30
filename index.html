@@ -383,6 +383,14 @@
   .foot-fullname{font-family:var(--mono); font-size:0.62rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--steel); margin-top:4px; padding-left:16px;}
 
   @media (max-width: 880px){
+    /* TAP TARGETS. The phone number under the hero button was a 17px-tall
+       line of text - the smallest target on the page and, on a phone, the most
+       important tap on it. Padding grows the hit area to about 44px, the size
+       Apple asks for; the matching negative margin means the line still looks
+       exactly as it did. Nothing moves, the finger just stops missing. */
+    .alt-ways a, .other-ways a, .lite-link a, .fare-note a, .loy-note a{
+      display:inline-block; padding:13px 3px; margin:-13px 0;
+    }
     .nav-links{display:none;}
     .hero > .wrap{max-width:1160px; padding-left:24px;}
     .hero-grid{grid-template-columns:1fr; gap:36px;}
