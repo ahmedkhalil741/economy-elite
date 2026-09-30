@@ -553,6 +553,12 @@
   @media (max-width: 560px){
     .fare-row{grid-template-columns:minmax(0,1fr) auto auto; gap:10px; padding:14px 16px;}
     .fare-amt{font-size:1rem;}
+    /* The with-tolls figure is what squeezes the destination. At 375px it cut
+       "Manhattan / New York City" to a 100px column standing four lines tall,
+       which reads as a fault rather than a layout. The toll is already named
+       on the line beneath the destination, so the combined number was the one
+       thing here saying itself twice. */
+    .fare-amt em{display:none;}
   }
   .loy-sub{
     margin-top:14px; max-width:56ch; font-size:1.02rem; line-height:1.7; color:var(--ink);
