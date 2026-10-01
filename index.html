@@ -187,7 +187,7 @@
   }
   h1 em{font-style:normal; color:var(--teal);}
   .hero-sub{color:var(--ink-dim); font-size:1.08rem; max-width:480px; margin-bottom:32px;}
-  .hero-actions{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:0;}
+  .hero-actions{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:8px;}
   .btn-primary{
     background:var(--teal); color:#0B0A08; font-weight:600; font-size:0.96rem;
     padding:14px 26px; border-radius:100px; border:none; text-decoration:none;
@@ -207,29 +207,12 @@
      wants to phone will find a phone number, and one who is ready to book
      should not have to choose between three identical buttons first. */
   .btn-lg{font-size:1.05rem; padding:17px 34px; font-weight:600;}
-  /* Two changes, both about where the eye lands. The line sits close under the
-     button now, so they read as one offer with two ways to take it rather than
-     a button and an unrelated footnote 54px below it. And the NUMBER carries
-     the weight, not the word "call" - a person scanning for a phone number is
-     looking for digits. The underline stays, because it is what says tappable,
-     but quietly: two fully underlined links side by side looked like a
-     correction at the bottom of a page. */
-  .alt-ways{
-    margin-top:20px; font-size:0.88rem; color:var(--steel);
-  }
-  .alt-ways a{
-    color:var(--ink-dim); text-decoration:underline;
-    text-decoration-color:var(--line); text-underline-offset:4px;
-    transition:color .15s, text-decoration-color .15s;
-  }
-  .alt-ways a:hover{color:var(--ink); text-decoration-color:var(--steel);}
-  .alt-ways .num, .other-ways .num{
+  /* The number carries the weight, not the word "call" - somebody scanning a
+     page for a phone number is looking for digits. */
+  .other-ways .num{
     color:var(--ink); font-weight:600; font-size:1rem;
     font-variant-numeric:tabular-nums; letter-spacing:0.01em;
   }
-  /* var(--line) is a border colour - on near-black it rendered as nothing, so the
-     number and "text us" floated apart with no visible join. */
-  .alt-ways .sep{color:var(--steel); padding:0 7px;}
 
   .trust-row{display:flex; gap:28px; flex-wrap:wrap; font-size:0.86rem; color:var(--steel);}
   .trust-row span{display:flex; align-items:center; gap:7px;}
@@ -406,7 +389,7 @@
        important tap on it. Padding grows the hit area to about 44px, the size
        Apple asks for; the matching negative margin means the line still looks
        exactly as it did. Nothing moves, the finger just stops missing. */
-    .alt-ways a, .other-ways a, .lite-link a, .fare-note a, .loy-note a{
+    .other-ways a, .lite-link a, .fare-note a, .loy-note a{
       display:inline-block; padding:13px 3px; margin:-13px 0;
     }
     .nav-links{display:none;}
@@ -785,7 +768,6 @@
     <div class="hero-actions">
       <a href="#book" class="btn-primary btn-lg">Book a ride →</a>
     </div>
-    <p class="alt-ways">or call <a href="tel:9084949256" class="num">(908) 494-9256</a><span class="sep">&middot;</span><a href="sms:9084949256">text us</a></p>
   </div>
   <div class="hero-car">
     <img src="suburban-hero.jpg" alt="A black Chevrolet Suburban, the vehicle used by The Standard" loading="eager">
@@ -879,6 +861,7 @@
            spent four paragraphs explaining who he is. -->
       <div class="hany-contact">
         <a href="tel:9084949256" class="btn-primary">Call Hany &middot; (908) 494-9256</a>
+        <a href="sms:9084949256" class="btn-ghost">Text instead</a>
       </div>
     </div>
   </div>
