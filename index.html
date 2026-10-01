@@ -227,7 +227,9 @@
     color:var(--ink); font-weight:600; font-size:1rem;
     font-variant-numeric:tabular-nums; letter-spacing:0.01em;
   }
-  .alt-ways .sep{color:var(--line); padding:0 4px;}
+  /* var(--line) is a border colour - on near-black it rendered as nothing, so the
+     number and "text us" floated apart with no visible join. */
+  .alt-ways .sep{color:var(--steel); padding:0 7px;}
 
   .trust-row{display:flex; gap:28px; flex-wrap:wrap; font-size:0.86rem; color:var(--steel);}
   .trust-row span{display:flex; align-items:center; gap:7px;}
