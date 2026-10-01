@@ -454,6 +454,11 @@
 
   /* MEET HANY — "Read Hany's story" */
   .fleet-info p{margin-bottom:14px;}
+  .hany-contact{display:flex; flex-wrap:wrap; gap:12px; margin:22px 0 4px;}
+  @media (max-width: 560px){
+    .hany-contact{flex-direction:column; align-items:stretch;}
+    .hany-contact a{justify-content:center; text-align:center;}
+  }
   .story{margin-top:10px;}
   .story summary{
     list-style:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
@@ -824,6 +829,17 @@
              srcset="hany-signature.png 1x, hany-signature@2x.png 2x"
              alt="Hany's signature" width="140" height="49" loading="lazy">
         <div class="signed-name">Hany<span>Founder, The Standard</span></div>
+      </div>
+
+      <!-- Somebody who has just read why they should trust Hany had nowhere to
+           go but back up the page to find a number. This is the one spot where
+           a reader is most convinced and least likely to act, so the way out
+           belongs here rather than only at the top and the bottom. Call first:
+           a person who wants to speak to someone is the whole reason this
+           section exists. -->
+      <div class="hany-contact">
+        <a href="tel:9084949256" class="btn-primary">Call Hany &middot; (908) 494-9256</a>
+        <a href="sms:9084949256" class="btn-ghost">Text instead</a>
       </div>
 
       <details class="story">
