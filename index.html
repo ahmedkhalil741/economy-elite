@@ -457,74 +457,17 @@
   .other-ways a{color:var(--teal-dim); text-decoration:none; border-bottom:1px solid var(--line); padding-bottom:2px;}
   .other-ways a:hover{color:var(--ink); border-color:var(--steel);}
 
-  /* TRUST BAR */
-  /* The claims used to be their own section under the nav, with its own border
-     and its own background - two bars, one on top of the other. They are the
-     nav's second row now: no divider between them, no second background, one
-     block that happens to carry two lines. The hairline above keeps the two
-     rows readable as rows without making them look like separate furniture. */
-  .trustbar-inner{
-    border-top:1px solid var(--line);
-    overflow:hidden; max-height:200px;
-    transition:max-height .25s ease, opacity .2s ease, padding .25s ease, border-color .25s ease;
-  }
-  /* The nav is sticky, so merging the claims into it would otherwise park them
-     on screen for the whole 9,000px of page - and on a phone, where they stack
-     into three rows, that is a third of the screen gone permanently. They are
-     an opening statement, not a toolbar: full bar at the top, and once you
-     start reading it folds away and leaves the nav doing its job. */
-  nav.scrolled .trustbar-inner{
-    max-height:0; opacity:0; padding-top:0; padding-bottom:0; border-top-color:transparent;
-  }
-  @media (prefers-reduced-motion: reduce){
-    .trustbar-inner{transition:none;}
-  }
-  /* A centred flex row fitted five of the six on one line and left the sixth
-     stranded underneath on its own, which is what made the bar look wrong. Six
-     divides by three, two and one, so a grid gives even rows at every width -
-     3x2 here, 2x3 on a tablet, a single column on a phone. Nothing is ever
-     left over. */
-  /* One row, to echo the nav above it: seven links there, six claims here, both
-     running the full width with the first flush left and the last flush right.
-     space-between does that and keeps the outer edges locked to the bar above -
-     which is why the labels got shorter. "24+ years serving the community" and
-     "child seats on request" are warmer, but at this size they made six items
-     impossible on one line, and the row mattered more than the extra words. */
-  .trustbar-inner{
-    display:flex; justify-content:space-between; align-items:center;
-    gap:18px; padding:22px 24px;
-    font-family:var(--mono); font-size:0.73rem; letter-spacing:0.07em;
-    text-transform:uppercase; color:var(--steel); white-space:nowrap;
-  }
-  /* Centring every item inside its own column left the whole block floating in
-     the middle of the page: the first item started well right of the logo above
-     it and the last ended well left of the button. The container was always the
-     same 1160px as the nav - it was the text inside it that never reached the
-     edges. First column left, last column right, so both edges run as straight
-     lines down from the bar above. The hairlines went with it; once the items
-     are pushed to the edges those marks sit nowhere in particular. */
-  .trustbar-inner span{display:block;}
-  /* Narrower than this and six on a line would either collide or shrink to
-     unreadable, so it becomes the grid again: three, then two, then one, always
-     in even rows, with the outer columns still pinned to the page edges. */
-  @media (max-width: 960px){
-    .trustbar-inner{
-      display:grid; grid-template-columns:repeat(3, minmax(0,1fr));
-      gap:14px 24px; white-space:normal;
-    }
-    .trustbar-inner span{display:flex; align-items:center;}
-    .trustbar-inner span:nth-child(3n+1){justify-content:flex-start; text-align:left;}
-    .trustbar-inner span:nth-child(3n+2){justify-content:center; text-align:center;}
-    .trustbar-inner span:nth-child(3n){justify-content:flex-end; text-align:right;}
+  /* THREE WAYS TO BOOK */
+  /* One quiet line inside the same top bar - no divider, no second background,
+     no separate strip. It just names the three ways to reach us, under the row
+     that carries the number and the button. */
+  .nav-booknote{
+    padding:0 24px 14px;
+    font-family:var(--mono); font-size:0.7rem; letter-spacing:0.07em;
+    text-transform:uppercase; color:var(--steel);
   }
   @media (max-width: 620px){
-    .trustbar-inner{grid-template-columns:repeat(2, minmax(0,1fr));}
-    .trustbar-inner span:nth-child(odd){justify-content:flex-start; text-align:left;}
-    .trustbar-inner span:nth-child(even){justify-content:flex-end; text-align:right;}
-  }
-  @media (max-width: 400px){
-    .trustbar-inner{grid-template-columns:1fr; gap:11px;}
-    .trustbar-inner span{justify-content:flex-start; text-align:left;}
+    .nav-booknote{font-size:0.65rem; padding-bottom:12px;}
   }
 
   /* MEET HANY — "Read Hany's story" */
@@ -803,7 +746,6 @@
     .loy-steps{grid-template-columns:1fr; gap:0;}
     .loy-step:nth-child(-n+2){border-top:1px solid var(--line); padding-top:14px;}
     .loy-step:first-child{border-top:0; padding-top:0;}
-    .trustbar-inner{font-size:0.68rem;}
     .closer-actions .btn-primary, .closer-actions .btn-ghost{width:100%; justify-content:center;}
     .hero-actions .btn-primary, .hero-actions .btn-ghost{width:100%; justify-content:center; text-align:center;}
   }
@@ -831,21 +773,14 @@
       <a href="#book" class="nav-cta">Book a ride</a>
     </div>
   </div>
-  <div class="wrap trustbar-inner">
-    <span>24+ years serving the community</span>
-    <span>Professional drivers</span>
-    <span>Upfront pricing</span>
-    <span>No surge pricing</span>
-    <span>Flight monitoring</span>
-    <span>Child seats on request</span>
-  </div>
+  <div class="wrap nav-booknote">Book online, by call, or by text</div>
 </nav>
 
 <section class="hero">
   <div class="wrap hero-grid">
     <div class="hero-mark">The Standard</div>
     <h1>Your Driver.<br>Not Just Your <em>Ride</em>.</h1>
-    <p class="hero-sub">Trusted private transportation in New Providence and surrounding communities for over 24 years.<br>Book online, by text, or by phone.</p>
+    <p class="hero-sub">Trusted private transportation in New Providence and surrounding communities for over 24 years.</p>
     <div class="hero-actions">
       <a href="#book" class="btn-primary btn-lg">Book a ride →</a>
     </div>
@@ -1724,21 +1659,6 @@
       navigator.serviceWorker.register('sw.js').catch(()=>{});
     });
   }
-</script>
-<script>
-  // Folds the claims row away once the reader has started. Passive listener and
-  // a class flip rather than per-frame style writes, so scrolling stays smooth.
-  (function trustRowFold(){
-    var nav = document.querySelector('nav');
-    if (!nav) return;
-    var folded = false;
-    function check(){
-      var should = window.scrollY > 120;
-      if (should !== folded){ folded = should; nav.classList.toggle('scrolled', should); }
-    }
-    window.addEventListener('scroll', check, { passive:true });
-    check();
-  })();
 </script>
 </body>
 </html>
