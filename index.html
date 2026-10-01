@@ -97,10 +97,13 @@
      a choice. A 1fr/auto/1fr grid gives the outer columns equal width whatever
      they contain, so the links are centred on the page instead of on whatever
      is left over.
-     Flex still handles the narrow end: below 880px the links are hidden and
-     the brand and the button need to wrap, which a fixed three-column grid
-     would not let them do. */
-  @media (min-width: 881px){
+     The breakpoint is 1120px, not 881px, and the number is measured rather
+     than chosen: equal outer columns need 2x270 for the wider of them, plus
+     521 for the links, plus 48 of padding = 1109. Set it at 881 and the grid
+     holds three columns in a space that only fits two and a bit - at 950px the
+     links ran straight into the phone number with nothing between them. Below
+     1120 flex wraps instead, which is what it is good at. */
+  @media (min-width: 1120px){
     .nav-inner{display:grid; grid-template-columns:1fr auto 1fr; align-items:center;}
     .nav-inner .brand{justify-self:start;}
     .nav-inner .nav-links{justify-self:center;}
