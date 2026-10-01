@@ -464,11 +464,17 @@
      divides by three, two and one, so a grid gives even rows at every width -
      3x2 here, 2x3 on a tablet, a single column on a phone. Nothing is ever
      left over. */
+  /* One row, to echo the nav above it: seven links there, six claims here, both
+     running the full width with the first flush left and the last flush right.
+     space-between does that and keeps the outer edges locked to the bar above -
+     which is why the labels got shorter. "24+ years serving the community" and
+     "child seats on request" are warmer, but at this size they made six items
+     impossible on one line, and the row mattered more than the extra words. */
   .trustbar-inner{
-    display:grid; grid-template-columns:repeat(3, minmax(0,1fr));
-    gap:14px 24px; padding:22px 24px;
+    display:flex; justify-content:space-between; align-items:center;
+    gap:18px; padding:22px 24px;
     font-family:var(--mono); font-size:0.73rem; letter-spacing:0.07em;
-    text-transform:uppercase; color:var(--steel);
+    text-transform:uppercase; color:var(--steel); white-space:nowrap;
   }
   /* Centring every item inside its own column left the whole block floating in
      the middle of the page: the first item started well right of the logo above
@@ -477,16 +483,26 @@
      edges. First column left, last column right, so both edges run as straight
      lines down from the bar above. The hairlines went with it; once the items
      are pushed to the edges those marks sit nowhere in particular. */
-  .trustbar-inner span{display:flex; align-items:center;}
-  .trustbar-inner span:nth-child(3n+1){justify-content:flex-start; text-align:left;}
-  .trustbar-inner span:nth-child(3n+2){justify-content:center; text-align:center;}
-  .trustbar-inner span:nth-child(3n){justify-content:flex-end; text-align:right;}
-  @media (max-width: 760px){
+  .trustbar-inner span{display:block;}
+  /* Narrower than this and six on a line would either collide or shrink to
+     unreadable, so it becomes the grid again: three, then two, then one, always
+     in even rows, with the outer columns still pinned to the page edges. */
+  @media (max-width: 960px){
+    .trustbar-inner{
+      display:grid; grid-template-columns:repeat(3, minmax(0,1fr));
+      gap:14px 24px; white-space:normal;
+    }
+    .trustbar-inner span{display:flex; align-items:center;}
+    .trustbar-inner span:nth-child(3n+1){justify-content:flex-start; text-align:left;}
+    .trustbar-inner span:nth-child(3n+2){justify-content:center; text-align:center;}
+    .trustbar-inner span:nth-child(3n){justify-content:flex-end; text-align:right;}
+  }
+  @media (max-width: 620px){
     .trustbar-inner{grid-template-columns:repeat(2, minmax(0,1fr));}
     .trustbar-inner span:nth-child(odd){justify-content:flex-start; text-align:left;}
     .trustbar-inner span:nth-child(even){justify-content:flex-end; text-align:right;}
   }
-  @media (max-width: 440px){
+  @media (max-width: 400px){
     .trustbar-inner{grid-template-columns:1fr; gap:11px;}
     .trustbar-inner span{justify-content:flex-start; text-align:left;}
   }
@@ -816,12 +832,12 @@
      claim the business can't back up. -->
 <section class="trustbar">
   <div class="wrap trustbar-inner">
-    <span>24+ years serving the community</span>
+    <span>24+ years local</span>
     <span>Professional drivers</span>
     <span>Upfront pricing</span>
     <span>No surge pricing</span>
     <span>Flight monitoring</span>
-    <span>Child seats on request</span>
+    <span>Child seats</span>
   </div>
 </section>
 
