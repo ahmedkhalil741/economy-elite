@@ -440,17 +440,38 @@
 
   /* TRUST BAR */
   .trustbar{border-bottom:1px solid var(--line); background:var(--bg-raised);}
+  /* A centred flex row fitted five of the six on one line and left the sixth
+     stranded underneath on its own, which is what made the bar look wrong. Six
+     divides by three, two and one, so a grid gives even rows at every width -
+     3x2 here, 2x3 on a tablet, a single column on a phone. Nothing is ever
+     left over. */
   .trustbar-inner{
-    display:flex; flex-wrap:wrap; justify-content:center; align-items:center;
-    gap:14px 30px; padding:20px 24px;
+    display:grid; grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:14px 24px; padding:22px 24px;
     font-family:var(--mono); font-size:0.73rem; letter-spacing:0.07em;
     text-transform:uppercase; color:var(--steel);
   }
-  /* A hairline between items instead of bullets or icons — quieter, and it
-     disappears on its own when the row wraps to the next line. */
-  .trustbar-inner span{display:flex; align-items:center;}
-  .trustbar-inner span:not(:last-child)::after{
-    content:''; width:1px; height:11px; background:var(--line); margin-left:30px;
+  .trustbar-inner span{
+    display:flex; align-items:center; justify-content:center;
+    text-align:center; position:relative;
+  }
+  /* A hairline between columns rather than between items: on a grid the old
+     rule drew one after the third and sixth too, hanging off the right edge. */
+  .trustbar-inner span:not(:nth-child(3n))::after{
+    content:''; position:absolute; right:-12px;
+    width:1px; height:11px; background:var(--line);
+  }
+  @media (max-width: 760px){
+    .trustbar-inner{grid-template-columns:repeat(2, minmax(0,1fr));}
+    .trustbar-inner span:not(:nth-child(3n))::after{display:none;}
+    .trustbar-inner span:not(:nth-child(2n))::after{
+      content:''; position:absolute; right:-12px;
+      width:1px; height:11px; background:var(--line);
+    }
+  }
+  @media (max-width: 440px){
+    .trustbar-inner{grid-template-columns:1fr; gap:11px;}
+    .trustbar-inner span::after{display:none !important;}
   }
 
   /* MEET HANY — "Read Hany's story" */
@@ -729,8 +750,7 @@
     .loy-steps{grid-template-columns:1fr; gap:0;}
     .loy-step:nth-child(-n+2){border-top:1px solid var(--line); padding-top:14px;}
     .loy-step:first-child{border-top:0; padding-top:0;}
-    .trustbar-inner{gap:10px 18px; font-size:0.68rem;}
-    .trustbar-inner span:not(:last-child)::after{display:none;}
+    .trustbar-inner{font-size:0.68rem;}
     .closer-actions .btn-primary, .closer-actions .btn-ghost{width:100%; justify-content:center;}
     .hero-actions .btn-primary, .hero-actions .btn-ghost{width:100%; justify-content:center; text-align:center;}
   }
@@ -784,7 +804,7 @@
     <span>Upfront pricing</span>
     <span>No surge pricing</span>
     <span>Flight monitoring</span>
-    <span>Book online, by text, or by phone</span>
+    <span>Child seats on request</span>
   </div>
 </section>
 
