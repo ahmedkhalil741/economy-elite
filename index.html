@@ -458,7 +458,27 @@
   .other-ways a:hover{color:var(--ink); border-color:var(--steel);}
 
   /* TRUST BAR */
-  .trustbar{border-bottom:1px solid var(--line); background:var(--bg-raised);}
+  /* The claims used to be their own section under the nav, with its own border
+     and its own background - two bars, one on top of the other. They are the
+     nav's second row now: no divider between them, no second background, one
+     block that happens to carry two lines. The hairline above keeps the two
+     rows readable as rows without making them look like separate furniture. */
+  .trustbar-inner{
+    border-top:1px solid var(--line);
+    overflow:hidden; max-height:200px;
+    transition:max-height .25s ease, opacity .2s ease, padding .25s ease, border-color .25s ease;
+  }
+  /* The nav is sticky, so merging the claims into it would otherwise park them
+     on screen for the whole 9,000px of page - and on a phone, where they stack
+     into three rows, that is a third of the screen gone permanently. They are
+     an opening statement, not a toolbar: full bar at the top, and once you
+     start reading it folds away and leaves the nav doing its job. */
+  nav.scrolled .trustbar-inner{
+    max-height:0; opacity:0; padding-top:0; padding-bottom:0; border-top-color:transparent;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .trustbar-inner{transition:none;}
+  }
   /* A centred flex row fitted five of the six on one line and left the sixth
      stranded underneath on its own, which is what made the bar look wrong. Six
      divides by three, two and one, so a grid gives even rows at every width -
@@ -811,6 +831,14 @@
       <a href="#book" class="nav-cta">Book a ride</a>
     </div>
   </div>
+  <div class="wrap trustbar-inner">
+    <span>24+ years serving the community</span>
+    <span>Professional drivers</span>
+    <span>Upfront pricing</span>
+    <span>No surge pricing</span>
+    <span>Flight monitoring</span>
+    <span>Child seats on request</span>
+  </div>
 </nav>
 
 <section class="hero">
@@ -830,17 +858,6 @@
 <!-- TRUST BAR — six concrete reasons, no adjectives. Every one of these is
      something the policy page actually commits to, so nothing here is a
      claim the business can't back up. -->
-<section class="trustbar">
-  <div class="wrap trustbar-inner">
-    <span>24+ years local</span>
-    <span>Professional drivers</span>
-    <span>Upfront pricing</span>
-    <span>No surge pricing</span>
-    <span>Flight monitoring</span>
-    <span>Child seats</span>
-  </div>
-</section>
-
 <!-- The four services, as entry points rather than reading matter. Each one
      scrolls to the form AND tells it what kind of ride this is, so the answer
      is already filled in by the time the customer gets there. -->
@@ -1707,6 +1724,21 @@
       navigator.serviceWorker.register('sw.js').catch(()=>{});
     });
   }
+</script>
+<script>
+  // Folds the claims row away once the reader has started. Passive listener and
+  // a class flip rather than per-frame style writes, so scrolling stays smooth.
+  (function trustRowFold(){
+    var nav = document.querySelector('nav');
+    if (!nav) return;
+    var folded = false;
+    function check(){
+      var should = window.scrollY > 120;
+      if (should !== folded){ folded = should; nav.classList.toggle('scrolled', should); }
+    }
+    window.addEventListener('scroll', check, { passive:true });
+    check();
+  })();
 </script>
 </body>
 </html>
