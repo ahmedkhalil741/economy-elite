@@ -470,9 +470,19 @@
   .story[open] summary::after{content:'−';}
   .story summary:hover{color:var(--ink);}
   .story-body{border-left:2px solid var(--line); padding:6px 0 6px 20px; margin-top:8px;}
+  /* Six paragraphs are not a pull-quote. This reads as Hany writing to you, so
+     it is set as prose rather than in quotation marks and italics - the quote
+     styling was carrying one sentence and would have made a page of speech look
+     like an advertisement for itself. */
   .story-body blockquote{
     font-family:var(--display); font-style:italic; font-weight:500;
     font-size:1.05rem; line-height:1.6; color:var(--ink); margin-bottom:14px;
+  }
+  .story-body p{color:var(--ink-dim); font-size:0.95rem; line-height:1.75; margin:0 0 14px; max-width:62ch;}
+  .story-body p:last-child{margin-bottom:0;}
+  .story-close{
+    font-family:var(--display); font-size:1.08rem; font-weight:600;
+    color:var(--ink) !important; margin-top:20px !important;
   }
   .story-attr{font-family:var(--mono); font-size:0.74rem; letter-spacing:0.05em; text-transform:uppercase; color:var(--steel);}
 
@@ -834,7 +844,12 @@
       <details class="story">
         <summary>Read Hany's story</summary>
         <div class="story-body">
-          <blockquote>"I'm not trying to make more customers — I'm trying to build real relationships. We don't just care about how the ride looks from the outside. We care about how you feel on the inside: comfortable, safe, and genuinely happy. If you're looking for luxury for its own sake, there's plenty of that around you. If you're looking for real happiness and satisfaction, we're the right choice."</blockquote>
+          <p>I came to America from Egypt looking for an opportunity to build a better life, and work that meant something to me. Along the way I realized what makes me happiest isn&rsquo;t doing a job &mdash; it&rsquo;s serving people, treating them fairly, and knowing someone had a better day because of how I treated them.</p>
+          <p>That&rsquo;s the idea behind The Standard.</p>
+          <p>We&rsquo;re not trying to get more customers. We want to build real relationships with the people we serve.</p>
+          <p>A great ride isn&rsquo;t about a beautiful car, or how everything looks from the outside. It&rsquo;s about how you feel on the inside &mdash; comfortable, safe, respected, genuinely cared for.</p>
+          <p>We want you to arrive feeling you weren&rsquo;t just another reservation on our schedule. You were someone we were happy to serve.</p>
+          <p class="story-close">That is our standard.</p>
         </div>
       </details>
 
