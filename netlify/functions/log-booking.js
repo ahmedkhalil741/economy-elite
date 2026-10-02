@@ -51,7 +51,6 @@ const { google } = require('googleapis');
 const { estimateFare } = require('./_fare-calc');
 const { formatTimestamp, formatRequestedDateTime } = require('./_format');
 const { readTab, buildRow, orNA } = require('./_sheet');
-const { sendCustomerConfirmation } = require('./_customer-email');
 
 // The tab bookings are appended to.
 const SHEET_TAB = 'Bookings';
@@ -196,32 +195,7 @@ exports.handler = async function (event) {
       requestBody: { values: [row] },
     });
 
-    // The customer hears back. Only after the row is safely in the sheet -
-    // an email promising a ride we have no record of is worse than silence.
-    //
-    // Web bookings only. A booking Ahmed types in on /dispatch was made with
-    // the customer already on the phone, so "we've got your request, Hany will
-    // text you shortly" would be telling them something they just heard him
-    // say. Their confirmation is the text he sends from dispatch instead.
-    //
-    // It never throws and it is never awaited into the failure path: if Resend
-    // is down, or the address was mistyped, the booking still succeeds. The
-    // result rides back in the response so a bad address is visible rather
-    // than silent - the kind of quiet failure that hid the calendar bug for
-    // months.
-    let customerEmail = { sent: false, reason: 'not a web booking' };
-    if (String(source || 'Web').trim().toLowerCase() === 'web') {
-      try {
-        customerEmail = await sendCustomerConfirmation(
-          { email, name, pickup, dropoff, dateTime, vehicle, payMethod },
-          fare
-        );
-      } catch (err) {
-        customerEmail = { sent: false, reason: String(err && err.message || err) };
-      }
-    }
-
-    return { statusCode: 200, body: JSON.stringify({ success: true, customerEmail }) };
+    return { statusCode: 200, body: JSON.stringify({ success: true }) };
   } catch (err) {
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
