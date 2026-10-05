@@ -346,6 +346,11 @@
   .book-summary .amt{font-family:var(--mono); font-size:1.5rem; color:var(--amber); font-weight:600;}
   .btn-block{width:100%; text-align:center; justify-content:center;}
   .form-msg{font-size:0.84rem; color:var(--ink-dim); text-align:center; margin-top:14px; min-height:1.2em;}
+  .form-consent{
+    font-size:0.76rem; color:var(--steel); line-height:1.6;
+    margin-top:14px; text-align:center;
+  }
+  .form-consent a{color:var(--ink-dim);}
 
   /* POLICY */
   .policy{padding:64px 0; border-bottom:1px solid var(--line);}
@@ -1186,6 +1191,21 @@
         </div>
 
         <button type="submit" class="btn-primary btn-block btn-lg">Confirm booking</button>
+        <!-- CONSENT. Not decoration and not legal throat-clearing: when the
+             carriers review an application to send business texts, they open
+             the site and look for exactly this - that the customer is told
+             they will be texted, what about, and how to stop. No wording, no
+             approval, and the application comes back weeks later rejected.
+             It sits under the button rather than behind a tick box on purpose.
+             A pre-ticked box is not consent anyone would defend, and an
+             unticked one is a hurdle in front of a booking. Saying it plainly
+             at the moment they press the button is both honest and the thing
+             the reviewer is looking for. -->
+        <p class="form-consent">By booking, you agree we may text or call you
+          about this ride &mdash; confirmation, your driver, and changes. Message
+          and data rates may apply. Reply STOP to any text to opt out, HELP for
+          help. We never send marketing texts, and we don&rsquo;t share your
+          number. See our <a href="policy.html">Policy</a>.</p>
         <div class="form-msg" id="formMsg"></div>
       </div>
     </form>
