@@ -546,7 +546,10 @@
      page and tappable. The detailed cards further down explain each one; these
      exist so somebody who wants an airport run can say so in one tap instead
      of reading their way to the form. */
-  .entry{padding:34px 0 30px; border-bottom:1px solid var(--line);}
+  .entry{padding:78px 0 72px; border-bottom:1px solid var(--line);}
+  /* Tighter than a full section head elsewhere: the cards below are
+     compact, and 44px of air over four small cards reads as a gap. */
+  .entry .section-head{margin-bottom:32px;}
   .entry-grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px;}
   .entry-card{
     display:flex; flex-direction:column; gap:6px; text-decoration:none;
@@ -670,16 +673,6 @@
   .fleet-visual img{max-width:100%; height:auto;}
 
   .services{padding:64px 0; border-bottom:1px solid var(--line);}
-  .service-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:18px;}
-  .service-card{
-    background:var(--bg-raised); border:1px solid var(--line); border-radius:var(--radius);
-    padding:26px 24px 28px; display:flex; flex-direction:column;
-  }
-  .service-card h3{font-family:var(--display); font-size:1.08rem; font-weight:600; margin-bottom:12px; line-height:1.3;}
-  .service-card h3::before{
-    content:''; display:block; width:28px; height:2px; background:var(--teal); margin-bottom:14px;
-  }
-  .service-card p{font-size:0.88rem; color:var(--ink-dim); line-height:1.65;}
 
   /* BOOKING — the two steps */
   .step-count{
@@ -745,11 +738,9 @@
   .closer-actions{display:flex; gap:14px; justify-content:center; flex-wrap:wrap;}
 
   @media (max-width: 980px){
-    .service-grid{grid-template-columns:1fr 1fr;}
     .lite-grid{grid-template-columns:1fr;}
   }
   @media (max-width: 620px){
-    .service-grid{grid-template-columns:1fr;}
     .entry-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
     .loy-steps{grid-template-columns:1fr; gap:0;}
     .loy-step:nth-child(-n+2){border-top:1px solid var(--line); padding-top:14px;}
@@ -797,33 +788,43 @@
   </div>
 </section>
 
-<!-- TRUST BAR — six concrete reasons, no adjectives. Every one of these is
-     something the policy page actually commits to, so nothing here is a
-     claim the business can't back up. -->
-<!-- The four services, as entry points rather than reading matter. Each one
-     scrolls to the form AND tells it what kind of ride this is, so the answer
-     is already filled in by the time the customer gets there. -->
-<section class="entry">
+<!-- THE FOUR SERVICES. These used to be said twice on the page — once as a
+     read-only "Four ways to ride with us" block further down, and again here
+     as buttons. Same four categories, same claims, nothing new the second
+     time, and on a phone that was two full screens of scrolling to learn one
+     thing. So: one section. The buttons stayed, because each card scrolls to
+     the form AND tells it what kind of ride this is, so the answer is already
+     filled in when the customer arrives. The words came from the block that
+     is now gone — that is where the writing was better. "We watch your
+     flight" says less than "we watch your flight, so a delay never costs you
+     the car"; the first states a fact, the second says what it means for you.
+     The card titles are unchanged on purpose: data-service feeds the booking
+     form, and a title that drifts from it makes the two disagree. -->
+<section class="entry" id="services">
   <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">The relationship, on the day</div>
+      <h2>Four ways to ride with us</h2>
+    </div>
     <div class="entry-grid">
       <a class="entry-card" href="#book" data-service="Airport transportation">
         <span class="t">Airport transportation</span>
-        <span class="d">Newark, LaGuardia, JFK, Teterboro. We watch your flight.</span>
+        <span class="d">Newark, LaGuardia, JFK and Teterboro. We watch your flight, so a delay never costs you the car &mdash; or an extra fee.</span>
         <span class="go">Book this &rarr;</span>
       </a>
       <a class="entry-card" href="#book" data-service="Local ride">
         <span class="t">Local rides</span>
-        <span class="d">Dinner, an appointment, the train. One flat price.</span>
+        <span class="d">Dinner, a doctor’s appointment, the train station, a school run. Short trips around New Providence and Union County, one flat price.</span>
         <span class="go">Book this &rarr;</span>
       </a>
       <a class="entry-card" href="#book" data-service="New York City">
         <span class="t">NYC trips</span>
-        <span class="d">Manhattan and the boroughs, fare agreed before you get in.</span>
+        <span class="d">Manhattan and the boroughs, in and out, by reservation. A fixed fare agreed before you get in.</span>
         <span class="go">Book this &rarr;</span>
       </a>
       <a class="entry-card" href="#book" data-service="Special occasion">
         <span class="t">Special occasions</span>
-        <span class="d">A wedding, a night out, the shore, a hospital transfer.</span>
+        <span class="d">Philadelphia, the shore, a wedding, a hospital transfer, a night out with stops along the way. Tell us the plan and we&rsquo;ll quote it.</span>
         <span class="go">Book this &rarr;</span>
       </a>
     </div>
@@ -874,34 +875,6 @@
       <div class="hany-contact">
         <a href="tel:9084949256" class="btn-primary">Call Hany &middot; (908) 494-9256</a>
         <a href="sms:9084949256" class="btn-ghost">Text instead</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- SERVICES — four things you can actually hire us for, said plainly. -->
-<section class="services" id="services">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">The relationship, on the day</div>
-      <h2>Four ways to ride with us</h2>
-    </div>
-    <div class="service-grid">
-      <div class="service-card">
-        <h3>Airport transportation</h3>
-        <p>Newark, LaGuardia, JFK and Teterboro. We watch your flight, so a delay never costs you the car — or an extra fee.</p>
-      </div>
-      <div class="service-card">
-        <h3>Local &amp; point-to-point</h3>
-        <p>Dinner, a doctor's appointment, the train station, a school run. Short trips around New Providence and Union County, one flat price.</p>
-      </div>
-      <div class="service-card">
-        <h3>NYC transportation</h3>
-        <p>Manhattan and the boroughs, in and out, by reservation. A fixed fare agreed before you get in.</p>
-      </div>
-      <div class="service-card">
-        <h3>Long-distance &amp; special trips</h3>
-        <p>Philadelphia, the shore, a wedding, a hospital transfer, a night out with stops along the way. Tell us the plan and we'll quote it.</p>
       </div>
     </div>
   </div>
