@@ -1080,6 +1080,20 @@
 
         <button type="button" class="btn-primary btn-block" id="toStep2">Continue →</button>
         <div class="form-msg" id="step1Msg"></div>
+        <!-- The same consent as on step two, repeated here. It lives on step
+             two because that is where the customer actually commits - but step
+             two is a hidden pane until somebody fills in step one, and the
+             carrier reviewing the application to send business texts will not
+             fill in a booking form. They open the page, look for the wording,
+             and if it is not on screen the application comes back rejected
+             weeks later. So it is on the first pane too, visible to anyone who
+             scrolls to the form. The customer reads it twice, which for a
+             promise about texting their phone is not a bad thing. -->
+        <p class="form-consent">By booking, you agree we may text or call you
+          about this ride &mdash; confirmation, your driver, and changes. Message
+          and data rates may apply. Reply STOP to any text to opt out, HELP for
+          help. We never send marketing texts, and we don&rsquo;t share your
+          number. See our <a href="policy.html">Policy</a>.</p>
       </div>
 
       <!-- STEP 2 — contact, vehicle, and the details that make the ride right. -->
