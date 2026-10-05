@@ -689,6 +689,7 @@
   .lite-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:26px;}
   .lite-card h3{font-family:var(--display); font-size:1.05rem; font-weight:600; margin-bottom:10px;}
   .lite-card p{font-size:0.88rem; color:var(--ink-dim); line-height:1.65;}
+  .fare-cta{display:flex; justify-content:center; margin-top:8px;}
   .lite-link{text-align:center; margin-top:28px;}
   .lite-link a{
     font-family:var(--mono); font-size:0.76rem; letter-spacing:0.08em; text-transform:uppercase;
@@ -860,14 +861,14 @@
         One flat fare for the whole trip, agreed up front &mdash; no surge, no meter,
         and nothing added at the end you haven&rsquo;t already seen.</p>
     </div>
-    <p class="fare-note"><strong>Your town sets the fare.</strong> A ride from New Providence
-      and a ride from two towns over are not the same trip, so there is no single list of
-      prices that is true for everybody. Put in your pickup and where you&rsquo;re headed and
-      the exact figure comes back &mdash; sedan or SUV, tolls shown separately, the total you
-      will actually pay.</p>
-    <p class="fare-note"><strong>Nothing is owed for asking.</strong> An estimate is not a
-      booking. Look at the number, think about it, and book only if it suits you.</p>
-    <div class="lite-link"><a href="#book">Get an estimate &rarr;</a></div>
+    <!-- One button and nothing else. Everything that used to sit here - the
+         table, the notes about tolls and tips, the small print about towns -
+         was answering questions in advance that the form answers exactly, in
+         the customer's own case, one tap away. A line of reading is not worth
+         what a real number is. -->
+    <div class="fare-cta">
+      <a href="#book" class="btn-primary btn-lg">Get an estimate &rarr;</a>
+    </div>
   </div>
 </section>
 
