@@ -556,38 +556,17 @@
      not our margin, and the note says the town matters: a fare from Allentown
      is not a fare from Summit, and a quiet promise otherwise would be a lie. */
   .fares{border-top:1px solid var(--line);}
-  .fare-table{
-    border:1px solid var(--line); border-radius:var(--radius);
-    overflow:hidden; background:var(--panel);
-  }
-  .fare-row{
-    display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);
-    gap:12px; padding:16px 20px; align-items:baseline;
-    border-bottom:1px solid var(--line);
-  }
-  .fare-row:last-child{border-bottom:0;}
-  .fare-row.head{
-    background:var(--bg-raised); font-family:var(--mono); font-size:0.72rem;
-    letter-spacing:0.09em; text-transform:uppercase; color:var(--steel);
-  }
-  .fare-where{color:var(--ink); font-weight:500;}
-  .fare-where span{display:block; font-size:0.8rem; color:var(--steel); font-weight:400; margin-top:3px;}
-  .fare-amt{font-family:var(--display); font-size:1.15rem; color:var(--ink);}
-  .fare-amt em{display:block; font-style:normal; font-size:0.78rem; color:var(--steel); margin-top:3px;}
   .fare-note{
     margin-top:18px; font-size:0.84rem; color:var(--steel); line-height:1.7;
     border-left:2px solid var(--line); padding-left:14px;
   }
   .fare-note strong{color:var(--ink-dim); font-weight:500;}
   @media (max-width: 560px){
-    .fare-row{grid-template-columns:minmax(0,1fr) auto auto; gap:10px; padding:14px 16px;}
-    .fare-amt{font-size:1rem;}
     /* The with-tolls figure is what squeezes the destination. At 375px it cut
        "Manhattan / New York City" to a 100px column standing four lines tall,
        which reads as a fault rather than a layout. The toll is already named
        on the line beneath the destination, so the combined number was the one
        thing here saying itself twice. */
-    .fare-amt em{display:none;}
   }
   .loy-sub{
     margin-top:14px; max-width:56ch; font-size:1.02rem; line-height:1.7; color:var(--ink);
