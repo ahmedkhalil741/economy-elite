@@ -599,6 +599,14 @@
   .loy-steps{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:0 48px;}
   .loy-step{display:grid; grid-template-columns:auto 1fr; gap:4px 18px; padding:14px 0; border-top:1px solid var(--line);}
   .loy-step:nth-child(-n+2){border-top:0; padding-top:0;}
+  /* Seven things do not divide into two columns. Six of them did — three even
+     rows — and the seventh sat alone in the bottom left with a hole beside
+     it, which is what made the block look lopsided.
+     The seventh is also the odd one out in kind: the other six are things you
+     earn, and this one is a promise that nothing is ever taken away. So it
+     runs the full width underneath them, where a closing line belongs. Even
+     rows above, one statement below, and nothing left over. */
+  .loy-step.full{grid-column:1 / -1;}
   .loy-step .amt{
     font-family:var(--mono); font-size:0.95rem; font-weight:600; color:var(--teal);
     font-variant-numeric:tabular-nums; white-space:nowrap;
@@ -959,7 +967,7 @@
           <span class="what">On your birthday</span>
           <span class="why">Tell us the day. We don&rsquo;t need the year.</span>
         </div>
-        <div class="loy-step">
+        <div class="loy-step full">
           <span class="amt">Never</span>
           <span class="what">Your points expire</span>
           <span class="why">Spending credit never costs you your standing.</span>
