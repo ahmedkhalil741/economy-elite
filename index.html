@@ -607,6 +607,26 @@
      runs the full width underneath them, where a closing line belongs. Even
      rows above, one statement below, and nothing left over. */
   .loy-step.full{grid-column:1 / -1;}
+
+  /* MIRRORED, not merely side by side. Both columns used to read left-to-right,
+     so the two halves were copies rather than a pair — the eye read them as
+     one list that happened to wrap, and the page's centre line did nothing.
+     The left column is turned around to face the right one: its text runs to
+     the right edge of its column and the amount sits after it, so the two
+     blocks meet at the gutter and the whole thing balances on the middle of
+     the page.
+     Only above 620px. Below that the grid collapses to a single column, and
+     "odd" would then mean every other item in one list rather than the left
+     column — alternate rows flipping would look like a mistake. The full-width
+     closing line is excluded for the same reason: it has no partner to face. */
+  @media (min-width: 621px){
+    .loy-step:nth-child(odd):not(.full){
+      grid-template-columns:1fr auto; text-align:right;
+    }
+    .loy-step:nth-child(odd):not(.full) .what{grid-column:1; grid-row:1;}
+    .loy-step:nth-child(odd):not(.full) .amt {grid-column:2; grid-row:1;}
+    .loy-step:nth-child(odd):not(.full) .why {grid-column:1; grid-row:2;}
+  }
   .loy-step .amt{
     font-family:var(--mono); font-size:0.95rem; font-weight:600; color:var(--teal);
     font-variant-numeric:tabular-nums; white-space:nowrap;
