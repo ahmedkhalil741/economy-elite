@@ -161,17 +161,21 @@
   }
   .hero-grid{max-width:500px; position:relative; z-index:2;}
   .hero-car{
-    /* The vehicle deliberately overlaps ~70px into the text column so the
-       headline and the SUV read as one composition rather than two
-       columns. The copy sits at z-index 2 and the car at z-index 1, and
-       the car's left edge is masked down to almost nothing, so the overlap
-       is a faint dark presence BEHIND the words — never a shape covering
-       them. */
-    position:absolute; top:50%; right:1%;
-    transform:translate(-20px, -50%);
-    width:56%; max-width:820px; z-index:1; pointer-events:none;
-    -webkit-mask-image:linear-gradient(to right, transparent 0%, rgba(0,0,0,0.25) 13%, rgba(0,0,0,0.72) 27%, #000 44%);
-    mask-image:linear-gradient(to right, transparent 0%, rgba(0,0,0,0.25) 13%, rgba(0,0,0,0.72) 27%, #000 44%);
+    /* Every trick that used to live here existed because this was a
+       PHOTOGRAPH: a hard left fade so the photo's rectangle dissolved before
+       it reached the headline, a bottom fade so it didn't end on a hard
+       edge, and a pool of light on the floor so the car wasn't hovering in
+       black. A line drawing on a transparent ground needs none of it —
+       there is no rectangle to hide and no ground to fake — and the left
+       fade in particular would have sliced the left-hand car in half. So the
+       masks are gone.
+       The drawing is also symmetrical, three cars facing you, which means it
+       cannot overlap the text the way the old photo did: a car would end up
+       sitting under the words. It clears the copy column instead. At 1512px
+       the headline runs out near 692px and this starts near 696px. */
+    position:absolute; top:50%; right:2%;
+    transform:translateY(-50%);
+    width:52%; max-width:760px; z-index:1; pointer-events:none;
   }
   /* The bottom fade lives on the image rather than the container, so it
      multiplies with the container's left fade. Two single-axis masks
@@ -179,22 +183,13 @@
      does not. Only the last stretch fades and it never reaches full
      transparency until the very edge, so the tyres stay solid and the car
      doesn't dissolve into the page. */
-  .hero-car img{
-    width:100%; height:auto; display:block;
-    -webkit-mask-image:linear-gradient(to bottom, #000 86%, rgba(0,0,0,0.7) 95%, transparent 100%);
-    mask-image:linear-gradient(to bottom, #000 86%, rgba(0,0,0,0.7) 95%, transparent 100%);
-  }
+  .hero-car img{width:100%; height:auto; display:block;}
   /* The only thing grounding the vehicle: a faint pool of light on the
      floor beneath it. On a near-black background a dark shadow would be
      invisible, so this is a very low-opacity cream wash instead — enough
      that the SUV isn't floating, nowhere near a wet-floor reflection. It
      inherits the container's left fade, so it disappears with the car. */
-  .hero-car::before{
-    content:'';
-    position:absolute; left:14%; right:8%; bottom:3%; height:10%;
-    background:radial-gradient(ellipse at 50% 50%, rgba(242,237,227,0.075) 0%, transparent 72%);
-    z-index:-1; pointer-events:none;
-  }
+
   .hero-trust{font-size:0.85rem; color:var(--steel); margin-top:16px;}
   .eyebrow{
     font-family:var(--mono); font-size:0.78rem; color:var(--teal);
@@ -417,9 +412,7 @@
     .hero > .wrap{max-width:1160px; padding-left:24px;}
     .hero-grid{grid-template-columns:1fr; gap:36px;}
     .hero-car{
-      position:relative; width:100%; max-width:100%; transform:none; margin-top:24px;
-      -webkit-mask-image:linear-gradient(to bottom, transparent 0%, #000 14%);
-      mask-image:linear-gradient(to bottom, transparent 0%, #000 14%);
+      position:relative; width:100%; max-width:100%; transform:none; margin-top:28px;
     }
     .fleet-grid{grid-template-columns:1fr;}
     .fleet-visual{order:-1;}
@@ -784,7 +777,7 @@
     </div>
   </div>
   <div class="hero-car">
-    <img src="suburban-hero.jpg" alt="A black Chevrolet Suburban, the vehicle used by The Standard" loading="eager">
+    <img src="driveway.png" alt="A line drawing of three cars waiting in a driveway outside a suburban house" loading="eager" width="1500" height="750">
   </div>
 </section>
 
