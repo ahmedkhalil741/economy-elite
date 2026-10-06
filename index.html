@@ -1078,6 +1078,14 @@
 
         <div class="trip-recap" id="tripRecap"></div>
 
+        <!-- The price, before a single personal detail is asked for. It sits
+             above the name and phone fields on purpose: the customer should
+             be deciding whether the number suits them, not whether they have
+             already given away too much to back out. Some will look and
+             leave, and we will never know they were here. That is the cost of
+             a page that says nothing is hidden and means it. -->
+        <div class="quote-card" id="quoteBox" hidden></div>
+
         <div class="book-row">
           <div class="field">
             <label for="b-name">Your name</label>
@@ -1296,6 +1304,65 @@
     }
   });
 
+  // One place that turns a quote into a panel, so the figure the customer
+  // sees before booking and the figure on their confirmation can never be
+  // written two different ways.
+  const money = (n) => '$' + Number(n).toFixed(2).replace(/\.00$/, '');
+
+  function quotePanel(q, heading){
+    const head = `<div class="q-head">${heading}</div>`;
+    if (!q || !q.matched) {
+      return head + `<div class="q-note">This route isn&rsquo;t on our standard rate card, so Hany
+        works the price out himself and texts it to you before anything is agreed.</div>`;
+    }
+    const rows = [`<div class="q-row"><span>Fare</span><b>${money(q.fare)}</b></div>`];
+    if (q.toll)    rows.push(`<div class="q-row"><span>Tolls</span><b>${money(q.toll)}</b></div>`);
+    if (q.cardFee) rows.push(`<div class="q-row"><span>${q.cardFeeLabel || 'Card'} fee</span><b>${money(q.cardFee)}</b></div>`);
+    rows.push(`<div class="q-row q-total"><span>Estimated total</span><b>${money(q.total)}</b></div>`);
+    return head + rows.join('') +
+      (q.tipSuggested ? `<div class="q-note">A tip is separate and never added for you &mdash; 20% of
+        the fare is usual, about ${money(q.tipSuggested)} on this trip.</div>` : '') +
+      `<div class="q-note">Nothing is charged now. Hany confirms the final figure before you ride.</div>`;
+  }
+
+  // Asks the server for a price and paints it. Called on the way into step 2
+  // and again whenever the customer changes the vehicle or how they are
+  // paying, because both move the number - an estimate that went stale the
+  // moment they picked Sedan would be worse than no estimate at all.
+  let quoteSeq = 0;
+  async function refreshQuote(){
+    const box = document.getElementById('quoteBox');
+    const pickup  = document.getElementById('b-pickup').value.trim();
+    const dropoff = document.getElementById('b-dropoff').value.trim();
+    if (!pickup) { box.hidden = true; return; }
+
+    const hourly = document.getElementById('b-service').value === 'By the hour';
+    const payload = {
+      pickup, dropoff,
+      dateTime: document.getElementById('b-date').value,
+      vehicle:  document.getElementById('b-vehicle').value,
+      payMethod: selectedPay,
+      hours: hourly ? parseFloat(document.getElementById('b-hours').value) || null : null,
+    };
+
+    const mine = ++quoteSeq;
+    box.hidden = false;
+    box.innerHTML = '<div class="q-head">Your estimate</div><div class="q-note">Working it out&hellip;</div>';
+    try {
+      const res = await fetch('/.netlify/functions/quote', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const q = await res.json();
+      // A slower earlier request must never overwrite a newer answer.
+      if (mine !== quoteSeq) return;
+      box.innerHTML = quotePanel(q, 'Your estimate');
+    } catch (err) {
+      if (mine !== quoteSeq) return;
+      box.innerHTML = quotePanel(null, 'Your estimate');
+    }
+  }
+
   document.getElementById('toStep2').addEventListener('click', function(){
     const pickup  = document.getElementById('b-pickup').value.trim();
     const dropoff = document.getElementById('b-dropoff').value.trim();
@@ -1327,6 +1394,7 @@
 
     step1.hidden = true;
     step2.hidden = false;
+    refreshQuote();
     document.getElementById('b-name').focus({ preventScroll: true });
     step2.scrollIntoView({ behavior:'smooth', block:'start' });
   });
@@ -1352,7 +1420,11 @@
     chip.classList.add('active');
     selectedPay = chip.dataset.pay;
     document.getElementById('payNote').textContent = payNotes[selectedPay];
+    refreshQuote();
   });
+
+  // Sedan and SUV are different money, and the vehicle is chosen on this pane.
+  document.getElementById('b-vehicle').addEventListener('change', refreshQuote);
 
   // Look up a returning customer and hand back everything we already know —
   // their preferences AND what they have earned — so a regular never types the
@@ -1603,33 +1675,11 @@
       body: JSON.stringify(payload)
     }).catch(() => {});
 
-    const money = (n) => '$' + Number(n).toFixed(2).replace(/\.00$/, '');
     const lead = `Reservation received — ${pickup} to ${dropoff}.`;
     const tail = selectedPay === 'Card'
       ? `Hany will text you to confirm your driver and your total. You'll tap your card in the car at the end of the trip.`
       : `Hany will text you to confirm your driver, your total, and ${selectedPay} payment details.`;
-
-    let quoteHtml = '';
-    if (quote && quote.matched) {
-      const rows = [];
-      rows.push(`<div class="q-row"><span>Fare</span><b>${money(quote.fare)}</b></div>`);
-      if (quote.toll)    rows.push(`<div class="q-row"><span>Tolls</span><b>${money(quote.toll)}</b></div>`);
-      if (quote.cardFee) rows.push(`<div class="q-row"><span>${quote.cardFeeLabel || 'Card'} fee</span><b>${money(quote.cardFee)}</b></div>`);
-      rows.push(`<div class="q-row q-total"><span>Estimated total</span><b>${money(quote.total)}</b></div>`);
-      quoteHtml =
-        `<div class="quote-card">` +
-          `<div class="q-head">Your estimate</div>` +
-          rows.join('') +
-          (quote.tipSuggested ? `<div class="q-note">A tip is separate and never added for you — 20% of the fare is usual, about ${money(quote.tipSuggested)} on this trip.</div>` : '') +
-          `<div class="q-note">This is what we expect it to come to. Nothing is charged now, and Hany confirms the final figure before you ride.</div>` +
-        `</div>`;
-    } else {
-      quoteHtml =
-        `<div class="quote-card">` +
-          `<div class="q-head">Your estimate</div>` +
-          `<div class="q-note">This route isn't on our standard rate card, so Hany works the price out himself and texts it to you before anything is agreed.</div>` +
-        `</div>`;
-    }
+    const quoteHtml = `<div class="quote-card">` + quotePanel(quote, 'Your estimate') + `</div>`;
 
     msg.innerHTML = `${lead} ${tail}` + quoteHtml;
     msg.style.color = '#F2EDE3';
