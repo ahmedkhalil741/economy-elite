@@ -27,7 +27,12 @@ const COMPLETED = 'Completed';
 const CANCELLED = 'Cancelled';
 const NO_SHOW = 'No-show';
 const REQUESTED = 'Requested';
-const ALLOWED = [COMPLETED, CANCELLED, NO_SHOW, REQUESTED];
+// Confirmed sits between Requested and Completed: Ahmed has looked at the
+// booking, agreed the price and told the customer. It deliberately earns
+// nothing and settles nothing - only Completed touches points and credit -
+// so it is safe to set, unset and set again while a ride is being arranged.
+const CONFIRMED = 'Confirmed';
+const ALLOWED = [COMPLETED, CANCELLED, NO_SHOW, REQUESTED, CONFIRMED];
 
 function normalizePhone(phone) {
   return String(phone || '').replace(/\D/g, '').slice(-10);

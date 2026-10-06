@@ -53,6 +53,12 @@
   .ride-meta .tag{display:inline-block;font-family:var(--mono);font-size:0.68rem;letter-spacing:0.06em;
                   text-transform:uppercase;border:1px solid var(--line);border-radius:100px;padding:2px 9px;margin-right:6px;color:var(--steel)}
   .ride-meta .care{border-color:var(--accent);color:var(--accent)}
+  /* Confirming is a different act from assigning a driver, and comes first:
+     the customer is told their ride is on and what it costs, then a driver is
+     picked. Its own row, above, so the two are never the same click. */
+  .confirm-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line)}
+  .confirm-row .lbl{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.07em;text-transform:uppercase;color:var(--dim)}
+  .confirm-row .conf-go[disabled]{opacity:0.55;cursor:default}
   .assign-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line)}
   .assign-row select{flex:1;min-width:150px;width:auto}
   .current{font-family:var(--mono);font-size:0.74rem;letter-spacing:0.07em;text-transform:uppercase;color:#8fbf8f}
@@ -582,6 +588,7 @@
         : '<div class="standing">New &middot; no profile yet</div>';
 
       const isDone = String(r.rideStatus || '').toLowerCase() === 'completed';
+      const isConfirmed = /^confirmed$/i.test(String(r.rideStatus || '').trim());
       const isSettled = /^(completed|cancelled|no-?show)$/i.test(String(r.rideStatus || '').trim());
       const statusRow = data.hasRideStatusColumn
         ? '<div class="status-row">' +
@@ -644,6 +651,12 @@
           (split ? split
                  : ' &middot; <span class="fare-val">' + esc(r.fare || 'no fare') + '</span>') +
           '<button class="fare-edit">change the price</button>' +
+        '</div>' +
+        '<div class="confirm-row">' +
+          '<span class="lbl">Confirm with the customer</span>' +
+          '<button class="btn conf-go"' + (isConfirmed ? ' disabled' : '') + '>' +
+            (isConfirmed ? 'Confirmed' : 'Confirm &amp; text') + '</button>' +
+          '<span class="result confres"></span>' +
         '</div>' +
         '<div class="assign-row">' +
           (r.driver ? '<span class="current">Driver: ' + esc(r.driver) + '</span>' : '') +
@@ -780,6 +793,69 @@
         out.innerHTML = '<span class="bad">' + esc(err.message) + '</span>';
       }finally{
         st.disabled = false;
+      }
+      return;
+    }
+
+    // CONFIRM & TEXT. The customer booked and was told Hany would come back to
+    // them; this is that moment. It marks the ride Confirmed on the sheet and
+    // hands over the whole message already written, the same way assigning a
+    // driver does - the tap that sends it is still a person's, because a price
+    // going to a customer should pass under somebody's eye first.
+    //
+    // It writes nothing the loyalty ledger cares about. Confirmed earns no
+    // point and spends no credit; only Completed does that.
+    const conf = e.target.closest('.conf-go');
+    if (conf) {
+      const card = conf.closest('.ride');
+      const ride = data.rides[Number(card.dataset.i)];
+      const out  = card.querySelector('.confres');
+
+      if (!ride.phone) {
+        out.className = 'result confres show';
+        out.innerHTML = '<span class="bad">No phone number on this booking \u2014 nothing to text.</span>';
+        return;
+      }
+
+      conf.disabled = true;
+      const was = conf.innerHTML;
+      conf.textContent = 'Saving\u2026';
+      out.className = 'result confres show';
+      out.innerHTML = 'Working\u2026';
+
+      try {
+        const res = await fetch('/.netlify/functions/set-ride-status', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ token, rowNumber: ride.rowNumber, status: 'Confirmed',
+                                 pickup: ride.pickup, dropoff: ride.dropoff,
+                                 phone: ride.phone, name: ride.name })
+        });
+        const j = await res.json();
+        if (!res.ok || j.error) throw new Error(j.error || ('Error ' + res.status));
+
+        ride.rideStatus = 'Confirmed';
+        conf.innerHTML = 'Confirmed';
+
+        const first = String(ride.name || '').trim().split(/\s+/)[0];
+        const num = (v) => { const t = String(v == null ? '' : v).replace(/[$,\s]/g,'');
+                             return /^\d+(\.\d+)?$/.test(t) ? parseFloat(t) : null; };
+        const tipN  = num(ride.tip) || 0;
+        const body =
+          (first ? 'Hi ' + first + ' \u2014 ' : '') +
+          'Hany from The Standard. You\u2019re confirmed for ' + (ride.when || 'your ride') + '. ' +
+          'Pickup ' + ride.pickup + (ride.dropoff ? ' to ' + ride.dropoff : '') + '. ' +
+          (ride.vehicle ? ride.vehicle + '. ' : '') +
+          (ride.fare ? 'Total ' + (String(ride.fare).startsWith('$') ? ride.fare : '$' + ride.fare) + '. ' : '') +
+          (tipN ? 'A tip is separate, about $' + tipN + ' if you\u2019d like. ' : '') +
+          'Any changes, just text this number.';
+
+        out.innerHTML =
+          '<span class="good">Marked confirmed.</span><br>' +
+          '<a class="btn" href="' + esc(smsLink(ride.phone, body)) + '">Text ' + esc(first || 'the customer') + '</a>';
+      } catch (err) {
+        conf.disabled = false;
+        conf.innerHTML = was;
+        out.innerHTML = '<span class="bad">' + esc(err.message) + '</span>';
       }
       return;
     }
