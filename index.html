@@ -143,8 +143,7 @@
      below, the headline becomes the whole thing instead of one half of it. */
   .hero{
     position:relative;
-    padding:132px 0 120px;
-    border-bottom:1px solid var(--line);
+    padding:132px 0 56px;
     overflow:hidden;
   }
   .hero > .wrap{max-width:820px; padding-left:24px; padding-right:24px; text-align:center;}
@@ -523,10 +522,14 @@
      page and tappable. The detailed cards further down explain each one; these
      exist so somebody who wants an airport run can say so in one tap instead
      of reading their way to the form. */
-  .entry{padding:78px 0 72px; border-bottom:1px solid var(--line);}
-  /* Tighter than a full section head elsewhere: the cards below are
-     compact, and 44px of air over four small cards reads as a gap. */
-  .entry .section-head{margin-bottom:32px;}
+  /* No heading over these any more, and none needed: four cards that say
+     Airport transportation, Local rides, NYC trips and Special occasions
+     explain themselves, and the line that used to sit above them - "the
+     relationship, on the day" - was abstract language over concrete things.
+     They belong to the hero now rather than following it. The rule between
+     the two is gone and the gap is small on purpose: headline, one line,
+     one button, then the four things you can actually ask for. */
+  .entry{padding:0 0 72px; border-bottom:1px solid var(--line);}
   .entry-grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px;}
   .entry-card{
     display:flex; flex-direction:column; gap:6px; text-decoration:none;
@@ -765,10 +768,6 @@
      form, and a title that drifts from it makes the two disagree. -->
 <section class="entry" id="services">
   <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">The relationship, on the day</div>
-      <h2>Four ways to ride with us</h2>
-    </div>
     <div class="entry-grid">
       <a class="entry-card" href="#book" data-service="Airport transportation">
         <span class="t">Airport transportation</span>
