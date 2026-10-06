@@ -15,7 +15,8 @@
 //                             reader — credit, debit, and phone wallets like
 //                             Apple Pay all run through it at this rate. The
 //                             customer only ever sees the word "Card".
-//   Venmo      1.9% + $0.10   business profile
+//   Venmo      nothing — Ahmed's call, 2026-10-06. Only card costs the
+//                             customer anything now.
 //   Cash       nothing
 //
 // ---- TWO THINGS TO KNOW ABOUT SURCHARGING ----
@@ -49,7 +50,10 @@ const CARD_FEES = {
   card: { rate: 0.026, fixed: 0.15, label: 'Card' },
   square: { rate: 0.026, fixed: 0.15, label: 'Card' },
   'apple pay': { rate: 0.026, fixed: 0.15, label: 'Card' },
-  venmo: { rate: 0.019, fixed: 0.10, label: 'Venmo' },
+  // Was 1.9% + $0.10 on a Venmo business profile. Set to null on Ahmed's
+  // instruction — cash, Zelle and Venmo all cost the customer nothing, and
+  // card is the only method that adds anything.
+  venmo: null,
 };
 
 // Returns { amount, label, rate, fixed } for a method that costs something,
