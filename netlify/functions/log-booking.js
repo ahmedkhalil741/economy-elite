@@ -195,7 +195,26 @@ exports.handler = async function (event) {
       requestBody: { values: [row] },
     });
 
-    return { statusCode: 200, body: JSON.stringify({ success: true }) };
+    // The customer sees this. Until now the fare was worked out here, written
+    // to the sheet, mailed to Ahmed - and never shown to the person who asked
+    // for the ride. They handed over a phone number and were told a number
+    // would arrive by text later, on the page that promises nothing is hidden.
+    //
+    // Only the figures a quote is made of, and only when the route is one we
+    // actually price. Nothing about zones, nothing about how the table works.
+    // An unmatched route sends matched:false and the page says it will be
+    // priced by hand, which is the truth rather than a blank.
+    const quote = fare && fare.matched ? {
+      matched: true,
+      fare: fare.fare,
+      toll: fare.toll || 0,
+      cardFee: fare.cardFee || 0,
+      cardFeeLabel: fare.cardFeeLabel || null,
+      total: fare.total,
+      tipSuggested: fare.tipSuggested || null,
+    } : { matched: false };
+
+    return { statusCode: 200, body: JSON.stringify({ success: true, quote }) };
   } catch (err) {
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }

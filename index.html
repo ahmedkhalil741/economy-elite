@@ -693,6 +693,24 @@
   .lite-card h3{font-family:var(--display); font-size:1.05rem; font-weight:600; margin-bottom:10px;}
   .lite-card p{font-size:0.88rem; color:var(--ink-dim); line-height:1.65;}
   .fare-cta{display:flex; justify-content:center; margin-top:8px;}
+  /* The estimate, shown the moment the booking lands. Deliberately a panel
+     rather than another sentence: a number buried in a paragraph is a number
+     nobody reads, and this is the figure the whole page has been promising. */
+  .quote-card{
+    text-align:left; margin:18px auto 0; max-width:420px;
+    background:var(--bg-raised); border:1px solid var(--line);
+    border-radius:12px; padding:16px 18px;
+  }
+  .q-head{
+    font-family:var(--mono); font-size:0.66rem; letter-spacing:0.14em;
+    text-transform:uppercase; color:var(--steel); margin-bottom:12px;
+  }
+  .q-row{display:flex; justify-content:space-between; gap:16px; padding:6px 0; font-size:0.9rem; color:var(--ink-dim);}
+  .q-row b{color:var(--ink); font-weight:500;}
+  .q-total{border-top:1px solid var(--line); margin-top:6px; padding-top:10px;}
+  .q-total span{color:var(--ink);}
+  .q-total b{font-family:var(--display); font-size:1.25rem;}
+  .q-note{font-size:0.78rem; color:var(--steel); line-height:1.6; margin-top:12px;}
   .lite-link{text-align:center; margin-top:28px;}
   .lite-link a{
     font-family:var(--mono); font-size:0.76rem; letter-spacing:0.08em; text-transform:uppercase;
@@ -1494,7 +1512,7 @@
   // two rides dispatch can't tell apart.
   let submitting = false;
 
-  document.getElementById('bookForm').addEventListener('submit', function(e){
+  document.getElementById('bookForm').addEventListener('submit', async function(e){
     e.preventDefault();
     if (submitting) return;
     const msg = document.getElementById('formMsg');
@@ -1560,11 +1578,22 @@
       body: JSON.stringify(payload)
     }).catch(() => {});
 
-    fetch('/.netlify/functions/log-booking', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    }).catch(() => {});
+    // The one call we wait for. The other two can finish in their own time -
+    // nothing on screen depends on them - but this one carries the estimate
+    // back, and the estimate is the whole point of the screen that follows.
+    // Wrapped so a slow or failed call costs the customer their number, not
+    // their booking: the ride is already saved by the time this resolves, and
+    // if it doesn't, they get the message they used to get and nothing breaks.
+    let quote = null;
+    try {
+      const bookRes = await fetch('/.netlify/functions/log-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const bookJson = await bookRes.json();
+      quote = bookJson && bookJson.quote ? bookJson.quote : null;
+    } catch (err) { quote = null; }
 
     // Save/update this customer's profile (name + preferences) so we
     // recognize them and prefill their usual info next time they book.
@@ -1574,20 +1603,44 @@
       body: JSON.stringify(payload)
     }).catch(() => {});
 
-    if(selectedPay === 'Card'){
-      msg.textContent = `Reservation received — ${pickup} to ${dropoff}. We'll review your request and text you to confirm your ride and your total. You'll tap your card in the car at the end of the trip.`;
-    }else{
-      msg.textContent = `Reservation received — ${pickup} to ${dropoff}. We'll review your request and text you to confirm your ride, your total, and ${selectedPay} payment details.`;
+    const money = (n) => '$' + Number(n).toFixed(2).replace(/\.00$/, '');
+    const lead = `Reservation received — ${pickup} to ${dropoff}.`;
+    const tail = selectedPay === 'Card'
+      ? `Hany will text you to confirm your driver and your total. You'll tap your card in the car at the end of the trip.`
+      : `Hany will text you to confirm your driver, your total, and ${selectedPay} payment details.`;
+
+    let quoteHtml = '';
+    if (quote && quote.matched) {
+      const rows = [];
+      rows.push(`<div class="q-row"><span>Fare</span><b>${money(quote.fare)}</b></div>`);
+      if (quote.toll)    rows.push(`<div class="q-row"><span>Tolls</span><b>${money(quote.toll)}</b></div>`);
+      if (quote.cardFee) rows.push(`<div class="q-row"><span>${quote.cardFeeLabel || 'Card'} fee</span><b>${money(quote.cardFee)}</b></div>`);
+      rows.push(`<div class="q-row q-total"><span>Estimated total</span><b>${money(quote.total)}</b></div>`);
+      quoteHtml =
+        `<div class="quote-card">` +
+          `<div class="q-head">Your estimate</div>` +
+          rows.join('') +
+          (quote.tipSuggested ? `<div class="q-note">A tip is separate and never added for you — 20% of the fare is usual, about ${money(quote.tipSuggested)} on this trip.</div>` : '') +
+          `<div class="q-note">This is what we expect it to come to. Nothing is charged now, and Hany confirms the final figure before you ride.</div>` +
+        `</div>`;
+    } else {
+      quoteHtml =
+        `<div class="quote-card">` +
+          `<div class="q-head">Your estimate</div>` +
+          `<div class="q-note">This route isn't on our standard rate card, so Hany works the price out himself and texts it to you before anything is agreed.</div>` +
+        `</div>`;
     }
+
+    msg.innerHTML = `${lead} ${tail}` + quoteHtml;
     msg.style.color = '#F2EDE3';
-    const done = msg.textContent;
+    const done = msg.innerHTML;
     e.target.reset();
     // reset() empties every field in both panes, including the confirmation
     // we just wrote, so the message is restored and moved to step 1 where the
     // customer is about to be looking.
-    document.getElementById('step1Msg').textContent = done;
+    document.getElementById('step1Msg').innerHTML = done;
     document.getElementById('step1Msg').style.color = '#F2EDE3';
-    msg.textContent = '';
+    msg.innerHTML = '';
     step2.hidden = true;
     step1.hidden = false;
     document.getElementById('b-name').value = '';
