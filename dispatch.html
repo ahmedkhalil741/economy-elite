@@ -60,6 +60,16 @@
   .confirm-row .lbl{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.07em;text-transform:uppercase;color:var(--dim)}
   .confirm-row .conf-go[disabled]{opacity:0.55;cursor:default}
   .confres .hint{display:block;margin-top:8px;font-size:0.78rem;color:var(--dim);line-height:1.6}
+  /* The three things we ever say to a customer. Each one opens the text so it
+     can be read - and edited - before it goes anywhere. */
+  .msg-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line);margin-top:14px}
+  .msg-row .lbl{font-family:var(--mono);font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--steel);margin-right:2px}
+  .cmsg.on{border-color:var(--accent);color:var(--accent);background:rgba(201,169,107,0.1)}
+  .msg-box{margin-top:12px}
+  .msg-box textarea{width:100%;min-height:118px;background:var(--bg);color:var(--ink);border:1px solid var(--line);
+                    border-radius:10px;padding:12px 14px;font-family:inherit;font-size:0.88rem;line-height:1.65;resize:vertical}
+  .msg-box textarea:focus{outline:none;border-color:var(--accent)}
+  .msg-box .hint{display:block;margin-top:8px;font-size:0.78rem;color:var(--dim);line-height:1.6}
   .assign-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line)}
   .assign-row select{flex:1;min-width:150px;width:auto}
   .current{font-family:var(--mono);font-size:0.74rem;letter-spacing:0.07em;text-transform:uppercase;color:#8fbf8f}
@@ -491,6 +501,55 @@
     return 'sms:' + phone + sep + 'body=' + encodeURIComponent(body);
   }
 
+  // ------------------------------------------------------------------
+  // THE THREE MESSAGES, WRITTEN ONCE.
+  //
+  // Confirm & text and the "Message the customer" row both read from here,
+  // so the confirmation the button sends and the confirmation the row copies
+  // can never drift into saying two different things.
+  //
+  // The after-the-ride message promises only credit the ledger actually
+  // holds. It will not invent a $5 that the loyalty sheet has never heard of,
+  // because the customer would turn up expecting it.
+  // ------------------------------------------------------------------
+  function custMsg(ride){
+    const first = String(ride.name || '').trim().split(/\s+/)[0];
+    const hi = first ? 'Hi ' + first + ' \u2014 ' : '';
+    const num = (v) => { const t = String(v == null ? '' : v).replace(/[$,\s]/g,'');
+                         return /^\d+(\.\d+)?$/.test(t) ? parseFloat(t) : null; };
+    const tipN = num(ride.tip) || 0;
+    const money = (v) => String(v).trim().startsWith('$') ? String(v).trim() : '$' + v;
+    const route = String(ride.pickup || '') + (ride.dropoff ? ' to ' + ride.dropoff : '');
+    const c = ride.customer || null;
+    const credit = c && Number(c.creditOwed) > 0 ? Number(c.creditOwed) : 0;
+    const pts = c && Number(c.points) > 0 ? Number(c.points) : 0;
+
+    return {
+      received:
+        hi + 'thanks for booking with The Standard. We have your request for ' +
+        (ride.when || 'your ride') + (route ? ', ' + route : '') + '. ' +
+        'Hany will text you back shortly to confirm it, or with anything that needs adjusting. ' +
+        'This number is the one to use for any change.',
+
+      confirmed:
+        hi + 'Hany from The Standard. You\u2019re confirmed for ' + (ride.when || 'your ride') + '. ' +
+        'Pickup ' + route + '. ' +
+        (ride.vehicle ? ride.vehicle + '. ' : '') +
+        (ride.fare ? 'Total ' + money(ride.fare) + '. ' : '') +
+        (tipN ? 'A tip is separate, about $' + tipN + ' if you\u2019d like. ' : '') +
+        'Any changes, just text this number.',
+
+      completed:
+        hi + 'thank you for riding with The Standard. ' +
+        (credit ? 'You have $' + credit + ' credit sitting on your account, and it comes off your next ride automatically. '
+         : pts ? 'That puts you on ' + pts + ' point' + (pts === 1 ? '' : 's') + ' with us. '
+         : '') +
+        'Book any time at standardnj.com, or just text this number and Hany will sort it.',
+    };
+  }
+
+  const MSG_LABEL = { received: 'Got your booking', confirmed: 'Confirmed', completed: 'After the ride' };
+
   // Default: yesterday to a week ahead — the only rides that need anything
   // doing. Everything further out is one tap away.
   const HKEY = 'standard-dispatch-notify';
@@ -659,6 +718,13 @@
             (isConfirmed ? 'Confirmed' : 'Confirm &amp; text') + '</button>' +
           '<span class="result confres"></span>' +
         '</div>' +
+        '<div class="msg-row">' +
+          '<span class="lbl">Message the customer</span>' +
+          '<button class="btn-line cmsg" data-msg="received">Got your booking</button>' +
+          '<button class="btn-line cmsg" data-msg="confirmed">Confirmed</button>' +
+          '<button class="btn-line cmsg" data-msg="completed">After the ride</button>' +
+        '</div>' +
+        '<div class="msg-box" hidden></div>' +
         '<div class="assign-row">' +
           (r.driver ? '<span class="current">Driver: ' + esc(r.driver) + '</span>' : '') +
           '<select class="pick">' + opts + '</select>' +
@@ -806,6 +872,54 @@
     //
     // It writes nothing the loyalty ledger cares about. Confirmed earns no
     // point and spends no credit; only Completed does that.
+    // ---- the three customer messages ----
+    //
+    // Opens the text in a box rather than firing it off. Every one of these
+    // carries the customer's name and the figures from the sheet, and a wrong
+    // figure in a text to a customer is a figure we have to honour. So it is
+    // shown, editable, and copied only when it has been read.
+    const cm = e.target.closest('.cmsg');
+    if (cm) {
+      const card = cm.closest('.ride');
+      const ride = data.rides[Number(card.dataset.i)];
+      const box  = card.querySelector('.msg-box');
+      const kind = cm.dataset.msg;
+
+      // Same button twice closes it.
+      if (!box.hidden && box.dataset.kind === kind) {
+        box.hidden = true;
+        card.querySelectorAll('.cmsg').forEach(b => b.classList.remove('on'));
+        return;
+      }
+
+      card.querySelectorAll('.cmsg').forEach(b => b.classList.toggle('on', b === cm));
+      const text = custMsg(ride)[kind] || '';
+      box.dataset.kind = kind;
+      box.hidden = false;
+      box.innerHTML =
+        '<textarea class="msg-text" spellcheck="false"></textarea>' +
+        '<div class="sms-actions">' +
+          '<button class="btn-line msg-copy">Copy it</button>' +
+          (ride.phone
+            ? '<a class="btn" style="text-decoration:none;display:inline-block" href="' +
+                esc(smsLink(ride.phone, text)) + '">Text from this phone</a>'
+            : '') +
+        '</div>' +
+        '<span class="hint">' + esc(MSG_LABEL[kind] || '') + '. Copy it, open the messages app on the ' +
+        'company phone, paste, send &mdash; that way it goes out from (908) 666-3777. ' +
+        '&ldquo;Text from this phone&rdquo; uses whatever number this device sends from.</span>';
+
+      const ta = box.querySelector('.msg-text');
+      ta.value = text;
+      const cp = box.querySelector('.msg-copy');
+      cp.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(ta.value); cp.textContent = 'Copied'; }
+        catch (err) { ta.select(); cp.textContent = 'Press Cmd-C'; }
+        setTimeout(() => { cp.textContent = 'Copy it'; }, 2400);
+      });
+      return;
+    }
+
     const conf = e.target.closest('.conf-go');
     if (conf) {
       const card = conf.closest('.ride');
@@ -837,24 +951,13 @@
         ride.rideStatus = 'Confirmed';
         conf.innerHTML = 'Confirmed';
 
-        const first = String(ride.name || '').trim().split(/\s+/)[0];
-        const num = (v) => { const t = String(v == null ? '' : v).replace(/[$,\s]/g,'');
-                             return /^\d+(\.\d+)?$/.test(t) ? parseFloat(t) : null; };
-        const tipN  = num(ride.tip) || 0;
-        const body =
-          (first ? 'Hi ' + first + ' \u2014 ' : '') +
-          'Hany from The Standard. You\u2019re confirmed for ' + (ride.when || 'your ride') + '. ' +
-          'Pickup ' + ride.pickup + (ride.dropoff ? ' to ' + ride.dropoff : '') + '. ' +
-          (ride.vehicle ? ride.vehicle + '. ' : '') +
-          (ride.fare ? 'Total ' + (String(ride.fare).startsWith('$') ? ride.fare : '$' + ride.fare) + '. ' : '') +
-          (tipN ? 'A tip is separate, about $' + tipN + ' if you\u2019d like. ' : '') +
-          'Any changes, just text this number.';
+        const body = custMsg(ride).confirmed;
 
         // TWO WAYS OUT, and the difference matters.
         //
         // The sms: link opens the phone's own Messages app, which sends from
         // whatever line that phone uses - Ahmed's personal number. There is no
-        // way for a web page to say "send this from (908) 388-9997": the link
+        // way for a web page to say "send this from (908) 666-3777": the link
         // can carry a number and a message, never a choice of app or SIM.
         //
         // So until the carrier registration clears and dispatch can send
@@ -869,7 +972,7 @@
             '<a class="btn" style="text-decoration:none;display:inline-block" href="' +
               esc(smsLink(ride.phone, body)) + '">Text from this phone</a>' +
           '</div>' +
-          '<span class="hint">Copy, open Quo, paste &mdash; that sends from (908) 388-9997. ' +
+          '<span class="hint">Copy, open Quo, paste &mdash; that sends from (908) 666-3777. ' +
           'The other button sends from your own number.</span>';
 
         const cp = out.querySelector('.conf-copy');
