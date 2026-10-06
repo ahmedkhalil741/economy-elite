@@ -59,6 +59,7 @@
   .confirm-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line)}
   .confirm-row .lbl{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.07em;text-transform:uppercase;color:var(--dim)}
   .confirm-row .conf-go[disabled]{opacity:0.55;cursor:default}
+  .confres .hint{display:block;margin-top:8px;font-size:0.78rem;color:var(--dim);line-height:1.6}
   .assign-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line)}
   .assign-row select{flex:1;min-width:150px;width:auto}
   .current{font-family:var(--mono);font-size:0.74rem;letter-spacing:0.07em;text-transform:uppercase;color:#8fbf8f}
@@ -849,9 +850,33 @@
           (tipN ? 'A tip is separate, about $' + tipN + ' if you\u2019d like. ' : '') +
           'Any changes, just text this number.';
 
+        // TWO WAYS OUT, and the difference matters.
+        //
+        // The sms: link opens the phone's own Messages app, which sends from
+        // whatever line that phone uses - Ahmed's personal number. There is no
+        // way for a web page to say "send this from (908) 388-9997": the link
+        // can carry a number and a message, never a choice of app or SIM.
+        //
+        // So until the carrier registration clears and dispatch can send
+        // through Quo itself, the business-number route is: copy the message,
+        // open Quo, paste, send. Two more taps, and the customer sees the
+        // business number instead of his private one, which is the whole
+        // reason the number was bought.
         out.innerHTML =
           '<span class="good">Marked confirmed.</span><br>' +
-          '<a class="btn" href="' + esc(smsLink(ride.phone, body)) + '">Text ' + esc(first || 'the customer') + '</a>';
+          '<div class="sms-actions">' +
+            '<button class="btn-line conf-copy">Copy for Quo</button>' +
+            '<a class="btn" style="text-decoration:none;display:inline-block" href="' +
+              esc(smsLink(ride.phone, body)) + '">Text from this phone</a>' +
+          '</div>' +
+          '<span class="hint">Copy, open Quo, paste &mdash; that sends from (908) 388-9997. ' +
+          'The other button sends from your own number.</span>';
+
+        const cp = out.querySelector('.conf-copy');
+        if (cp) cp.addEventListener('click', async () => {
+          try { await navigator.clipboard.writeText(body); cp.textContent = 'Copied \u2014 paste it in Quo'; }
+          catch (err) { cp.textContent = 'Copy failed \u2014 select the text instead'; }
+        });
       } catch (err) {
         conf.disabled = false;
         conf.innerHTML = was;
