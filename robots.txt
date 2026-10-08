@@ -1,0 +1,9 @@
+# The booking and dispatch pages are for Ahmed and the drivers, not for search.
+# They carry customer names and numbers behind a passcode, and a passcode is no
+# defence against a crawler that already knows the address.
+
+User-agent: *
+Disallow: /dispatch.html
+Disallow: /admin-booking.html
+
+Sitemap: https://standardnj.com/sitemap.xml

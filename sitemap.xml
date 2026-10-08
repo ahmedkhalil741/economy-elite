@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The two pages that are meant to be found.
+
+  dispatch.html and admin-booking.html are deliberately absent, and robots.txt
+  tells crawlers to leave them alone. They are working tools with customer names
+  and phone numbers behind a passcode; a passcode stops a person, not a crawler
+  that was handed the address.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://standardnj.com/</loc>
+    <lastmod>2026-10-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://standardnj.com/policy.html</loc>
+    <lastmod>2026-10-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>
