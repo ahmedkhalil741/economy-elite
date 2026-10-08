@@ -1,0 +1,22 @@
+# The old name, pointed at the new one.
+#
+# economyelite.com and standardnj.com were serving the same site independently,
+# so Google treated them as two separate websites and kept ranking the old name
+# above the new one. A 301 is permanent: it keeps every old link working and
+# hands the trust the old domain built up over to standardnj.com instead of
+# throwing it away.
+#
+# :splat carries the rest of the path through, so economyelite.com/policy.html
+# lands on standardnj.com/policy.html rather than the home page.
+#
+# Keep renewing economyelite.com while these lines exist. If the domain lapses,
+# the redirect dies with it and the old links go nowhere.
+
+http://economyelite.com/*      https://standardnj.com/:splat  301!
+https://economyelite.com/*     https://standardnj.com/:splat  301!
+http://www.economyelite.com/*  https://standardnj.com/:splat  301!
+https://www.economyelite.com/* https://standardnj.com/:splat  301!
+
+# www to bare, so there is only ever one address for the new name too.
+http://www.standardnj.com/*    https://standardnj.com/:splat  301!
+https://www.standardnj.com/*   https://standardnj.com/:splat  301!
