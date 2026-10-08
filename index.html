@@ -560,14 +560,38 @@
      sit on the same baseline across the row. Without it a description that
      wraps shoves its own price up and the row stops reading as a row. */
   .sf-desc{
-    font-size:.78rem; color:var(--ink-dim); line-height:1.45; max-width:16ch;
-    min-height:2.9em; display:flex; align-items:flex-start; justify-content:center;
+    font-size:.82rem; color:var(--ink-dim); line-height:1.5; max-width:24ch;
+    /* Room for the longest of the four descriptions, reserved on all of them.
+       Without it the three-line card pushes its own price up and the row stops
+       reading as a row. */
+    min-height:4.6em; display:flex; align-items:flex-start; justify-content:center;
   }
   .sf-also{
     text-align:center; color:var(--ink-dim); font-size:.92rem;
     margin:12px auto 0; max-width:620px; line-height:1.6;
   }
   .sf-also a{color:var(--ink); text-underline-offset:3px;}
+
+  /* Three facts, not three paragraphs. Prose here is what made this repeat the
+     story directly above it. */
+  .why-three{
+    list-style:none; display:flex; flex-wrap:wrap; gap:10px 0;
+    margin:22px 0 26px; padding:0;
+  }
+  .why-three li{
+    font-size:.84rem; color:var(--ink); letter-spacing:.02em;
+    padding:0 18px 0 0; margin-right:18px; border-right:1px solid var(--line);
+  }
+  .why-three li:last-child{border-right:0; margin-right:0; padding-right:0;}
+  @media (max-width:520px){
+    .why-three{flex-direction:column; gap:8px;}
+    .why-three li{border-right:0; margin-right:0; padding-right:0;}
+  }
+
+  /* The "from" and "/hr" qualifiers ride with the figure now, so every cell is
+     label / figure / description - three rows, same heights, no stray fourth
+     line on three of the four cards. */
+  .sf-note-2{margin-top:8px;}
   .rewardstrip{
     background:var(--bg-raised); border-bottom:1px solid var(--line);
     padding:20px 20px 18px; text-align:center;
@@ -602,16 +626,15 @@
   .sf-cell{
     background:var(--bg-raised); padding:30px 20px; text-align:center;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
-    min-height:150px;
+    min-height:208px;
   }
   .sf-where{
     min-height:1.1em;
-    font-size:.74rem; letter-spacing:.14em; text-transform:uppercase;
-    color:var(--steel); font-weight:500;
+    font-size:.76rem; letter-spacing:.14em; text-transform:uppercase;
+    color:#A79E8C; font-weight:500;
   }
   .sf-amt{font-family:var(--body); font-size:2.1rem; font-weight:600; color:var(--ink); line-height:1;}
-  .sf-amt small{font-size:.8rem; font-weight:500; color:var(--ink-dim); letter-spacing:.04em;}
-  .sf-from{font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--teal-dim);}
+  .sf-amt small{font-size:.74rem; font-weight:500; color:var(--ink-dim); letter-spacing:.06em;}
   .sf-note{
     text-align:center; color:var(--ink-dim); font-size:.95rem;
     margin:22px auto 0; max-width:620px; line-height:1.6;
@@ -623,8 +646,11 @@
   }
   @media (max-width:520px){
     .sf-grid{grid-template-columns:1fr;}
-    .sf-cell{min-height:0; padding:24px 18px;}
+    .sf-cell{min-height:0; padding:26px 20px;}
     .sf-amt{font-size:1.85rem;}
+    /* Nothing a customer reads goes under 16px on a phone. */
+    .sf-desc{font-size:1rem; max-width:30ch; min-height:0;}
+    .sf-note, .sf-also{font-size:1rem;}
   }
   .entry{padding:0 0 72px; border-bottom:1px solid var(--line);}
   .entry-grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px;}
@@ -896,46 +922,46 @@
 
      The cells keep data-service, because that was the quiet job the old cards
      did - clicking one scrolls to the form AND fills in what kind of ride this
-     is, so the customer arrives with the first question already answered. The
-     wiring below matches .sf-cell[data-service] as well as .entry-card.
+     is, so the customer arrives with the first question already answered.
 
-     Local rides and special occasions lost their own card in the merge, so they
-     are named in the line underneath. They are real work - a doctor's
-     appointment, a wedding, the shore, Philadelphia - and dropping them
-     entirely to tidy the layout would have cost more than it saved. -->
+     The hourly condition is on its own line, deliberately. "One-way sedan
+     fares" is true of the three airport and city cards and false of the hourly
+     one, and a single sentence covering all four would quietly mislead on the
+     only card it doesn't fit. -->
 <section class="startfares" id="services">
   <div class="wrap">
     <div class="section-head">
       <div class="eyebrow">What it costs</div>
       <h2>Where can we take you?</h2>
-      <p class="loy-sub">Straightforward pricing. Personal service.</p>
+      <p class="loy-sub">Airport transfers, city trips, and everyday rides.</p>
     </div>
     <div class="sf-grid">
       <a class="sf-cell" href="#book" data-service="Airport transportation">
         <span class="sf-where">Newark Airport</span>
-        <span class="sf-amt">$75</span>
-        <span class="sf-desc">We track your flight</span>
+        <span class="sf-amt">$75<small> from</small></span>
+        <span class="sf-desc">Airport transfers with flight tracking.</span>
       </a>
       <a class="sf-cell" href="#book" data-service="New York City">
         <span class="sf-where">Manhattan</span>
-        <span class="sf-amt">$135</span>
-        <span class="sf-desc">In and out, by reservation</span>
+        <span class="sf-amt">$135<small> from</small></span>
+        <span class="sf-desc">Private rides to and from the city.</span>
       </a>
       <a class="sf-cell" href="#book" data-service="Airport transportation">
         <span class="sf-where">JFK &amp; LaGuardia</span>
-        <span class="sf-amt">$185</span>
-        <span class="sf-desc">The early run, done properly</span>
+        <span class="sf-amt">$185<small> from</small></span>
+        <span class="sf-desc">Reliable airport transportation, by reservation.</span>
       </a>
       <a class="sf-cell" href="#book" data-service="By the hour">
         <span class="sf-where">By the hour</span>
         <span class="sf-amt">$60<small>/hr</small></span>
-        <span class="sf-desc">No minimum</span>
+        <span class="sf-desc">A driver for appointments, errands, and multiple stops.</span>
       </a>
     </div>
-    <p class="sf-note"><b>Starting sedan fares, one way, from New Providence.</b> An SUV and
-      any tolls are added to your quote <b>before</b> you book &mdash; never after.</p>
-    <p class="sf-also">Also local rides, weddings, the shore, Philadelphia and hospital
-      transfers. <a href="#book">Tell us the plan</a> and we&rsquo;ll quote it.</p>
+    <p class="sf-note">Starting one-way sedan fares from New Providence. Your quote includes
+      vehicle selection and applicable tolls before you book.</p>
+    <p class="sf-note sf-note-2">Hourly service is charged by the hour, with no minimum.</p>
+    <p class="sf-also">Also serving local destinations, Teterboro, Philadelphia, the shore,
+      and special occasions. <a href="#book">Contact us for a quote.</a></p>
     <div class="sf-actions">
       <a href="#book" class="btn-primary btn-lg">Get your price &rarr;</a>
     </div>
@@ -949,13 +975,18 @@
       <h2>24+ years serving our community</h2>
       <p>For more than 24 years, Hany has driven people around New Providence and the surrounding towns. Many of his riders are his neighbors, and he drives them the way he'd drive his own family.</p>
       <p>Hany can&rsquo;t be behind the wheel for every ride. When someone else comes for you, it&rsquo;s a driver he knows personally and chose himself &mdash; held to the same standard, or they don&rsquo;t drive for us.</p>
-      <!-- The last line of what used to be a whole section of its own, "Not just
-           professional. Family." It said at length what Hany's story above
-           already says by example, so it is one sentence here instead. Keeping
-           it: "professional" is what every competitor claims, and this is the
-           sentence that draws the line past it. -->
+      <!-- What used to be a whole section called "Why The Standard". It said at
+           length what Hany's story above already says by example. One sentence,
+           then the three facts as labels rather than prose: "professional" is
+           what every competitor claims, and these are what draw the line past
+           it. -->
       <p>Getting you there safely is the baseline. Making you feel looked after is the
         standard we hold ourselves to.</p>
+      <ul class="why-three">
+        <li>24+ years of experience</li>
+        <li>Personal service</li>
+        <li>Clear pricing</li>
+      </ul>
       <blockquote class="hany-word">
         &ldquo;My goal has always been simple &mdash; take care of every passenger the way I would take care of my own family.&rdquo;
       </blockquote>
