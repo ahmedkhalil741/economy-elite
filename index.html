@@ -529,6 +529,79 @@
      They belong to the hero now rather than following it. The rule between
      the two is gone and the gap is small on purpose: headline, one line,
      one button, then the four things you can actually ask for. */
+
+  /* STARTING FARES — the first thing on the page after the headline.
+     Four equal cells, so it stays symmetric however it wraps: four across on a
+     desktop, two by two on a tablet, one column on a phone. Never three-and-one.
+     These are the lowest real numbers from the rate table (sedan, one way), not
+     teasers - the line underneath says plainly what moves them, because a
+     "from" price that hides a surprise is the exact thing this company is
+     selling against. */
+
+  /* REWARDS STRIP — a thin band above the hero. Three equal cells and nothing
+     else: the whole programme is seven things, but a first-time visitor only
+     needs to know that riding earns money off the next trip. The detail still
+     lives in #loyalty and this links to it. Built from Ahmed's own mock-up,
+     recoloured to the site's variables so it cannot drift when the palette
+     moves. */
+
+
+  .q-row span i{font-style:normal; color:var(--steel); font-size:.84em; letter-spacing:.02em;}
+  .loy-extra{
+    max-width:720px; margin:26px auto 0; text-align:center;
+    color:var(--ink-dim); font-size:.98rem; line-height:1.65;
+  }
+  .loy-extra b{color:var(--ink); font-weight:600;}
+  .rewardstrip{
+    background:var(--bg-raised); border-bottom:1px solid var(--line);
+    padding:20px 20px 18px; text-align:center;
+  }
+  .rs-inner{max-width:620px; margin:0 auto;}
+  .rs-head{font-size:1.02rem; font-weight:500; line-height:1.35; margin-bottom:16px; color:var(--ink);}
+  .rs-amounts{display:grid; grid-template-columns:repeat(3,1fr); list-style:none; margin-bottom:16px;}
+  .rs-amounts li{font-size:.8rem; color:var(--ink-dim); line-height:1.3; padding:0 10px;}
+  .rs-amounts li + li{border-left:1px solid var(--line);}
+  .rs-amounts strong{
+    display:block; margin-bottom:3px; font-size:1.35rem; font-weight:600; color:var(--ink);
+  }
+  .rs-note{margin:0; font-size:.85rem; color:var(--ink-dim); line-height:1.5;}
+  .rs-note a{color:var(--ink); text-underline-offset:3px;}
+  @media (max-width:400px){
+    .rs-amounts strong{font-size:1.2rem;}
+    .rs-amounts li{font-size:.75rem; padding:0 5px;}
+  }
+  .startfares{padding:0 0 64px; border-bottom:1px solid var(--line);}
+  .sf-grid{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+    background:var(--line); border:1px solid var(--line); border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .sf-cell{
+    background:var(--bg-raised); padding:30px 20px; text-align:center;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+    min-height:150px;
+  }
+  .sf-where{
+    font-size:.74rem; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--steel); font-weight:500;
+  }
+  .sf-amt{font-family:var(--body); font-size:2.1rem; font-weight:600; color:var(--ink); line-height:1;}
+  .sf-amt small{font-size:.8rem; font-weight:500; color:var(--ink-dim); letter-spacing:.04em;}
+  .sf-from{font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--teal-dim);}
+  .sf-note{
+    text-align:center; color:var(--ink-dim); font-size:.95rem;
+    margin:22px auto 0; max-width:620px; line-height:1.6;
+  }
+  .sf-note b{color:var(--ink); font-weight:600;}
+  .sf-actions{display:flex; justify-content:center; margin-top:26px;}
+  @media (max-width:900px){
+    .sf-grid{grid-template-columns:repeat(2,1fr);}
+  }
+  @media (max-width:520px){
+    .sf-grid{grid-template-columns:1fr;}
+    .sf-cell{min-height:0; padding:24px 18px;}
+    .sf-amt{font-size:1.85rem;}
+  }
   .entry{padding:0 0 72px; border-bottom:1px solid var(--line);}
   .entry-grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px;}
   .entry-card{
@@ -601,8 +674,11 @@
   }
   /* The first row is a word, not an amount. Same column, quieter, so the eye
      still reads a list of what you get rather than a price list. */
-  .loy-step:first-child .amt,
-  .loy-step:last-child .amt{font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--steel);}
+  /* A word rather than a sum ("Always") is set as a label, not a figure. This is
+     a class and not :first-child/:last-child on purpose - it used to be the
+     latter, and the day the list changed length it silently restyled a real
+     dollar amount as a grey caption. */
+  .loy-step.label .amt{font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--steel);}
   .loy-step .what{font-size:0.9rem; color:var(--ink); line-height:1.5;}
   .loy-step .why{grid-column:2; font-size:0.82rem; color:var(--ink-dim); line-height:1.6;}
   .loy-note{
@@ -761,6 +837,21 @@
   </div>
 </nav>
 
+<section class="rewardstrip" aria-label="Rewards">
+  <div class="rs-inner">
+    <p class="rs-head">Every ride earns you money off your next one.</p>
+    <ul class="rs-amounts">
+      <li><strong>$5</strong>after your first ride</li>
+      <li><strong>$15</strong>at 10 rides</li>
+      <li><strong>$10</strong>every 10 rides after</li>
+    </ul>
+    <p class="rs-note">
+      Credit never expires. We text you when you earn it.<br>
+      <a href="#loyalty">See how it works</a>
+    </p>
+  </div>
+</section>
+
 <section class="hero">
   <div class="wrap hero-grid">
     <div class="hero-mark">The Standard</div>
@@ -768,6 +859,43 @@
     <p class="hero-sub">Trusted private transportation in New Providence and surrounding communities for over 24 years.</p>
     <div class="hero-actions">
       <a href="#book" class="btn-primary btn-lg">Book a ride →</a>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT IT COSTS, BEFORE ANYTHING ELSE. The old page promised an up-front flat
+     fare and then made you fill in a form to find out what that meant. The
+     promise and the proof are now in the same eyeful. Lowest sedan price on each
+     of the three routes people actually ask for, plus the hourly rate. -->
+<section class="startfares">
+  <div class="wrap">
+    <div class="sf-grid">
+      <div class="sf-cell">
+        <span class="sf-where">Newark Airport</span>
+        <span class="sf-amt">$75</span>
+        <span class="sf-from">from</span>
+      </div>
+      <div class="sf-cell">
+        <span class="sf-where">Manhattan</span>
+        <span class="sf-amt">$135</span>
+        <span class="sf-from">from</span>
+      </div>
+      <div class="sf-cell">
+        <span class="sf-where">JFK &amp; LaGuardia</span>
+        <span class="sf-amt">$185</span>
+        <span class="sf-from">from</span>
+      </div>
+      <div class="sf-cell">
+        <span class="sf-where">By the hour</span>
+        <span class="sf-amt">$60<small>/hr</small></span>
+        <span class="sf-from">no minimum</span>
+      </div>
+    </div>
+    <p class="sf-note"><b>Sedan, one way, from New Providence.</b> An SUV and any tolls are
+      added to your quote <b>before</b> you book &mdash; never after. Tell us the trip and
+      you&rsquo;ll see the whole figure in about a minute.</p>
+    <div class="sf-actions">
+      <a href="#book" class="btn-primary btn-lg">Get your price &rarr;</a>
     </div>
   </div>
 </section>
@@ -915,7 +1043,7 @@
     </div>
     <div class="loy-grid">
       <div class="loy-steps">
-        <div class="loy-step">
+        <div class="loy-step label">
           <span class="amt">Always</span>
           <span class="what">We remember you</span>
           <span class="why">Your cabin, the car seat, the Suburban or the sedan. Set from the
@@ -936,23 +1064,17 @@
           <span class="what">Every ten rides after that</span>
           <span class="why">Twenty, thirty, forty. It keeps going.</span>
         </div>
-        <div class="loy-step">
-          <span class="amt">$10</span>
-          <span class="what">When you refer someone</span>
-          <span class="why">Once they&rsquo;ve taken their first ride. Tell us who sent them.</span>
-        </div>
-        <div class="loy-step">
-          <span class="amt">$10</span>
-          <span class="what">On your birthday</span>
-          <span class="why">Tell us the day. We don&rsquo;t need the year.</span>
-        </div>
-        <div class="loy-step full">
-          <span class="amt">Never</span>
-          <span class="what">Your points expire</span>
-          <span class="why">Spending credit never costs you your standing.</span>
-        </div>
       </div>
     </div>
+    <!-- Referrals, birthdays and the never-expire rule used to be three more
+         boxes of the same shape, which made seven things to read where four
+         would do. They are all still true and still running on the back end;
+         they are one sentence here because nobody decides to try a car service
+         on the strength of a birthday credit. -->
+    <p class="loy-extra">There&rsquo;s <b>$10</b> for sending us someone new, once they&rsquo;ve
+      taken their first ride, and <b>$10</b> on your birthday &mdash; tell us the day, we
+      don&rsquo;t need the year. Your points never expire, and spending credit never costs you
+      your standing.</p>
     <p class="loy-note">Credit comes off a future ride and isn't paid out in cash. Points are
       counted when a ride is completed &mdash; a cancelled trip doesn't count, and doesn't cost
       you one either.</p>
@@ -1311,12 +1433,15 @@
         works the price out himself and texts it to you before anything is agreed.</div>`;
     }
     const rows = [`<div class="q-row"><span>Fare</span><b>${money(q.fare)}</b></div>`];
-    if (q.toll)    rows.push(`<div class="q-row"><span>Tolls</span><b>${money(q.toll)}</b></div>`);
+    if (q.toll)    rows.push(`<div class="q-row"><span>Tolls <i>at cost</i></span><b>${money(q.toll)}</b></div>`);
     if (q.cardFee) rows.push(`<div class="q-row"><span>${q.cardFeeLabel || 'Card'} fee</span><b>${money(q.cardFee)}</b></div>`);
     rows.push(`<div class="q-row q-total"><span>Estimated total</span><b>${money(q.total)}</b></div>`);
     return head + rows.join('') +
       (q.tipSuggested ? `<div class="q-note">A tip is separate and never added for you &mdash; 20% of
         the fare is usual, about ${money(q.tipSuggested)} on this trip.</div>` : '') +
+      (q.toll ? `<div class="q-note">The toll is what the road costs us and is passed straight
+        through &mdash; we don&rsquo;t mark it up. It is in the total above, so there is nothing
+        further to pay at the airport or the tunnel.</div>` : '') +
       `<div class="q-note">Nothing is charged now. Hany confirms the final figure before you ride.</div>`;
   }
 
