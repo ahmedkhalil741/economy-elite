@@ -577,16 +577,13 @@
   /* Four cells, matching the fares block further down. The divider is drawn on
      every cell except the first of each row, so it never hangs at the start of
      a wrapped line - the thing that makes a two-by-two look broken. */
-  .rs-amounts{display:grid; grid-template-columns:repeat(4,1fr); list-style:none; margin-bottom:16px;}
+  .rs-amounts{display:grid; grid-template-columns:repeat(3,1fr); list-style:none; margin-bottom:16px;}
   .rs-amounts li{
     font-size:.8rem; color:var(--ink-dim); line-height:1.3; padding:0 10px;
     border-left:1px solid var(--line);
   }
   .rs-amounts li:first-child{border-left:0;}
-  @media (max-width:700px){
-    .rs-amounts{grid-template-columns:repeat(2,1fr); gap:14px 0;}
-    .rs-amounts li:nth-child(odd){border-left:0;}
-  }
+
   .rs-amounts strong{
     display:block; margin-bottom:3px; font-size:1.35rem; font-weight:600; color:var(--ink);
   }
@@ -733,6 +730,9 @@
     border:1px solid var(--line); border-radius:100px; padding:4px 11px;
   }
   .known .again{margin:12px 0 0; font-size:0.8rem; color:var(--steel); line-height:1.6;}
+  .field-hint{
+    display:block; margin-top:7px; font-size:.78rem; color:var(--ink-dim); line-height:1.5;
+  }
   .know-hint{
     font-size:0.85rem; color:var(--ink-dim); line-height:1.7;
     border-left:2px solid var(--teal); padding-left:14px; margin-bottom:22px;
@@ -871,11 +871,9 @@
       <li><strong>$5</strong>after your first ride</li>
       <li><strong>$15</strong>at 10 rides</li>
       <li><strong>$10</strong>every 10 rides after</li>
-      <li><strong>$10</strong>on your birthday</li>
     </ul>
     <p class="rs-note">
-      Credit never expires. We text you when you earn it. Tell us the day for your
-      birthday &mdash; we don&rsquo;t need the year.<br>
+      Credit never expires. We text you when you earn it.<br>
       <a href="#loyalty">See how it works</a>
     </p>
   </div>
@@ -1230,6 +1228,23 @@
         <div class="field">
           <label for="b-email">Email (optional)</label>
           <input type="email" id="b-email" placeholder="you@example.com" autocomplete="email">
+        </div>
+
+        <!-- BIRTHDAY. Optional, and worth $10 on the day. Asked here rather than
+             shouted about at the top of the page: nobody chooses a car service
+             because of a birthday credit, but a customer already filling in a
+             form will happily give a date for ten dollars.
+
+             Month and day only. The year is deliberately not asked for - it is
+             more than this needs to know, and _loyalty.js ignores it anyway.
+             A text input rather than type="date" on purpose: a date picker
+             insists on a year and defaults to the wrong century. -->
+        <div class="field">
+          <label for="b-birthday">Birthday (optional) &mdash; it's worth $10</label>
+          <input type="text" id="b-birthday" placeholder="e.g. March 14" autocomplete="bday"
+                 inputmode="text" maxlength="24">
+          <span class="field-hint">Tell us the day and we'll put $10 toward a ride that
+            week. We don't need the year.</span>
         </div>
 
         <div class="field">
@@ -1594,6 +1609,7 @@
 
           const remembered = [];
           if(fill('b-email', data.email)) remembered.push('your email');
+          fill('b-birthday', data.birthday);
           if(data.temp && data.temp !== 'No preference'
              && document.getElementById('b-temp').value === 'No preference'){
             document.getElementById('b-temp').value = data.temp;
@@ -1739,6 +1755,7 @@
     const passengers = document.getElementById('b-passengers').value;
     const email = document.getElementById('b-email').value;
     const referredBy = document.getElementById('b-referred').value;
+    const birthday = document.getElementById('b-birthday').value.trim();
 
     if(!pickup.trim() || !dropoff.trim() || !dateTime || !phone.trim() || !name.trim()){
       msg.textContent = 'Please fill in your name and phone number.';
@@ -1758,7 +1775,7 @@
       dropoff: (dropoff || '').trim() || (hours ? 'Hourly \u2014 no set drop-off' : dropoff),
       dateTime, phone, email, referredBy, notes, hours,
       payMethod: selectedPay,
-      carSeats, flight, temp, elderly, contact15, vehicle, passengers,
+      carSeats, flight, temp, elderly, contact15, vehicle, passengers, birthday,
       source: 'Web'
     };
 

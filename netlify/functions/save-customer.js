@@ -100,7 +100,7 @@ exports.handler = async function (event) {
 
   try {
     const { phone, email, name, temp, carSeats, elderly, notes, vehicle, referredBy,
-            contact15, payMethod } = JSON.parse(event.body);
+            contact15, payMethod, birthday } = JSON.parse(event.body);
     const target = normalizePhone(phone);
     const targetEmail = normalizeEmail(email);
     if (!target && !targetEmail) {
@@ -153,6 +153,12 @@ exports.handler = async function (event) {
       text_before_ride: contact15 ? 'Yes' : 'No',
       payment_method: payMethod || existing.payment_method || '',
       notes: notes || existing.notes || '',
+      // Optional, and only ever added - never cleared. Someone who gave us a
+      // date once and then books again without filling the box in has not
+      // changed their birthday, they just didn't retype it. daily-reminders.js
+      // reads this column; _loyalty.js uses the month and day and throws the
+      // year away even if one is given.
+      birthday: birthday || existing.birthday || '',
       car_type: vehicle || existing.car_type || '',
       // Only ever set once, on the profile's first booking — a regular
       // customer mentioning a friend later doesn't rewrite who sent them.

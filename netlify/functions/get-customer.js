@@ -112,6 +112,9 @@ exports.handler = async function (event) {
         contact15: customer.text_before_ride || '',
         payMethod: customer.payment_method || '',
         notes: customer.notes || '',
+        // So a returning customer who already gave us a date sees it filled in
+        // rather than being asked a second time for something we know.
+        birthday: customer.birthday || '',
         carType: customer.car_type || '',
         totalRides: customer.total_rides || '0',
         completedRides: customer.completed_rides || '0',
