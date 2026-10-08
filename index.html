@@ -552,15 +552,41 @@
     color:var(--ink-dim); font-size:.98rem; line-height:1.65;
   }
   .loy-extra b{color:var(--ink); font-weight:600;}
+
+  .sf-cell{text-decoration:none; transition:background .15s ease, border-color .15s ease;}
+  a.sf-cell:hover, a.sf-cell:focus-visible{background:var(--panel);}
+  a.sf-cell:focus-visible{outline:2px solid var(--teal); outline-offset:-2px;}
+  /* Two lines' worth of room whether the line wraps or not, so the four prices
+     sit on the same baseline across the row. Without it a description that
+     wraps shoves its own price up and the row stops reading as a row. */
+  .sf-desc{
+    font-size:.78rem; color:var(--ink-dim); line-height:1.45; max-width:16ch;
+    min-height:2.9em; display:flex; align-items:flex-start; justify-content:center;
+  }
+  .sf-also{
+    text-align:center; color:var(--ink-dim); font-size:.92rem;
+    margin:12px auto 0; max-width:620px; line-height:1.6;
+  }
+  .sf-also a{color:var(--ink); text-underline-offset:3px;}
   .rewardstrip{
     background:var(--bg-raised); border-bottom:1px solid var(--line);
     padding:20px 20px 18px; text-align:center;
   }
   .rs-inner{max-width:620px; margin:0 auto;}
   .rs-head{font-size:1.02rem; font-weight:500; line-height:1.35; margin-bottom:16px; color:var(--ink);}
-  .rs-amounts{display:grid; grid-template-columns:repeat(3,1fr); list-style:none; margin-bottom:16px;}
-  .rs-amounts li{font-size:.8rem; color:var(--ink-dim); line-height:1.3; padding:0 10px;}
-  .rs-amounts li + li{border-left:1px solid var(--line);}
+  /* Four cells, matching the fares block further down. The divider is drawn on
+     every cell except the first of each row, so it never hangs at the start of
+     a wrapped line - the thing that makes a two-by-two look broken. */
+  .rs-amounts{display:grid; grid-template-columns:repeat(4,1fr); list-style:none; margin-bottom:16px;}
+  .rs-amounts li{
+    font-size:.8rem; color:var(--ink-dim); line-height:1.3; padding:0 10px;
+    border-left:1px solid var(--line);
+  }
+  .rs-amounts li:first-child{border-left:0;}
+  @media (max-width:700px){
+    .rs-amounts{grid-template-columns:repeat(2,1fr); gap:14px 0;}
+    .rs-amounts li:nth-child(odd){border-left:0;}
+  }
   .rs-amounts strong{
     display:block; margin-bottom:3px; font-size:1.35rem; font-weight:600; color:var(--ink);
   }
@@ -582,6 +608,7 @@
     min-height:150px;
   }
   .sf-where{
+    min-height:1.1em;
     font-size:.74rem; letter-spacing:.14em; text-transform:uppercase;
     color:var(--steel); font-weight:500;
   }
@@ -844,9 +871,11 @@
       <li><strong>$5</strong>after your first ride</li>
       <li><strong>$15</strong>at 10 rides</li>
       <li><strong>$10</strong>every 10 rides after</li>
+      <li><strong>$10</strong>on your birthday</li>
     </ul>
     <p class="rs-note">
-      Credit never expires. We text you when you earn it.<br>
+      Credit never expires. We text you when you earn it. Tell us the day for your
+      birthday &mdash; we don&rsquo;t need the year.<br>
       <a href="#loyalty">See how it works</a>
     </p>
   </div>
@@ -863,78 +892,56 @@
   </div>
 </section>
 
-<!-- WHAT IT COSTS, BEFORE ANYTHING ELSE. The old page promised an up-front flat
-     fare and then made you fill in a form to find out what that meant. The
-     promise and the proof are now in the same eyeful. Lowest sedan price on each
-     of the three routes people actually ask for, plus the hourly rate. -->
-<section class="startfares">
+<!-- ONE SECTION, NOT TWO. The page used to say what it costs and then, in a
+     second grid of four cards directly underneath, what the services are. Same
+     shape twice, and on a phone that was two screens to learn one thing. The
+     price now carries the service: the figure answers the first question, the
+     line under it answers the second.
+
+     The cells keep data-service, because that was the quiet job the old cards
+     did - clicking one scrolls to the form AND fills in what kind of ride this
+     is, so the customer arrives with the first question already answered. The
+     wiring below matches .sf-cell[data-service] as well as .entry-card.
+
+     Local rides and special occasions lost their own card in the merge, so they
+     are named in the line underneath. They are real work - a doctor's
+     appointment, a wedding, the shore, Philadelphia - and dropping them
+     entirely to tidy the layout would have cost more than it saved. -->
+<section class="startfares" id="services">
   <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">What it costs</div>
+      <h2>Where can we take you?</h2>
+      <p class="loy-sub">Straightforward pricing. Personal service.</p>
+    </div>
     <div class="sf-grid">
-      <div class="sf-cell">
+      <a class="sf-cell" href="#book" data-service="Airport transportation">
         <span class="sf-where">Newark Airport</span>
         <span class="sf-amt">$75</span>
-        <span class="sf-from">from</span>
-      </div>
-      <div class="sf-cell">
+        <span class="sf-desc">We track your flight</span>
+      </a>
+      <a class="sf-cell" href="#book" data-service="New York City">
         <span class="sf-where">Manhattan</span>
         <span class="sf-amt">$135</span>
-        <span class="sf-from">from</span>
-      </div>
-      <div class="sf-cell">
+        <span class="sf-desc">In and out, by reservation</span>
+      </a>
+      <a class="sf-cell" href="#book" data-service="Airport transportation">
         <span class="sf-where">JFK &amp; LaGuardia</span>
         <span class="sf-amt">$185</span>
-        <span class="sf-from">from</span>
-      </div>
-      <div class="sf-cell">
+        <span class="sf-desc">The early run, done properly</span>
+      </a>
+      <a class="sf-cell" href="#book" data-service="By the hour">
         <span class="sf-where">By the hour</span>
         <span class="sf-amt">$60<small>/hr</small></span>
-        <span class="sf-from">no minimum</span>
-      </div>
+        <span class="sf-desc">No minimum</span>
+      </a>
     </div>
-    <p class="sf-note"><b>Sedan, one way, from New Providence.</b> An SUV and any tolls are
-      added to your quote <b>before</b> you book &mdash; never after. Tell us the trip and
-      you&rsquo;ll see the whole figure in about a minute.</p>
+    <p class="sf-note"><b>Starting sedan fares, one way, from New Providence.</b> An SUV and
+      any tolls are added to your quote <b>before</b> you book &mdash; never after.</p>
+    <p class="sf-also">Also local rides, weddings, the shore, Philadelphia and hospital
+      transfers. <a href="#book">Tell us the plan</a> and we&rsquo;ll quote it.</p>
     <div class="sf-actions">
       <a href="#book" class="btn-primary btn-lg">Get your price &rarr;</a>
-    </div>
-  </div>
-</section>
-
-<!-- THE FOUR SERVICES. These used to be said twice on the page — once as a
-     read-only "Four ways to ride with us" block further down, and again here
-     as buttons. Same four categories, same claims, nothing new the second
-     time, and on a phone that was two full screens of scrolling to learn one
-     thing. So: one section. The buttons stayed, because each card scrolls to
-     the form AND tells it what kind of ride this is, so the answer is already
-     filled in when the customer arrives. The words came from the block that
-     is now gone — that is where the writing was better. "We watch your
-     flight" says less than "we watch your flight, so a delay never costs you
-     the car"; the first states a fact, the second says what it means for you.
-     The card titles are unchanged on purpose: data-service feeds the booking
-     form, and a title that drifts from it makes the two disagree. -->
-<section class="entry" id="services">
-  <div class="wrap">
-    <div class="entry-grid">
-      <a class="entry-card" href="#book" data-service="Airport transportation">
-        <span class="t">Airport transportation</span>
-        <span class="d">Newark, LaGuardia, JFK and Teterboro. We watch your flight, so a delay never costs you the car &mdash; or an extra fee.</span>
-        <span class="go">Book this &rarr;</span>
-      </a>
-      <a class="entry-card" href="#book" data-service="Local ride">
-        <span class="t">Local rides</span>
-        <span class="d">Dinner, a doctor’s appointment, the train station, a school run. Short trips around New Providence and Union County, one flat price.</span>
-        <span class="go">Book this &rarr;</span>
-      </a>
-      <a class="entry-card" href="#book" data-service="New York City">
-        <span class="t">NYC trips</span>
-        <span class="d">Manhattan and the boroughs, in and out, by reservation. A fixed fare agreed before you get in.</span>
-        <span class="go">Book this &rarr;</span>
-      </a>
-      <a class="entry-card" href="#book" data-service="Special occasion">
-        <span class="t">Special occasions</span>
-        <span class="d">Philadelphia, the shore, a wedding, a hospital transfer, a night out with stops along the way. Tell us the plan and we&rsquo;ll quote it.</span>
-        <span class="go">Book this &rarr;</span>
-      </a>
     </div>
   </div>
 </section>
@@ -1687,7 +1694,7 @@
   // An entry card at the top of the page answers the first question on the
   // form before the customer reaches it. The href does the scrolling; this
   // only fills the box in.
-  document.querySelectorAll('.entry-card').forEach(function(card){
+  document.querySelectorAll('.entry-card, .sf-cell[data-service]').forEach(function(card){
     card.addEventListener('click', function(){
       var sel = document.getElementById('b-service');
       if (sel) { sel.value = card.dataset.service || ''; syncHourly(); }
