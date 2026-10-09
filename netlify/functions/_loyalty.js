@@ -43,7 +43,7 @@ const ACTIVE = 'Active';
 const INACTIVE = 'Inactive';
 
 // What a completed ride earns. Ahmed's settings, 2026-09-18.
-const FIRST_RIDE_CREDIT = 5;    // after their first completed ride
+const FIRST_RIDE_CREDIT = 10;   // after their first completed ride
 const LOYALTY_CREDIT = 15;      // once, on reaching Loyal at 10 rides
 const REPEAT_CREDIT = 10;       // every 10 after that — 20, 30, 40…
 const REFERRAL_CREDIT = 10;     // to the referrer, once the new rider completes
