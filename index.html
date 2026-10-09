@@ -994,7 +994,8 @@
 
     <p class="hero-fine">Credit never expires, and there is nothing to sign up for &mdash;
       your phone number is the account. We text you when you&rsquo;ve earned something.
-      Credit comes off a future ride and isn&rsquo;t paid out in cash.</p>
+      Credit is earned when a ride is completed, and comes off a future ride rather than
+      being paid out in cash. One credit per ride, and it never expires.</p>
 
     <div class="hero-actions">
       <a href="#book" class="btn-primary btn-lg">Book a ride &rarr;</a>
@@ -1046,7 +1047,8 @@
       </a>
     </div>
     <p class="sf-note">Starting one-way sedan fares from New Providence. Your quote includes
-      vehicle selection and applicable tolls before you book.</p>
+      vehicle selection and any tolls before you book. A card adds the processor&rsquo;s fee;
+      cash, Zelle and Venmo add nothing. A tip is never added for you.</p>
     <p class="sf-note sf-note-2">Hourly service is charged by the hour, with no minimum.</p>
     <p class="sf-also">Also serving local destinations, Teterboro, Philadelphia, the shore,
       and special occasions. <a href="#book">Contact us for a quote.</a></p>
@@ -1353,7 +1355,11 @@
           <div class="pay-note" id="payNote">Tap any card in the car at the end of the ride. A 2.6% + $0.15 processing fee applies &mdash; we&rsquo;ll confirm your total first.</div>
         </div>
 
-        <button type="submit" class="btn-primary btn-block btn-lg">Confirm booking</button>
+        <!-- "Request booking", not "Confirm booking". Nothing on this form confirms
+             anything: the panel below says Hany texts to confirm the driver and the
+             total, and no payment is taken. A button that says Confirm sets an
+             expectation the very next sentence withdraws. -->
+        <button type="submit" class="btn-primary btn-block btn-lg">Request booking</button>
         <!-- CONSENT. Not decoration and not legal throat-clearing: when the
              carriers review an application to send business texts, they open
              the site and look for exactly this - that the customer is told
@@ -1876,7 +1882,7 @@
     selectedPay = 'Card';
     document.getElementById('payNote').textContent = payNotes[selectedPay];
     submitting = false;
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Confirm booking'; }
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Request booking'; }
   });
 
   // Register service worker for PWA (installable on mobile)
