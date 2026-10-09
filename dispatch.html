@@ -511,6 +511,12 @@
   // The after-the-ride message promises only credit the ledger actually
   // holds. It will not invent a $5 that the loyalty sheet has never heard of,
   // because the customer would turn up expecting it.
+  //
+  // It also says RIDES and DOLLARS, never "points". Points are the internal
+  // counter; nobody texts a car service wanting to know their points balance.
+  // "That's 8 rides with us - two more and there's $15 on your account" is the
+  // same fact in words a customer does not have to translate, and it names the
+  // next milestone, which a bare count never does.
   // ------------------------------------------------------------------
   function custMsg(ride){
     const first = String(ride.name || '').trim().split(/\s+/)[0];
@@ -542,7 +548,9 @@
       completed:
         hi + 'thank you for riding with The Standard. ' +
         (credit ? 'You have $' + credit + ' credit sitting on your account, and it comes off your next ride automatically. '
-         : pts ? 'That puts you on ' + pts + ' point' + (pts === 1 ? '' : 's') + ' with us. '
+         : pts ? 'That\u2019s ' + pts + ' ride' + (pts === 1 ? '' : 's') + ' with us' +
+                 (pts < 10 ? ' \u2014 ' + (10 - pts) + ' more and there\u2019s $15 on your account. '
+                           : '. ')
          : '') +
         'Book any time at standardnj.com, or just text this number and Hany will sort it.',
     };
