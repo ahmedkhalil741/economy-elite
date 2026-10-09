@@ -644,10 +644,15 @@
   /* The credits at hero scale: three equal cells, the figure leading. Same
      three-across / stacked behaviour as every other row of cells on the page,
      so the opening matches what follows it rather than inventing a layout. */
+  .hero-proglabel{
+    font-family:var(--mono); font-size:.68rem; letter-spacing:.2em;
+    text-transform:uppercase; color:var(--teal-dim);
+    margin-top:34px; margin-bottom:-6px;
+  }
   .hero-loyalty h1{margin-bottom:18px;}
   .hero-credits{
     list-style:none; display:grid; grid-template-columns:repeat(3,1fr);
-    max-width:560px; margin:30px auto 22px; padding:0; width:100%;
+    max-width:560px; margin:18px auto 22px; padding:0; width:100%;
   }
   .hero-credits li{
     padding:0 14px; border-left:1px solid var(--line);
@@ -661,7 +666,7 @@
     color:var(--ink-dim); line-height:1.6;
   }
   @media (max-width:520px){
-    .hero-credits{grid-template-columns:1fr; gap:18px; margin-top:26px;}
+    .hero-credits{grid-template-columns:1fr; gap:18px; margin-top:16px;}
     .hero-credits li{border-left:0; padding:0;}
     .hero-fine{font-size:1rem;}
   }
@@ -955,6 +960,12 @@
     <p class="hero-sub">Private car service in New Providence. The same drivers every time
       &mdash; and credit toward every trip after this one.</p>
 
+    <!-- Naming it. Three dollar figures on their own read as a discount; calling
+         it a relationship program says it is a standing arrangement with a
+         person, which is what it actually is. American spelling - every word a
+         customer reads on this site is, and the two "programme"s in this file
+         are both in comments. -->
+    <div class="hero-proglabel">Our relationship program</div>
     <ul class="hero-credits">
       <li><strong>$5</strong><span>after your first ride</span></li>
       <li><strong>$15</strong><span>at ten rides</span></li>
