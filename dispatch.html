@@ -44,6 +44,23 @@
   .note strong{color:var(--ink)}
   .note code{font-family:var(--mono);font-size:0.85em;color:var(--accent)}
 
+  /* People to text today. Deliberately not styled like a ride card - these
+     are not rides, and one glance has to tell you which half of the page you
+     are looking at. */
+  .outreach{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+            border-radius:14px;padding:18px 20px;margin-bottom:18px}
+  .outreach > h2{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.09em;text-transform:uppercase;
+                 color:var(--accent);margin:0 0 4px;font-weight:500}
+  .outreach > .sub{font-family:inherit;font-size:0.82rem;letter-spacing:0;text-transform:none;
+                   color:var(--steel);margin:0 0 14px;line-height:1.6}
+  .person{padding:14px 0;border-top:1px solid var(--line)}
+  .person-name{font-size:0.98rem;font-weight:500;margin-bottom:5px}
+  .person-name .loyal{color:var(--accent);font-size:0.85em}
+  .person-why{font-size:0.84rem;color:var(--dim);line-height:1.6;margin-bottom:11px}
+  .person-why b{color:var(--ink);font-weight:500}
+  .person-acts{display:flex;gap:9px;flex-wrap:wrap}
+  .person .msg-box{margin-top:12px}
+
   .ride{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:14px}
   .ride.assigned{border-color:#3d5a3d}
   .ride-when{font-family:var(--mono);font-size:0.74rem;letter-spacing:0.07em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
@@ -277,6 +294,7 @@
 
   <section id="ridesView">
     <div id="setupNotes"></div>
+    <div id="toText"></div>
     <div id="windowBar" class="windowbar"></div>
     <div id="list"></div>
   </section>
@@ -530,6 +548,26 @@
     const credit = c && Number(c.creditOwed) > 0 ? Number(c.creditOwed) : 0;
     const pts = c && Number(c.points) > 0 ? Number(c.points) : 0;
 
+    // NAME THE NEXT THING, ALWAYS.
+    //
+    // The old version said "2 more and there's $15 on your account" up to ten
+    // rides and then went silent, which read as though the programme had
+    // finished at the exact moment somebody became worth keeping. Every tenth
+    // ride after that is another $10 and the customer had no way to know.
+    //
+    // The figures and the count come from the server, which reads
+    // _loyalty.js. Nothing here is typed in by hand, because a dollar amount
+    // typed twice is a dollar amount that will eventually disagree with itself
+    // and we would have to honour whichever one the customer read.
+    const rules = (data && data.loyalty) || null;
+    const nx = c && c.next ? c.next : null;
+    const loyalPts = rules ? rules.loyalPoints : 10;
+    const loyalNow = pts === loyalPts;
+    const aheadLine = (nx && pts > 0)
+      ? nx.ridesAway + ' more ride' + (nx.ridesAway === 1 ? '' : 's') + ' and another $' + nx.amount +
+        ' comes off' + (nx.becomesLoyal ? ', and you\u2019re a loyal customer' : '') + '. '
+      : '';
+
     return {
       received:
         hi + 'thanks for booking with The Standard. We have your request for ' +
@@ -547,13 +585,86 @@
 
       completed:
         hi + 'thank you for riding with The Standard. ' +
-        (credit ? 'You have $' + credit + ' credit sitting on your account, and it comes off your next ride automatically. '
-         : pts ? 'That\u2019s ' + pts + ' ride' + (pts === 1 ? '' : 's') + ' with us' +
-                 (pts < 10 ? ' \u2014 ' + (10 - pts) + ' more and there\u2019s $15 on your account. '
-                           : '. ')
-         : '') +
+        (credit ? 'You have $' + credit + ' credit sitting on your account, and it comes off your next ride automatically. ' : '') +
+        (pts ? 'That\u2019s ' + pts + ' ride' + (pts === 1 ? '' : 's') + ' with us' +
+               (loyalNow ? ' \u2014 you\u2019re a loyal customer now. ' : '. ') : '') +
+        aheadLine +
         'Book any time at standardnj.com, or just text this number and Hany will sort it.',
     };
+  }
+
+
+  // ------------------------------------------------------------------
+  // THE THREE MESSAGES NOBODY RIDES TO EARN.
+  //
+  // A credit already sitting on an account, a birthday coming up, and a
+  // customer who has gone quiet. None of these is triggered by a ride, so none
+  // of them ever reached this page before - they went to Ahmed's morning email
+  // and waited there to be remembered.
+  //
+  // Written here, beside custMsg, for one reason: there must be exactly one
+  // place in this codebase where words go out to a customer. Two places and
+  // they drift.
+  //
+  // THE PHONE IS THE CHANNEL, NOT EMAIL. Ahmed's decision, and it is the right
+  // one - every booking carries a phone number because the form requires it,
+  // and email is optional, so building the programme on email would mean half
+  // the customers are unreachable and nobody knows which half.
+  //
+  // Every figure comes from data.loyalty, which is _loyalty.js. Nothing below
+  // types a dollar amount.
+  // ------------------------------------------------------------------
+  function outreachMsg(p){
+    const first = String(p.name || '').trim().split(/\s+/)[0];
+    const hi = first ? 'Hi ' + first + ' \u2014 ' : '';
+    const lead = p.reasons[0];
+    const bal = Number(p.creditOwed) || 0;
+    const nx = p.next;
+
+    // THE GIFT AND THE BALANCE ARE TWO NUMBERS, and saying one when you mean
+    // the other is how somebody with $10 already on their account gets told
+    // their birthday present is $25. So: the gift is what this offer is worth,
+    // the balance is everything on there including it, and the message says
+    // both whenever they differ.
+    //
+    // p.granted is set by the button once the credit is actually on the sheet.
+    // Until then the balance has to have the gift added to it, because the
+    // message is being previewed before the grant.
+    const gift  = Number(lead.amount) || 0;
+    const total = p.granted ? bal : Math.round((bal + gift) * 100) / 100;
+    const alsoThere = total > gift ? ', $' + total + ' on there in total' : '';
+
+    if (lead.kind === 'birthday') {
+      return hi + 'Hany from The Standard. Happy birthday from us \u2014 there\u2019s $' + gift +
+        ' on your account for it' + alsoThere + ', and it comes off your next ride. ' +
+        'Use it whenever suits you. Book at standardnj.com or just text this number.';
+    }
+    if (lead.kind === 'quiet') {
+      return hi + 'Hany from The Standard. It\u2019s been a while since we drove you, and we\u2019d like to ' +
+        'again \u2014 there\u2019s $' + gift + ' on your account waiting' + alsoThere +
+        ', off your next ride. Book at standardnj.com or text this number and I\u2019ll sort it.';
+    }
+    // Credit already earned by riding and never mentioned to them. Nothing is
+    // being granted here, so the balance IS the whole story.
+    return hi + 'Hany from The Standard. You\u2019ve got $' + bal + ' credit on your account from ' +
+      'riding with us, and it comes off your next ride automatically' +
+      (nx && nx.ridesAway ? '. ' + nx.ridesAway + ' more ride' + (nx.ridesAway === 1 ? '' : 's') +
+         ' and another $' + nx.amount + ' comes off' +
+         (nx.becomesLoyal ? ', and you\u2019re a loyal customer' : '') + '. '
+       : '. ') +
+      'Book at standardnj.com or text this number.';
+  }
+
+  // What the row says about why this person is on the list. Plain facts - the
+  // amount, the date, the silence - so Ahmed can disagree with the suggestion.
+  function whyLine(p){
+    const bits = p.reasons.map(r => {
+      if (r.kind === 'birthday') return 'Birthday ' + esc(r.on || 'coming up') + ' \u2014 <b>$' + r.amount + '</b> if you send it';
+      if (r.kind === 'quiet')    return 'No ride in <b>' + r.days + ' days</b> \u2014 <b>$' + r.amount + '</b> if you send it';
+      return '<b>$' + r.amount + '</b> already earned and never mentioned';
+    });
+    const ride = p.completedRides + ' ride' + (p.completedRides === 1 ? '' : 's');
+    return bits.join(' \u00b7 ') + ' \u00b7 ' + ride;
   }
 
   const MSG_LABEL = { received: 'Got your booking', confirmed: 'Confirmed', completed: 'After the ride' };
@@ -622,6 +733,40 @@
       try { sessionStorage.setItem(WKEY, windowDays); } catch(e){}
       load().catch(()=>{});
     }));
+
+    // ---- people to text today ----
+    //
+    // Rendered BEFORE the early return below, on purpose. A day with no rides
+    // booked is exactly the day this list matters, and putting it after the
+    // "nothing to do" shortcut would have hidden it on the quiet days.
+    const out = document.getElementById('toText');
+    const people = data.toText || [];
+    if (!people.length) {
+      out.innerHTML = '';
+    } else {
+      out.innerHTML =
+        '<div class="outreach">' +
+          '<h2>' + people.length + ' to text</h2>' +
+          '<p class="sub">Nothing has gone out to anybody. Each one opens the message so you can read it ' +
+          'before it leaves.</p>' +
+          people.map((p, i) => {
+            const star = p.status === 'Loyal' ? ' <span class="loyal">&#9733;</span>' : '';
+            const lead = p.reasons[0];
+            const needsGrant = lead.kind === 'birthday' || lead.kind === 'quiet';
+            return '<div class="person" data-p="' + i + '">' +
+              '<div class="person-name">' + esc(p.name) + star + '</div>' +
+              '<div class="person-why">' + whyLine(p) + '</div>' +
+              '<div class="person-acts">' +
+                '<button class="btn omsg">' +
+                  (needsGrant ? 'Put $' + lead.amount + ' on and write the text' : 'Write the text') +
+                '</button>' +
+              '</div>' +
+              '<div class="result ores"></div>' +
+              '<div class="msg-box" hidden></div>' +
+            '</div>';
+          }).join('') +
+        '</div>';
+    }
 
     const list = document.getElementById('list');
     if(!data.rides.length){
@@ -757,6 +902,108 @@
   }
 
   document.addEventListener('click', async (e) => {
+    // ---- text somebody who is not on a ride ----
+    //
+    // ORDER MATTERS HERE AND IT IS THE WHOLE POINT OF THIS BRANCH. For a
+    // birthday or a win-back the money is not on the account yet, so the
+    // credit is granted FIRST and the message is written from the balance that
+    // comes back. If the grant fails, no message is offered at all - better a
+    // button that did not work than a text promising $15 the sheet has never
+    // heard of.
+    //
+    // A credit already earned needs no grant; the ride awarded it.
+    const om = e.target.closest('.omsg');
+    if (om) {
+      const row = om.closest('.person');
+      const p   = (data.toText || [])[Number(row.dataset.p)];
+      const box = row.querySelector('.msg-box');
+      const res = row.querySelector('.ores');
+      if (!p) return;
+
+      // Same button twice closes it, like the ride messages.
+      if (!box.hidden) {
+        box.hidden = true;
+        om.classList.remove('on');
+        return;
+      }
+
+      if (!p.phone) {
+        res.className = 'result ores show';
+        res.innerHTML = '<span class="bad">No phone number on this customer \u2014 nothing to text.</span>';
+        return;
+      }
+
+      const lead = p.reasons[0];
+      const needsGrant = lead.kind === 'birthday' || lead.kind === 'quiet';
+
+      if (needsGrant) {
+        om.disabled = true;
+        const was = om.textContent;
+        om.textContent = 'Putting it on\u2026';
+        res.className = 'result ores show';
+        res.innerHTML = 'Working\u2026';
+        try {
+          const r = await fetch('/.netlify/functions/grant-credit', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ token, phone: p.phone, kind: lead.kind })
+          });
+          const j = await r.json();
+          if (!r.ok || j.error) throw new Error(j.error || ('Error ' + r.status));
+
+          if (j.alreadyDone) {
+            // Already offered this year, so nothing was added and no message
+            // is written. Writing one anyway would quote a balance that has no
+            // birthday money in it while saying happy birthday.
+            p.creditOwed = Number(j.creditOwed) || 0;
+            res.innerHTML = '<span class="good">' + esc(j.note || 'Already done.') + '</span>';
+            om.textContent = was;
+            om.disabled = false;
+            return;
+          }
+          // The grant has happened, so the balance handed back already
+          // includes the gift. granted says exactly that, and outreachMsg
+          // needs to know or it will add the gift on a second time.
+          p.creditOwed = Number(j.creditOwed) || 0;
+          p.granted = true;
+          res.innerHTML = '<span class="good">$' + j.amount + ' is on the account \u2014 balance $' +
+            j.creditOwed + '.</span>' +
+            (j.warning ? '<br><span class="bad">' + esc(j.warning) + '</span>' : '');
+          om.textContent = 'Write the text';
+        } catch (err) {
+          res.innerHTML = '<span class="bad">' + esc(err.message) + '</span> Nothing was added, and no ' +
+                          'message has been written \u2014 try again rather than texting a figure by hand.';
+          om.textContent = was;
+          om.disabled = false;
+          return;
+        }
+        om.disabled = false;
+      }
+
+      const text = outreachMsg(p);
+      om.classList.add('on');
+      box.hidden = false;
+      box.innerHTML =
+        '<textarea class="msg-text" spellcheck="false"></textarea>' +
+        '<div class="sms-actions">' +
+          '<button class="btn-line omsg-copy">Copy it</button>' +
+          '<a class="btn" style="text-decoration:none;display:inline-block" href="' +
+            esc(smsLink(p.phone, text)) + '">Text from this phone</a>' +
+        '</div>' +
+        '<span class="hint">Copy it, open the messages app on the company phone, paste, send &mdash; ' +
+        'that way it goes out from (908) 666-3777. &ldquo;Text from this phone&rdquo; uses whatever ' +
+        'number this device sends from.</span>';
+
+      const ta = box.querySelector('.msg-text');
+      ta.value = text;
+      const cp = box.querySelector('.omsg-copy');
+      cp.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(ta.value); cp.textContent = 'Copied'; }
+        catch (err) { ta.select(); cp.textContent = 'Press Cmd-C'; }
+        setTimeout(() => { cp.textContent = 'Copy it'; }, 2400);
+      });
+      return;
+    }
+
     // ---- change the fare ----
     const edit = e.target.closest('.fare-edit');
     if(edit){

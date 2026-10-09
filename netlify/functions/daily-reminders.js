@@ -64,8 +64,13 @@ exports.handler = async function () {
         wentQuiet.push(`<strong>${name}</strong>${star} — ${c.phone || ''} · last ride ${days} days ago · ${completed} completed · a $${L.WIN_BACK_CREDIT} note would bring them back`);
       }
 
-      if (L.birthdayWithin(c.birthday, BIRTHDAY_LOOKAHEAD_DAYS, today)) {
-        birthdays.push(`<strong>${name}</strong>${star} — ${c.phone || ''} · birthday ${c.birthday} · $${L.BIRTHDAY_CREDIT} or something personal`);
+      // The marker is what stops the same birthday arriving in this email
+      // seven mornings running. It is written when the offer is actually
+      // granted on the dispatch page, so the two agree about what has been
+      // done without either having to ask the other.
+      if (L.birthdayWithin(c.birthday, BIRTHDAY_LOOKAHEAD_DAYS, today) &&
+          !L.birthdayOfferedThisYear(c.birthday_offered, today)) {
+        birthdays.push(`<strong>${name}</strong>${star} — ${c.phone || ''} · birthday ${c.birthday} · $${L.BIRTHDAY_CREDIT} — the dispatch page will put it on and write the text`);
       }
 
       const balance = parseFloat(c.credit_owed) || 0;
@@ -92,7 +97,7 @@ exports.handler = async function () {
     await sendOwnerEmail(`The Standard — ${subject}`, `
       <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.6;color:#111">
         ${parts.join('')}
-        <p style="margin:24px 0 0;color:#555;font-size:13px">Nothing has been sent to anybody. This is a list for you. When you send a credit, clear it from <code>credit_owed</code> in the Customers tab so it stops appearing here.</p>
+        <p style="margin:24px 0 0;color:#555;font-size:13px">Nothing has been sent to anybody. Open the dispatch page and everyone here is at the top of it with the text already written. A credit stays on this list until it is used on a ride.</p>
       </div>`);
 
     return { statusCode: 200, body: JSON.stringify({ sent: true, wentQuiet: wentQuiet.length, birthdays: birthdays.length, owed: owed.length }) };

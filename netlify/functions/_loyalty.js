@@ -87,6 +87,34 @@ function creditEarned(pointsAfter) {
   return null;
 }
 
+// What the NEXT credit is, and how many rides away. Called with the total they
+// have now, so the after-the-ride text can always name something to aim at.
+//
+// This exists because the message used to go silent after ten rides. Someone
+// who had just become Loyal was told their balance and nothing else, as though
+// the programme had finished. It has not: every tenth ride after that is worth
+// another $10, and a customer who is never told that has no reason to count.
+function nextMilestone(points) {
+  const p = Math.max(0, parseInt(points, 10) || 0);
+  if (p < LOYAL_POINTS) {
+    return { ridesAway: LOYAL_POINTS - p, amount: LOYALTY_CREDIT, becomesLoyal: true };
+  }
+  return { ridesAway: LOYAL_POINTS - (p % LOYAL_POINTS), amount: REPEAT_CREDIT, becomesLoyal: false };
+}
+
+// Has this year's birthday offer already gone out?
+//
+// THE BUG THIS FIXES. The birthday list looks seven days ahead, so the same
+// person appeared in Ahmed's morning email seven mornings running with nothing
+// recording that he had already texted them. The marker is just a year,
+// written the moment the offer is actually granted. An unreadable or empty
+// marker counts as NOT offered, which is the safe direction to be wrong in:
+// he sees the name and decides, rather than a birthday passing in silence.
+function birthdayOfferedThisYear(marker, today = new Date()) {
+  const m = String(marker || '').match(/\d{4}/);
+  return !!m && Number(m[0]) === today.getUTCFullYear();
+}
+
 // Someone has gone quiet if their last completed ride is past the 90-day line
 // but not so far past that a win-back note would be strange. Anyone further
 // gone has already been offered one — the window stops the same customer being
@@ -146,6 +174,7 @@ module.exports = {
   STATUS_NEW, STATUS_REGULAR, STATUS_LOYAL, ACTIVE, INACTIVE,
   FIRST_RIDE_CREDIT, LOYALTY_CREDIT, REPEAT_CREDIT, REFERRAL_CREDIT,
   WIN_BACK_CREDIT, BIRTHDAY_CREDIT, WIN_BACK_WINDOW_DAYS,
-  statusFor, activityFor, creditEarned, standingLine,
+  statusFor, activityFor, creditEarned, standingLine, nextMilestone,
+  birthdayOfferedThisYear,
   daysSince, justWentQuiet, birthdayWithin,
 };

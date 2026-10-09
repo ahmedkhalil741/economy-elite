@@ -28,6 +28,7 @@ const CUSTOMERS_TAB = 'Customers';
 //
 // So the default window is yesterday to a week ahead, and `days=all` widens it
 // to everything upcoming when you actually want to look further out.
+const BIRTHDAY_LOOKAHEAD_DAYS = 7;   // the same window the morning email uses
 const LOOK_BACK_HOURS = 30;      // yesterday, so last night's rides can still be marked
 const DEFAULT_DAYS_AHEAD = 7;
 
@@ -76,11 +77,28 @@ exports.handler = async function (event) {
     // dispatch page down with it.
     const byPhone = new Map();
     let customerColumns = [];
+
+    // WHO NEEDS A TEXT TODAY, independent of whether they have a booking.
+    //
+    // This is the half of the loyalty programme that no ride triggers. A
+    // birthday arrives whether or not anyone books; a customer going quiet is
+    // the absence of an event; a credit already earned sits there until
+    // somebody tells them it exists. Until now all three only reached Ahmed in
+    // a morning email, which meant the dispatch page he actually has open all
+    // day knew nothing about them.
+    //
+    // One entry per PERSON, not one per reason. Someone with a birthday on
+    // Friday who is also owed $10 is one text, not two, and splitting them is
+    // how a customer gets messaged twice in an hour.
+    const toText = [];
+    const today = new Date();
+
     try {
       const cust = await readTab(sheets, process.env.GOOGLE_SHEET_ID, CUSTOMERS_TAB);
       customerColumns = cust.headers;
       const digits = (v) => String(v || '').replace(/\D/g, '').slice(-10);
-      for (const row of cust.rows) {
+      for (let ri = 0; ri < cust.rows.length; ri++) {
+        const row = cust.rows[ri];
         const c = rowToObject(cust.keys, row);
         const key = digits(c.phone);
         if (!key) continue;
@@ -89,16 +107,46 @@ exports.handler = async function (event) {
         const status = L.statusFor(points, c.status);
         // Never ridden yet is not the same as gone quiet.
         const activity = completedRides === 0 ? '—' : L.activityFor(c.last_ride);
+        const creditOwed = parseFloat(c.credit_owed) || 0;
         byPhone.set(key, {
-          status, activity, points, completedRides,
-          creditOwed: parseFloat(c.credit_owed) || 0,
+          status, activity, points, completedRides, creditOwed,
           firstRide: c.first_ride || '', lastRide: c.last_ride || '',
+          next: L.nextMilestone(points),
           standing: L.standingLine({ name: c.name, status, activity, points, completedRides }),
         });
+
+        const reasons = [];
+        if (creditOwed > 0) {
+          reasons.push({ kind: 'credit', amount: creditOwed });
+        }
+        // Granted at the moment the text goes out, not now - see grant-credit.
+        if (L.birthdayWithin(c.birthday, BIRTHDAY_LOOKAHEAD_DAYS, today) &&
+            !L.birthdayOfferedThisYear(c.birthday_offered, today)) {
+          reasons.push({ kind: 'birthday', amount: L.BIRTHDAY_CREDIT, on: c.birthday || '' });
+        }
+        if (completedRides > 0 && L.justWentQuiet(c.last_ride, today)) {
+          reasons.push({ kind: 'quiet', amount: L.WIN_BACK_CREDIT, days: L.daysSince(c.last_ride, today) });
+        }
+        if (reasons.length) {
+          toText.push({
+            rowNumber: ri + 2,
+            name: c.name || c.phone, phone: c.phone || '',
+            status, activity, points, completedRides, creditOwed,
+            birthday: c.birthday || '',
+            next: L.nextMilestone(points),
+            reasons,
+          });
+        }
       }
     } catch (err) {
-      // leave byPhone empty; the rides still list
+      // leave byPhone and toText empty; the rides still list
     }
+
+    // Birthdays first - they have a date on them and stop being true. A credit
+    // owed is true for as long as it takes.
+    const ORDER = { birthday: 0, quiet: 1, credit: 2 };
+    toText.sort((a, b) => ORDER[a.reasons[0].kind] - ORDER[b.reasons[0].kind] ||
+                          String(a.name).localeCompare(String(b.name)));
 
     const rides = rows
       .map((row, i) => {
@@ -192,6 +240,20 @@ exports.handler = async function (event) {
       body: JSON.stringify({
         rides,
         beyond,
+        toText,
+        // Every figure the dispatch page quotes to a customer comes from here,
+        // which reads _loyalty.js. Nothing in the page hardcodes a dollar
+        // amount, so a rule change in one file can never leave a text message
+        // promising last month's number.
+        loyalty: {
+          loyalPoints: L.LOYAL_POINTS,
+          firstRide: L.FIRST_RIDE_CREDIT,
+          loyal: L.LOYALTY_CREDIT,
+          repeat: L.REPEAT_CREDIT,
+          referral: L.REFERRAL_CREDIT,
+          winBack: L.WIN_BACK_CREDIT,
+          birthday: L.BIRTHDAY_CREDIT,
+        },
         window: showAll ? 'all' : `${daysAhead} days`,
         drivers,
         driversError,
@@ -210,7 +272,7 @@ exports.handler = async function (event) {
         missingColumns: {
           bookings: ['driver', 'ride_status', 'passengers', 'car_seats', 'elderly_assistance', 'email', 'referred_by']
             .filter((k) => !keys.includes(k)),
-          customers: ['email', 'completed_rides', 'lifetime_points', 'activity', 'credit_owed', 'credit_history', 'referred_by', 'birthday', 'car_seats']
+          customers: ['email', 'completed_rides', 'lifetime_points', 'activity', 'credit_owed', 'credit_history', 'referred_by', 'birthday', 'birthday_offered', 'car_seats']
             .filter((k) => !customerColumns.map((h) => String(h).trim().toLowerCase().replace(/[\s-]+/g, '_')).includes(k)),
         },
       }),
