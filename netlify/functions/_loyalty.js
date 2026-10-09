@@ -48,7 +48,7 @@ const LOYALTY_CREDIT = 15;      // once, on reaching Loyal at 10 rides
 const REPEAT_CREDIT = 10;       // every 10 after that — 20, 30, 40…
 const REFERRAL_CREDIT = 10;     // to the referrer, once the new rider completes
 const WIN_BACK_CREDIT = 10;     // offered to someone who has gone quiet
-const BIRTHDAY_CREDIT = 10;     // offered on their birthday
+const BIRTHDAY_CREDIT = 15;     // offered on their birthday
 
 // Reaching Loyal is worth more than staying loyal, which is the point of a
 // milestone. $15 once, $10 each time after.

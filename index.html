@@ -644,30 +644,49 @@
   /* The credits at hero scale: three equal cells, the figure leading. Same
      three-across / stacked behaviour as every other row of cells on the page,
      so the opening matches what follows it rather than inventing a layout. */
+  /* Bold and visible, at Ahmed's request - it was a quiet grey caption and it
+     is the name of the thing the whole opening is about. Rules either side so
+     it reads as a titled block rather than a stray line. */
   .hero-proglabel{
-    font-family:var(--mono); font-size:.68rem; letter-spacing:.2em;
-    text-transform:uppercase; color:var(--teal-dim);
-    margin-top:34px; margin-bottom:-6px;
+    display:flex; align-items:center; justify-content:center; gap:16px;
+    font-family:var(--body); font-size:.82rem; font-weight:700; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--ink);
+    margin:38px auto 0; max-width:560px;
+  }
+  .hero-proglabel::before, .hero-proglabel::after{
+    content:""; height:1px; background:var(--line); flex:1;
+  }
+  @media (max-width:520px){
+    .hero-proglabel{font-size:.78rem; gap:12px; letter-spacing:.14em;}
   }
   .hero-loyalty h1{margin-bottom:18px;}
   .hero-credits{
-    list-style:none; display:grid; grid-template-columns:repeat(3,1fr);
-    max-width:560px; margin:18px auto 22px; padding:0; width:100%;
+    list-style:none; display:grid; grid-template-columns:repeat(5,1fr);
+    max-width:860px; margin:22px auto; padding:0; width:100%;
   }
   .hero-credits li{
     padding:0 14px; border-left:1px solid var(--line);
     display:flex; flex-direction:column; align-items:center; gap:4px;
   }
   .hero-credits li:first-child{border-left:0;}
-  .hero-credits strong{font-size:1.6rem; font-weight:600; color:var(--ink); line-height:1;}
-  .hero-credits span{font-size:.84rem; color:var(--ink-dim); line-height:1.35;}
+  .hero-credits strong{font-size:1.5rem; font-weight:600; color:var(--ink); line-height:1;}
+  .hero-credits span{font-size:.8rem; color:var(--ink-dim); line-height:1.35;}
   .hero-fine{
     max-width:520px; margin:0 auto 30px; font-size:.9rem;
     color:var(--ink-dim); line-height:1.6;
   }
   @media (max-width:520px){
-    .hero-credits{grid-template-columns:1fr; gap:18px; margin-top:16px;}
-    .hero-credits li{border-left:0; padding:0;}
+    /* Five stacked blocks would push the button off the first screen. Each is
+       one line on a phone instead - figure left, what it's for right. */
+    .hero-credits{grid-template-columns:1fr; gap:0; margin:18px auto 24px; max-width:300px;}
+    .hero-credits li{
+      border-left:0; border-top:1px solid var(--line);
+      flex-direction:row; align-items:baseline; justify-content:space-between;
+      padding:11px 0; gap:14px;
+    }
+    .hero-credits li:first-child{border-top:0;}
+    .hero-credits strong{font-size:1.15rem;}
+    .hero-credits span{font-size:.92rem; text-align:right;}
     .hero-fine{font-size:1rem;}
   }
   .startfares{padding:0 0 64px; border-bottom:1px solid var(--line);}
@@ -970,6 +989,8 @@
       <li><strong>$5</strong><span>after your first ride</span></li>
       <li><strong>$15</strong><span>at ten rides</span></li>
       <li><strong>$10</strong><span>every ten rides after</span></li>
+      <li><strong>$10</strong><span>when you send us someone</span></li>
+      <li><strong>$15</strong><span>on your birthday</span></li>
     </ul>
 
     <p class="hero-fine">Credit never expires, and there is nothing to sign up for &mdash;
@@ -1160,7 +1181,7 @@
          they are one sentence here because nobody decides to try a car service
          on the strength of a birthday credit. -->
     <p class="loy-extra">There&rsquo;s <b>$10</b> for sending us someone new, once they&rsquo;ve
-      taken their first ride, and <b>$10</b> on your birthday &mdash; tell us the day, we
+      taken their first ride, and <b>$15</b> on your birthday &mdash; tell us the day, we
       don&rsquo;t need the year. Your points never expire, and spending credit never costs you
       your standing.</p>
     <p class="loy-note">Credit comes off a future ride and isn't paid out in cash. Points are
@@ -1313,10 +1334,10 @@
              A text input rather than type="date" on purpose: a date picker
              insists on a year and defaults to the wrong century. -->
         <div class="field">
-          <label for="b-birthday">Birthday (optional) &mdash; it's worth $10</label>
+          <label for="b-birthday">Birthday (optional) &mdash; it's worth $15</label>
           <input type="text" id="b-birthday" placeholder="e.g. March 14" autocomplete="bday"
                  inputmode="text" maxlength="24">
-          <span class="field-hint">Tell us the day and we'll put $10 toward a ride that
+          <span class="field-hint">Tell us the day and we'll put $15 toward a ride that
             week. We don't need the year.</span>
         </div>
 
