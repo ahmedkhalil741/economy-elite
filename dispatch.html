@@ -152,6 +152,23 @@
   .ride-status.off{color:#E0A0A0}
   .ride-status.ok{color:#8fbf8f}
   .ride-status.pending{color:var(--accent)}
+  /* Why a ride did not happen. Tucked under the status row, open only after
+     Cancelled or No-show is tapped. */
+  .why-box{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+  .why-box .lbl{font-family:var(--mono);font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase;
+                color:var(--steel);display:block;margin-bottom:9px}
+  .why-opts{display:flex;gap:8px;flex-wrap:wrap}
+  .why{background:transparent;border:1px solid var(--line);color:var(--dim);border-radius:100px;
+       padding:7px 13px;font-size:0.8rem;font-weight:500}
+  .why:hover{border-color:var(--steel);color:var(--ink)}
+  .why.on{border-color:var(--accent);color:var(--accent);background:rgba(201,169,107,0.1)}
+  .why-free{display:flex;gap:9px;margin-top:10px}
+  .why-free input{flex:1;min-width:0;background:var(--bg);color:var(--ink);border:1px solid var(--line);
+                  border-radius:10px;padding:10px 12px;font-family:inherit;font-size:0.88rem}
+  .why-free input:focus{outline:none;border-color:var(--accent)}
+  .why-said{font-size:0.82rem;color:var(--dim);margin-top:9px;line-height:1.6}
+  .why-said b{color:var(--ink);font-weight:500}
+
   .ride.done{opacity:0.5}
   .ride.done:hover{opacity:1}
   .windowbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;
@@ -686,6 +703,100 @@
     return bits.join(' \u00b7 ') + ' \u00b7 ' + ride;
   }
 
+  // ------------------------------------------------------------------
+  // WHY THE RIDE DID NOT HAPPEN.
+  //
+  // Asked AFTER the cancellation is already saved, never before. A cancelled
+  // ride that is half-recorded because somebody was interrupted mid-question
+  // is worse than one with no note on it: the fee depends on when the
+  // cancellation happened, and the sheet has to know it happened at all.
+  //
+  // The five buttons are the five reasons that actually occur, and they are
+  // worth having as buttons rather than a free box because a reason typed five
+  // different ways cannot be counted at the end of the year. The free field is
+  // there for the sixth thing, which there always is.
+  // ------------------------------------------------------------------
+  const WHY = ['Customer cancelled', 'Flight cancelled or changed',
+               'We couldn\u2019t cover it', 'Duplicate booking', 'Other'];
+
+  function askWhy(card, ride, status){
+    const box = card.querySelector('.why-box');
+    if (!box) return;
+    // Moving a ride back to Confirmed or Completed clears the reason on the
+    // sheet, so it has to come off the card too - otherwise last week's
+    // "flight cancelled" sits under a run that went ahead.
+    if (!/^(cancelled|no-?show)$/i.test(status)) {
+      box.hidden = true;
+      const stale = card.querySelector('.why-said');
+      if (stale) stale.remove();
+      ride.cancelReason = '';
+      return;
+    }
+
+    box.hidden = false;
+    box.innerHTML =
+      '<span class="lbl">Why? \u2014 optional, saved on the booking</span>' +
+      '<div class="why-opts">' +
+        WHY.map(w => '<button class="why' + (ride.cancelReason === w ? ' on' : '') + '">' +
+                     esc(w) + '</button>').join('') +
+      '</div>' +
+      '<div class="why-free">' +
+        '<input type="text" class="why-text" maxlength="200" placeholder="or type it \u2014 e.g. rebooked for Thursday">' +
+        '<button class="btn-line why-save">Save</button>' +
+      '</div>' +
+      '<span class="result whyres"></span>';
+
+    const out = box.querySelector('.whyres');
+    const txt = box.querySelector('.why-text');
+
+    async function save(reason){
+      out.className = 'result whyres show';
+      out.textContent = 'Saving\u2026';
+      try {
+        const res = await fetch('/.netlify/functions/set-ride-status', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ token, rowNumber: ride.rowNumber, status: ride.rideStatus,
+                                 pickup: ride.pickup, dropoff: ride.dropoff,
+                                 phone: ride.phone, name: ride.name, reason: reason })
+        });
+        const j = await res.json();
+        if (!res.ok || j.error) throw new Error(j.error || ('Error ' + res.status));
+        ride.cancelReason = reason;
+
+        // Written on the card straight away. The cancellation is already saved,
+        // so a reason that only appears after a refresh looks like it failed.
+        let said = card.querySelector('.why-said');
+        if (!said) {
+          said = document.createElement('div');
+          said.className = 'why-said';
+          out.parentNode.insertBefore(said, out.parentNode.querySelector('.why-box'));
+        }
+        said.innerHTML = 'Reason: <b>' + esc(reason) + '</b>';
+
+        out.innerHTML = '<span class="good">Saved.</span>' +
+          (j.note ? ' <span class="bad">' + esc(j.note) + '</span>' : '');
+      } catch (err) {
+        out.innerHTML = '<span class="bad">' + esc(err.message) + '</span> ' +
+          'The ride is still cancelled \u2014 only the note failed.';
+      }
+    }
+
+    box.querySelectorAll('.why').forEach(b => b.addEventListener('click', () => {
+      box.querySelectorAll('.why').forEach(o => o.classList.toggle('on', o === b));
+      if (b.textContent.trim() === 'Other') { txt.focus(); return; }
+      save(b.textContent.trim());
+    }));
+    box.querySelector('.why-save').addEventListener('click', () => {
+      const v = txt.value.trim();
+      if (!v) { txt.focus(); return; }
+      box.querySelectorAll('.why').forEach(o => o.classList.remove('on'));
+      save(v);
+    });
+    txt.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); box.querySelector('.why-save').click(); }
+    });
+  }
+
   const MSG_LABEL = { received: 'Got your booking', confirmed: 'Confirmed', completed: 'After the ride' };
 
   // Default: yesterday to a week ahead — the only rides that need anything
@@ -843,6 +954,10 @@
         : '<span class="ride-status ' +
             (/cancel|no-?show/i.test(sTxt) ? 'off' : isDone ? 'ok' : 'pending') + '">' +
             esc(sTxt) + '</span>';
+      // Already recorded? Say it on the card, so a glance answers "why".
+      const whySaid = r.cancelReason
+        ? '<div class="why-said">Reason: <b>' + esc(r.cancelReason) + '</b></div>' : '';
+
       const statusRow = data.hasRideStatusColumn
         ? '<div class="status-row">' +
             '<span class="lbl">After the ride</span>' +
@@ -850,6 +965,8 @@
             '<button class="st' + (/cancel/i.test(r.rideStatus) ? ' on' : '') + '" data-status="Cancelled">Cancelled</button>' +
             '<button class="st' + (/no-?show/i.test(r.rideStatus) ? ' on' : '') + '" data-status="No-show">No-show</button>' +
             '<span class="result stres"></span>' +
+            whySaid +
+            '<div class="why-box" hidden></div>' +
           '</div>'
         : '';
 
@@ -1137,6 +1254,7 @@
         card.classList.toggle('completed', wanted === 'Completed');
         card.classList.add('done');
         ride.rideStatus = wanted;
+        askWhy(card, ride, wanted);
 
         // The word, there and then. Waiting for a refresh to show it is how
         // you end up driving to a cancelled pickup.

@@ -91,7 +91,7 @@ exports.handler = async function (event) {
   if (!expected) return { statusCode: 503, body: JSON.stringify({ error: 'ADMIN_TOKEN is not set in Netlify.' }) };
 
   try {
-    const { token, rowNumber, status, pickup, dropoff, phone, name } = JSON.parse(event.body);
+    const { token, rowNumber, status, pickup, dropoff, phone, name, reason } = JSON.parse(event.body);
     if (token !== expected) return { statusCode: 401, body: JSON.stringify({ error: 'Wrong passcode.' }) };
 
     const wanted = ALLOWED.find((s) => s.toLowerCase() === String(status || '').trim().toLowerCase());
@@ -116,15 +116,56 @@ exports.handler = async function (event) {
     }
 
     const before = String(row.ride_status || '').trim();
+
+    // WHY A REASON IS A SEPARATE WRITE.
+    //
+    // The dispatch page saves Cancelled the instant the button is tapped, and
+    // only then asks why. That order is deliberate: a cancellation half-made
+    // because somebody was interrupted is worse than one with no reason on it,
+    // and the fee a cancellation carries depends on when it happened, not on
+    // whether anyone wrote a note. So the reason arrives in a SECOND call with
+    // the same status, which used to fall straight into the unchanged branch
+    // below and be thrown away.
+    //
+    // A reason only means anything on a ride that did not happen. Moving a
+    // ride back to Confirmed or Completed clears it rather than leaving last
+    // week's "flight cancelled" sitting on a run that went ahead.
+    const hasReasonCol = bookings.keys.includes('cancel_reason');
+    const settled = /^(cancelled|no-?show)$/i.test(wanted);
+    const reasonText = settled ? String(reason == null ? '' : reason).trim().slice(0, 200) : '';
+    const reasonChanged = hasReasonCol &&
+      reasonText !== String(row.cancel_reason || '').trim() &&
+      (settled ? reasonText !== '' : String(row.cancel_reason || '').trim() !== '');
+
+    if (reasonChanged) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `${BOOKINGS_TAB}!A${rowNumber}:${bookings.lastColumn}${rowNumber}`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: [buildRow(bookings.keys,
+          { ride_status: wanted, cancel_reason: reasonText }, bookings.rows[idx])] },
+      });
+      bookings.rows[idx] = buildRow(bookings.keys,
+        { ride_status: wanted, cancel_reason: reasonText }, bookings.rows[idx]);
+    }
+
     if (before.toLowerCase() === wanted.toLowerCase()) {
-      return { statusCode: 200, body: JSON.stringify({ success: true, unchanged: true, status: wanted }) };
+      return { statusCode: 200, body: JSON.stringify({
+        success: true, unchanged: !reasonChanged, status: wanted,
+        reason: reasonText,
+        note: (settled && reasonText && !hasReasonCol)
+          ? 'The Bookings tab has no "cancel_reason" column, so the reason was not saved. Add one to the header row.'
+          : undefined,
+      }) };
     }
 
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: `${BOOKINGS_TAB}!A${rowNumber}:${bookings.lastColumn}${rowNumber}`,
       valueInputOption: 'USER_ENTERED',
-      requestBody: { values: [buildRow(bookings.keys, { ride_status: wanted }, bookings.rows[idx])] },
+      requestBody: { values: [buildRow(bookings.keys,
+        hasReasonCol ? { ride_status: wanted, cancel_reason: reasonText } : { ride_status: wanted },
+        bookings.rows[idx])] },
     });
 
     // ---- the point ----
@@ -136,7 +177,11 @@ exports.handler = async function (event) {
     const delta = (nowCompleted ? 1 : 0) - (wasCompleted ? 1 : 0);
 
     if (delta === 0) {
-      return { statusCode: 200, body: JSON.stringify({ success: true, status: wanted, pointsChanged: false }) };
+      return { statusCode: 200, body: JSON.stringify({ success: true, status: wanted, pointsChanged: false,
+        reason: reasonText,
+        note: (settled && reasonText && !hasReasonCol)
+          ? 'The Bookings tab has no "cancel_reason" column, so the reason was not saved. Add one to the header row.'
+          : undefined }) };
     }
 
 
