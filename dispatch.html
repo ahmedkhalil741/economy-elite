@@ -60,6 +60,9 @@
   .person-why b{color:var(--ink);font-weight:500}
   .person-acts{display:flex;gap:9px;flex-wrap:wrap}
   .person .msg-box{margin-top:12px}
+  .card-box{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+  .card-box .lbl{font-family:var(--mono);font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase;
+                 color:var(--steel);display:block;margin-bottom:9px}
 
   .ride{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:14px}
   .ride.assigned{border-color:#3d5a3d}
@@ -848,6 +851,75 @@
     });
   }
 
+  // ------------------------------------------------------------------
+  // HOW THE CARD WAS TAKEN.
+  //
+  // Tapping costs 2.6% + 15c; a card kept on file is card-not-present and
+  // costs 3.5% + 15c. Ahmed charges everybody the tapped price either way -
+  // his call, and the right one, because nobody should pay more for how the
+  // reader happened to behave. So this changes no money. It is here so the
+  // saved-card rides can be COUNTED at year end, and the gap between what
+  // Square billed and what the sheet says stops being a mystery.
+  //
+  // Asked after Completed, like the cancellation reason, and for the same
+  // reason: the ride being marked finished must never wait on a second
+  // question. Cash and Zelle rides are not asked at all.
+  //
+  // THE CARD NUMBER IS NEVER TOUCHED. A card on file lives in Square. This
+  // records that one was used, nothing more.
+  // ------------------------------------------------------------------
+  function askCard(card, ride, status){
+    const box = card.querySelector('.card-box');
+    if (!box) return;
+
+    const isCard = /card/i.test(String(ride.payMethod || ''));
+    if (!isCard || String(status).toLowerCase() !== 'completed') {
+      box.hidden = true;
+      return;
+    }
+
+    box.hidden = false;
+    box.innerHTML =
+      '<span class="lbl">How was the card taken?</span>' +
+      '<div class="why-opts">' +
+        ['Tapped', 'On file'].map(w =>
+          '<button class="why centry' + (ride.cardEntry === w ? ' on' : '') + '">' + w + '</button>').join('') +
+      '</div>' +
+      '<span class="result centryres"></span>';
+
+    const out = box.querySelector('.centryres');
+    box.querySelectorAll('.centry').forEach(b => b.addEventListener('click', async () => {
+      const val = b.textContent.trim();
+      box.querySelectorAll('.centry').forEach(o => o.classList.toggle('on', o === b));
+      out.className = 'result centryres show';
+      out.textContent = 'Saving\u2026';
+      try {
+        const res = await fetch('/.netlify/functions/set-ride-status', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ token, rowNumber: ride.rowNumber, status: ride.rideStatus,
+                                 pickup: ride.pickup, dropoff: ride.dropoff,
+                                 phone: ride.phone, name: ride.name, cardEntry: val })
+        });
+        const j = await res.json();
+        if (!res.ok || j.error) throw new Error(j.error || ('Error ' + res.status));
+        ride.cardEntry = val;
+
+        let said = card.querySelector('.card-said');
+        if (!said) {
+          said = document.createElement('div');
+          said.className = 'why-said card-said';
+          box.parentNode.insertBefore(said, box);
+        }
+        said.innerHTML = 'Card: <b>' + esc(val) + '</b>';
+        out.innerHTML = '<span class="good">Saved.</span>' +
+          (j.entryNote ? ' <span class="bad">' + esc(j.entryNote) + '</span>' : '');
+      } catch (err) {
+        out.innerHTML = '<span class="bad">' + esc(err.message) + '</span> ' +
+          'The ride is still completed \u2014 only this note failed.';
+      }
+    }));
+  }
+
   const MSG_LABEL = { received: 'Got your booking', confirmed: 'Confirmed', completed: 'After the ride' };
 
   // Default: yesterday to a week ahead — the only rides that need anything
@@ -1005,6 +1077,12 @@
         : '<span class="ride-status ' +
             (/cancel|no-?show/i.test(sTxt) ? 'off' : isDone ? 'ok' : 'pending') + '">' +
             esc(sTxt) + '</span>';
+      // Only a card ride is worth asking about - a cash or Zelle fare costs
+      // nothing to take either way.
+      const paidByCard = /card/i.test(String(r.payMethod || ''));
+      const cardSaid = r.cardEntry
+        ? '<div class="why-said">Card: <b>' + esc(r.cardEntry) + '</b></div>' : '';
+
       // Already recorded? Say it on the card, so a glance answers "why".
       const whySaid = r.cancelReason
         ? '<div class="why-said">Reason: <b>' + esc(r.cancelReason) + '</b></div>' : '';
@@ -1016,8 +1094,9 @@
             '<button class="st' + (/cancel/i.test(r.rideStatus) ? ' on' : '') + '" data-status="Cancelled">Cancelled</button>' +
             '<button class="st' + (/no-?show/i.test(r.rideStatus) ? ' on' : '') + '" data-status="No-show">No-show</button>' +
             '<span class="result stres"></span>' +
-            whySaid +
+            whySaid + cardSaid +
             '<div class="why-box" hidden></div>' +
+            '<div class="card-box" hidden></div>' +
           '</div>'
         : '';
 
@@ -1306,6 +1385,7 @@
         card.classList.add('done');
         ride.rideStatus = wanted;
         askWhy(card, ride, wanted);
+        askCard(card, ride, wanted);
 
         // The word, there and then. Waiting for a refresh to show it is how
         // you end up driving to a cancelled pickup.

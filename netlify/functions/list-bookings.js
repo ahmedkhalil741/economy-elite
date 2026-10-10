@@ -215,6 +215,7 @@ exports.handler = async function (event) {
           email: r.email || '',
           rideStatus: r.ride_status || '',
           cancelReason: r.cancel_reason || '',
+          cardEntry: r.card_entry || '',
           customer: byPhone.get(String(r.phone || '').replace(/\D/g, '').slice(-10)) || null,
         };
       })
@@ -307,7 +308,7 @@ exports.handler = async function (event) {
         // Named so a blank field on a card points at a missing column instead
         // of being a mystery — the same mistake has cost hours twice already.
         missingColumns: {
-          bookings: ['driver', 'ride_status', 'cancel_reason', 'passengers', 'car_seats', 'elderly_assistance', 'email', 'referred_by']
+          bookings: ['driver', 'ride_status', 'cancel_reason', 'card_entry', 'passengers', 'car_seats', 'elderly_assistance', 'email', 'referred_by']
             .filter((k) => !keys.includes(k)),
           customers: ['email', 'completed_rides', 'lifetime_points', 'activity', 'credit_owed', 'credit_history', 'referred_by', 'birthday', 'birthday_offered', 'car_seats']
             .filter((k) => !customerColumns.map((h) => String(h).trim().toLowerCase().replace(/[\s-]+/g, '_')).includes(k)),

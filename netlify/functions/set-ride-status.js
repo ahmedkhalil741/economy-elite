@@ -100,7 +100,7 @@ exports.handler = async function (event) {
   if (!expected) return { statusCode: 503, body: JSON.stringify({ error: 'ADMIN_TOKEN is not set in Netlify.' }) };
 
   try {
-    const { token, rowNumber, status, pickup, dropoff, phone, name, reason } = JSON.parse(event.body);
+    const { token, rowNumber, status, pickup, dropoff, phone, name, reason, cardEntry } = JSON.parse(event.body);
     if (token !== expected) return { statusCode: 401, body: JSON.stringify({ error: 'Wrong passcode.' }) };
 
     const wanted = ALLOWED.find((s) => s.toLowerCase() === String(status || '').trim().toLowerCase());
@@ -139,6 +139,17 @@ exports.handler = async function (event) {
     // A reason only means anything on a ride that did not happen. Moving a
     // ride back to Confirmed or Completed clears it rather than leaving last
     // week's "flight cancelled" sitting on a run that went ahead.
+    // HOW THE CARD WAS TAKEN. Recorded, never repriced.
+    //
+    // Ahmed charges everybody the tapped rate whichever way the card is run,
+    // so this changes no money. It exists so that at year end the saved-card
+    // rides can be counted and the real cost of them worked out, instead of
+    // the gap between what Square billed and what the sheet says being a
+    // mystery nobody can explain.
+    const ENTRIES = ['Tapped', 'On file'];
+    const hasEntryCol = bookings.keys.includes('card_entry');
+    const entry = ENTRIES.find((e) => e.toLowerCase() === String(cardEntry || '').trim().toLowerCase()) || '';
+
     const hasReasonCol = bookings.keys.includes('cancel_reason');
     const settled = /^(cancelled|no-?show)$/i.test(wanted);
     const reasonText = settled ? String(reason == null ? '' : reason).trim().slice(0, 200) : '';
@@ -146,22 +157,29 @@ exports.handler = async function (event) {
       reasonText !== String(row.cancel_reason || '').trim() &&
       (settled ? reasonText !== '' : String(row.cancel_reason || '').trim() !== '');
 
-    if (reasonChanged) {
+    const entryChanged = hasEntryCol && entry && entry !== String(row.card_entry || '').trim();
+    const sideCells = {};
+    if (reasonChanged) sideCells.cancel_reason = reasonText;
+    if (entryChanged) sideCells.card_entry = entry;
+
+    if (reasonChanged || entryChanged) {
+      const cells = Object.assign({ ride_status: wanted }, sideCells);
       await sheets.spreadsheets.values.update({
         spreadsheetId,
         range: `${BOOKINGS_TAB}!A${rowNumber}:${bookings.lastColumn}${rowNumber}`,
         valueInputOption: 'USER_ENTERED',
-        requestBody: { values: [buildRow(bookings.keys,
-          { ride_status: wanted, cancel_reason: reasonText }, bookings.rows[idx])] },
+        requestBody: { values: [buildRow(bookings.keys, cells, bookings.rows[idx])] },
       });
-      bookings.rows[idx] = buildRow(bookings.keys,
-        { ride_status: wanted, cancel_reason: reasonText }, bookings.rows[idx]);
+      bookings.rows[idx] = buildRow(bookings.keys, cells, bookings.rows[idx]);
     }
 
     if (before.toLowerCase() === wanted.toLowerCase()) {
       return { statusCode: 200, body: JSON.stringify({
-        success: true, unchanged: !reasonChanged, status: wanted,
-        reason: reasonText,
+        success: true, unchanged: !(reasonChanged || entryChanged), status: wanted,
+        reason: reasonText, cardEntry: entry,
+        entryNote: (entry && !hasEntryCol)
+          ? 'The Bookings tab has no "card_entry" column, so that was not saved. Add one to the header row.'
+          : undefined,
         note: (settled && reasonText && !hasReasonCol)
           ? 'The Bookings tab has no "cancel_reason" column, so the reason was not saved. Add one to the header row.'
           : undefined,
@@ -173,7 +191,9 @@ exports.handler = async function (event) {
       range: `${BOOKINGS_TAB}!A${rowNumber}:${bookings.lastColumn}${rowNumber}`,
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [buildRow(bookings.keys,
-        hasReasonCol ? { ride_status: wanted, cancel_reason: reasonText } : { ride_status: wanted },
+        Object.assign({ ride_status: wanted },
+          hasReasonCol ? { cancel_reason: reasonText } : {},
+          hasEntryCol && entry ? { card_entry: entry } : {}),
         bookings.rows[idx])] },
     });
 

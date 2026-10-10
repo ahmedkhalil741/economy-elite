@@ -48,6 +48,19 @@ const CARD_FEES = {
   // change has "Square" in its payment_method cell, and a stored value that
   // no longer prices is a silent zero-fee ride.
   card: { rate: 0.026, fixed: 0.15, label: 'Card' },
+  // A SAVED CARD COSTS MORE, and it is worth knowing by how much.
+  //
+  // A card kept on file is card-not-present, the same family as typing the
+  // number in, so Square charges the higher rate. The customer is still
+  // quoted the tapped price - Ahmed's call, and the right one: everybody pays
+  // the same and nobody is penalised for how the reader happened to behave.
+  // This entry exists so the difference can be COUNTED at year end rather
+  // than guessed at.
+  //
+  // THE CARD NUMBER ITSELF IS NEVER STORED HERE, or anywhere in this project.
+  // A card on file lives in Square, which keeps it and charges it; this
+  // codebase only ever records that a saved card was used.
+  'card on file': { rate: 0.035, fixed: 0.15, label: 'Card on file' },
   square: { rate: 0.026, fixed: 0.15, label: 'Card' },
   'apple pay': { rate: 0.026, fixed: 0.15, label: 'Card' },
   // Was 1.9% + $0.10 on a Venmo business profile. Set to null on Ahmed's
