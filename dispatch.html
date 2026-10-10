@@ -169,6 +169,12 @@
   .why-said{font-size:0.82rem;color:var(--dim);margin-top:9px;line-height:1.6}
   .why-said b{color:var(--ink);font-weight:500}
 
+  /* Which copy of this page am I looking at? A phone can serve a saved page
+     for days, and "nothing changed" then means two completely different
+     things. The date answers it without anyone opening a console. */
+  .build{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.08em;text-transform:uppercase;
+         color:var(--steel);margin:4px 0 0}
+
   .ride.done{opacity:0.5}
   .ride.done:hover{opacity:1}
   .windowbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;
@@ -320,6 +326,7 @@
     <div>
       <h1>Dispatch</h1>
       <p class="sub" style="margin:0" id="topSub">Upcoming rides</p>
+      <p class="build">Version 10 Oct 2026</p>
     </div>
     <button class="btn-line" id="refresh">Refresh</button>
     <button class="btn-line" id="signout">Sign out</button>

@@ -28,7 +28,7 @@
 // to bump it for ordinary content changes — network-first already handles
 // those.
 
-const CACHE = 'standardnj-v2';
+const CACHE = 'standardnj-v3';
 const OFFLINE_URLS = ['index.html', 'manifest.json'];
 
 self.addEventListener('install', (event) => {
