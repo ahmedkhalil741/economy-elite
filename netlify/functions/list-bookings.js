@@ -14,8 +14,28 @@
 const { google } = require('googleapis');
 const { readTab, rowToObject } = require('./_sheet');
 const { parseRequestedDateTime, easternToInstant } = require('./_format');
-const { allDrivers } = require('./_drivers');
+const { driversFromTab, fromEnvironment } = require('./_drivers');
 const L = require('./_loyalty');
+
+// Authorised once per warm container, not once per tap.
+//
+// Netlify reuses the container between invocations, so building a JWT and
+// exchanging it with Google on every request was a round trip bought and
+// thrown away each time somebody opened the page. google-auth-library
+// refreshes the token itself when it expires, so holding the client is safe.
+let cachedSheets = null;
+async function sheetsClient() {
+  if (cachedSheets) return cachedSheets;
+  const auth = new google.auth.JWT(
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+    null,
+    (process.env.GOOGLE_SERVICE_ACCOUNT_KEY || '').replace(/\\n/g, '\n'),
+    ['https://www.googleapis.com/auth/spreadsheets.readonly']
+  );
+  await auth.authorize();
+  cachedSheets = google.sheets({ version: 'v4', auth });
+  return cachedSheets;
+}
 
 const SHEET_TAB = 'Bookings';
 const CUSTOMERS_TAB = 'Customers';
@@ -44,16 +64,29 @@ exports.handler = async function (event) {
   }
 
   try {
-    const auth = new google.auth.JWT(
-      process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      null,
-      (process.env.GOOGLE_SERVICE_ACCOUNT_KEY || '').replace(/\\n/g, '\n'),
-      ['https://www.googleapis.com/auth/spreadsheets.readonly']
-    );
-    await auth.authorize();
-    const sheets = google.sheets({ version: 'v4', auth });
+    const sheets = await sheetsClient();
+    const id = process.env.GOOGLE_SHEET_ID;
 
-    const { headers, keys, rows } = await readTab(sheets, process.env.GOOGLE_SHEET_ID, SHEET_TAB);
+    // FOUR TABS AT ONCE, not one after another.
+    //
+    // This used to be six sequential round trips to Google - authorise,
+    // Bookings, Customers, Credits, Drivers, and then Drivers AGAIN for the
+    // dropdown - with each one waiting for the last to come back. On a phone
+    // that is the pause between tapping Dispatch and seeing anything, and
+    // Ahmed described it exactly: "it's so slow".
+    //
+    // allSettled, not all: only Bookings is load-bearing. A missing Customers,
+    // Credits or Drivers tab must still leave the rides on screen, which is
+    // what the individual try/catches used to guarantee one at a time.
+    const [bk, cu, cr, dr] = await Promise.allSettled([
+      readTab(sheets, id, SHEET_TAB),
+      readTab(sheets, id, CUSTOMERS_TAB),
+      readTab(sheets, id, 'Credits'),
+      readTab(sheets, id, 'Drivers'),
+    ]);
+
+    if (bk.status !== 'fulfilled') throw bk.reason;
+    const { headers, keys, rows } = bk.value;
 
     const daysParam = (event.queryStringParameters || {}).days || '';
     const showAll = String(daysParam).toLowerCase() === 'all';
@@ -94,7 +127,8 @@ exports.handler = async function (event) {
     const today = new Date();
 
     try {
-      const cust = await readTab(sheets, process.env.GOOGLE_SHEET_ID, CUSTOMERS_TAB);
+      if (cu.status !== 'fulfilled') throw cu.reason;
+      const cust = cu.value;
       customerColumns = cust.headers;
       const digits = (v) => String(v || '').replace(/\D/g, '').slice(-10);
       for (let ri = 0; ri < cust.rows.length; ri++) {
@@ -222,19 +256,21 @@ exports.handler = async function (event) {
 
     // Is there somewhere to keep the credit ledger?
     let creditsTab = 'missing';
-    try {
-      const cr = await readTab(sheets, process.env.GOOGLE_SHEET_ID, 'Credits');
-      creditsTab = cr.keys.length ? 'ok' : 'no header row';
-    } catch (err) { creditsTab = 'missing'; }
+    if (cr.status === 'fulfilled') creditsTab = cr.value.keys.length ? 'ok' : 'no header row';
 
     let drivers = [];
     let driversError = null;
     let driversSource = 'none';
-    try {
-      const dt = await readTab(sheets, process.env.GOOGLE_SHEET_ID, 'Drivers');
-      driversSource = dt.keys.length ? 'sheet' : 'tab has no header row';
-    } catch (err) { driversSource = process.env.DRIVERS ? 'netlify setting (no Drivers tab yet)' : 'none'; }
-    try { drivers = await allDrivers(sheets); } catch (err) { driversError = err.message; }
+    // One read of the Drivers tab answers both questions - where the dropdown's
+    // names came from, and what they are. It used to be read twice.
+    if (dr.status === 'fulfilled') {
+      driversSource = dr.value.keys.length ? 'sheet' : 'tab has no header row';
+      try { drivers = driversFromTab(dr.value.keys, dr.value.rows); }
+      catch (err) { drivers = fromEnvironment(); }
+    } else {
+      driversSource = process.env.DRIVERS ? 'netlify setting (no Drivers tab yet)' : 'none';
+      try { drivers = fromEnvironment(); } catch (err) { driversError = err.message; }
+    }
 
     return {
       statusCode: 200,

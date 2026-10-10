@@ -28,7 +28,15 @@ const L = require('./_loyalty');
 const CUSTOMERS_TAB = 'Customers';
 const CREDITS_TAB = 'Credits';
 
+// Authorised once per warm container, not once per tap.
+//
+// Netlify reuses the container between invocations, so building a JWT and
+// exchanging it with Google was a round trip bought and thrown away on every
+// single request. google-auth-library refreshes the token itself when it
+// expires, so holding the client is safe.
+let cachedSheets = null;
 async function sheetsClient() {
+  if (cachedSheets) return cachedSheets;
   const auth = new google.auth.JWT(
     process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
     null,
@@ -36,7 +44,8 @@ async function sheetsClient() {
     ['https://www.googleapis.com/auth/spreadsheets']
   );
   await auth.authorize();
-  return google.sheets({ version: 'v4', auth });
+  cachedSheets = google.sheets({ version: 'v4', auth });
+  return cachedSheets;
 }
 
 const normalizePhone = (v) => String(v || '').replace(/\D/g, '').slice(-10);

@@ -75,12 +75,14 @@ function fromEnvironment() {
   return parsed.filter((d) => d && d.name).map(shape);
 }
 
-async function allDrivers(sheets) {
-  try {
-    const client = sheets || await sheetsClient();
-    const { keys, rows } = await readTab(client, process.env.GOOGLE_SHEET_ID, DRIVERS_TAB);
-    if (!keys.length) throw new Error('no header row');
-
+// The list, built from a Drivers tab somebody has ALREADY read.
+//
+// Split out because list-bookings needs two things from that tab - the list
+// itself, and whether the tab exists at all - and was reading it twice to get
+// them. Two round trips to Google for one tab, on every single page load.
+function driversFromTab(keys, rows) {
+  if (!keys.length) throw new Error('no header row');
+  {
     const drivers = rows
       .map((row) => rowToObject(keys, row))
       .filter((d) => String(d.name || '').trim())
@@ -102,6 +104,14 @@ async function allDrivers(sheets) {
 
     if (drivers.length) return drivers;
     return fromEnvironment();
+  }
+}
+
+async function allDrivers(sheets) {
+  try {
+    const client = sheets || await sheetsClient();
+    const { keys, rows } = await readTab(client, process.env.GOOGLE_SHEET_ID, DRIVERS_TAB);
+    return driversFromTab(keys, rows);
   } catch (err) {
     // No Drivers tab yet — fall back rather than emptying the dropdown.
     return fromEnvironment();
@@ -114,4 +124,4 @@ async function findDriver(key) {
   return list.find((d) => d.key === wanted || d.name.toLowerCase() === wanted) || null;
 }
 
-module.exports = { allDrivers, findDriver, cleanPhone, prettyPhone };
+module.exports = { allDrivers, driversFromTab, fromEnvironment, findDriver, cleanPhone, prettyPhone };
