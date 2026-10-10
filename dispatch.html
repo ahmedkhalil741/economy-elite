@@ -751,7 +751,8 @@
     const bits = p.reasons.map(r => {
       if (r.kind === 'birthday') return 'Birthday ' + esc(r.on || 'coming up') + ' \u2014 <b>$' + r.amount + '</b> if you send it';
       if (r.kind === 'quiet')    return 'No ride in <b>' + r.days + ' days</b> \u2014 <b>$' + r.amount + '</b> if you send it';
-      return '<b>$' + r.amount + '</b> already earned and never mentioned';
+      return '<b>$' + r.amount + '</b> on their account, unused' +
+             (r.days ? ' \u2014 no ride in <b>' + r.days + ' days</b>' : '');
     });
     const ride = p.completedRides + ' ride' + (p.completedRides === 1 ? '' : 's');
     return bits.join(' \u00b7 ') + ' \u00b7 ' + ride;

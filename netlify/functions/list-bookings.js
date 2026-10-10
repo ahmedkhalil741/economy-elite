@@ -49,6 +49,14 @@ const CUSTOMERS_TAB = 'Customers';
 // So the default window is yesterday to a week ahead, and `days=all` widens it
 // to everything upcoming when you actually want to look further out.
 const BIRTHDAY_LOOKAHEAD_DAYS = 7;   // the same window the morning email uses
+// A credit is only worth chasing once they have stopped coming.
+//
+// Everyone who finishes a ride is owed something, and the after-the-ride text
+// on their own card has just told them so. Listing them again at the top the
+// same afternoon is the system saying the same thing twice. Someone who
+// earned credit a fortnight ago and has not been back is the one worth a
+// note - that is the whole point of the list.
+const CREDIT_QUIET_DAYS = 14;
 const LOOK_BACK_HOURS = 30;      // yesterday, so last night's rides can still be marked
 const DEFAULT_DAYS_AHEAD = 7;
 
@@ -150,8 +158,9 @@ exports.handler = async function (event) {
         });
 
         const reasons = [];
-        if (creditOwed > 0) {
-          reasons.push({ kind: 'credit', amount: creditOwed });
+        const sinceRide = L.daysSince(c.last_ride, today);
+        if (creditOwed > 0 && (sinceRide === null || sinceRide >= CREDIT_QUIET_DAYS)) {
+          reasons.push({ kind: 'credit', amount: creditOwed, days: sinceRide });
         }
         // Granted at the moment the text goes out, not now - see grant-credit.
         if (L.birthdayWithin(c.birthday, BIRTHDAY_LOOKAHEAD_DAYS, today) &&
