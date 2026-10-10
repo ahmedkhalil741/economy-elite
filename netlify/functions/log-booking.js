@@ -108,7 +108,15 @@ exports.handler = async function (event) {
       // question like "how many rides did this customer take in September"
       // is one COUNTIFS in the sheet instead of a script that can drift out
       // of step with the rows it is counting.
-      ride_month: /^(\d{4})-(\d{2})/.test(String(dateTime || '')) ? String(dateTime).slice(0, 7) : NA,
+      // A LEADING APOSTROPHE, AND IT MATTERS.
+      //
+      // "2026-10" looks like a date to Google Sheets, so with USER_ENTERED it
+      // was parsed and stored as the serial number 46296 — Ahmed opened the
+      // sheet and found a five-digit number where the month should be. The
+      // apostrophe forces it to stay text; Sheets eats the apostrophe itself
+      // and the cell reads "2026-10", which is what sorts and groups properly
+      // at year end.
+      ride_month: /^(\d{4})-(\d{2})/.test(String(dateTime || '')) ? "'" + String(dateTime).slice(0, 7) : NA,
       pickup,
       dropoff,
       name: orNA(name),

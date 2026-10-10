@@ -439,6 +439,9 @@ exports.handler = async function (event) {
         pointsChanged: true,
         customer: {
           name: who, status: status_, activity, points, completedRides,
+          // What they are working towards NOW, so the thank-you text can name
+          // it without the page having to reload and read the sheet again.
+          next: L.nextMilestone(points),
           creditOwed, creditEarned: credit ? credit.amount : 0,
           creditSpent: spent, creditReturned: refunded,
           discountOnRide,

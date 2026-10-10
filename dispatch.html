@@ -628,8 +628,8 @@
     const loyalPts = rules ? rules.loyalPoints : 10;
     const loyalNow = pts === loyalPts;
     const aheadLine = (nx && pts > 0)
-      ? nx.ridesAway + ' more ride' + (nx.ridesAway === 1 ? '' : 's') + ' and another $' + nx.amount +
-        ' comes off' + (nx.becomesLoyal ? ', and you\u2019re a loyal customer' : '') + '. '
+      ? nx.ridesAway + ' more and $' + nx.amount + ' comes off' +
+        (nx.becomesLoyal ? ', and you\u2019re a loyal customer' : '') + '. '
       : '';
 
     return {
@@ -647,13 +647,36 @@
         (tipN ? 'A tip is separate, about $' + tipN + ' if you\u2019d like. ' : '') +
         'Any changes, just text this number.',
 
-      completed:
-        hi + 'thank you for riding with The Standard. ' +
-        (credit ? 'You have $' + credit + ' credit sitting on your account, and it comes off your next ride automatically. ' : '') +
-        (pts ? 'That\u2019s ' + pts + ' ride' + (pts === 1 ? '' : 's') + ' with us' +
-               (loyalNow ? ' \u2014 you\u2019re a loyal customer now. ' : '. ') : '') +
-        aheadLine +
-        'Book any time at standardnj.com, or just text this number and Hany will sort it.',
+      completed: pts === 1
+
+        // THE FIRST RIDE IS THE ONLY TIME THE WHOLE THING IS WORTH SAYING.
+        //
+        // Ahmed's brief: tell them they're in, name the amounts, and don't
+        // make them feel like they're reading an article. Those pull against
+        // each other in a paragraph - five rewards in prose is a wall. As
+        // short lines it is five things you can take in at a glance and stop
+        // reading whenever you like, which is the same information at a
+        // fraction of the effort.
+        //
+        // Every figure comes from the server, which reads _loyalty.js.
+        ? hi + 'thanks for riding with The Standard.\n\n' +
+          'You\u2019re in our rewards now \u2014 no sign-up, your phone number is the account.\n\n' +
+          '$' + (rules ? rules.firstRide : 10) + ' off your next ride, already on\n' +
+          '$' + (rules ? rules.loyal : 15) + ' at ten rides\n' +
+          '$' + (rules ? rules.repeat : 10) + ' every ten after that\n' +
+          '$' + (rules ? rules.referral : 10) + ' when you send us someone\n' +
+          '$' + (rules ? rules.birthday : 15) + ' on your birthday\n\n' +
+          'Book at standardnj.com or text this number.'
+
+        // Every ride after that: what they have, what’s next, nothing else.
+        // They were told the rules once; repeating them every trip is how a
+        // thank-you turns into junk mail.
+        : hi + 'thanks for riding with The Standard. ' +
+          (credit ? 'You have $' + credit + ' on your account, off your next ride. ' : '') +
+          (pts ? 'That\u2019s ' + pts + ' ride' + (pts === 1 ? '' : 's') +
+                 (loyalNow ? ' \u2014 you\u2019re a loyal customer now. ' : '. ') : '') +
+          aheadLine +
+          'Book at standardnj.com or text this number.',
     };
   }
 
@@ -1296,6 +1319,14 @@
         }
 
         if(j.customer){
+          // THE MESSAGE HAS TO SEE THE RIDE IT JUST COUNTED.
+          //
+          // ride.customer came from the page load, so after tapping Completed
+          // it still held the numbers from BEFORE the ride counted - tap
+          // "After the ride" straight afterwards and the text thanked somebody
+          // for a ride it had not heard about, and quoted the old balance.
+          ride.customer = Object.assign({}, ride.customer || {}, j.customer);
+
           out.innerHTML = '<span class="good">' + esc(j.customer.standing) + '</span>' +
             (j.customer.creditEarned ? '<br><span class="good">Earned $' + j.customer.creditEarned +
               ' &mdash; balance owed $' + j.customer.creditOwed + '. Send it yourself.</span>' : '');
