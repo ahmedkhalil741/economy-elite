@@ -142,6 +142,16 @@
   .fare-box .lbl{font-family:var(--mono);font-size:0.68rem;letter-spacing:0.08em;
                  text-transform:uppercase;color:var(--steel)}
   .fare-box button{padding:9px 16px;font-size:0.85rem}
+  /* SAY THE WORD. A cancelled ride used to be a thin ring on a small button
+     and half the usual opacity - nothing on the card actually said cancelled,
+     and at a glance in a car it read as a live booking. Ahmed found this the
+     only way anyone finds it: by cancelling one and not believing it. */
+  .ride-status{font-family:var(--mono);font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;
+               font-weight:600;border-radius:100px;padding:3px 9px;margin-left:10px;
+               border:1px solid currentColor;white-space:nowrap}
+  .ride-status.off{color:#E0A0A0}
+  .ride-status.ok{color:#8fbf8f}
+  .ride-status.pending{color:var(--accent)}
   .ride.done{opacity:0.5}
   .ride.done:hover{opacity:1}
   .windowbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;
@@ -263,7 +273,16 @@
             padding:13px 20px;font-weight:500;font-size:0.95rem;font-family:inherit;cursor:pointer;}
   #bookingView .btn-line:hover{border-color:#8A8272;background:#161310;}
   #bookingView .review-note{font-size:0.78rem;color:#8A8272;margin-top:12px;line-height:1.6;}
-  #bookingView [hidden]{display:none !important;}
+  /* HIDDEN HAS TO MEAN HIDDEN, EVERYWHERE.
+     This rule was scoped to #bookingView when .qline and .qtip were found
+     showing through their own hidden attribute - a class that sets `display`
+     beats the browser's built-in `[hidden]{display:none}`, because a class
+     wins on specificity. Scoping the fix to the view it was found in left the
+     same trap set in the other one: .fare-box is display:flex, so the change-
+     the-price box sat open on every ride card from the day it was written.
+     Un-scoped now. Any future element that sets display and is rendered
+     hidden is covered rather than waiting to be noticed. */
+  [hidden]{display:none !important;}
 </style>
 </head>
 <body>
@@ -768,6 +787,18 @@
         '</div>';
     }
 
+    // Settled rides to the bottom. The CSS has claimed this happens since the
+    // day it was written and it never did - a cancelled 5am pickup sat at the
+    // top of the list looking exactly like work. Sorted here rather than on
+    // the server so the order survives a status change without a reload, and
+    // sorted in place because the cards address their ride by index.
+    data.rides.sort(function (a, b) {
+      var settled = function (r) {
+        return /^(completed|cancelled|no-?show)$/i.test(String(r.rideStatus || '').trim()) ? 1 : 0;
+      };
+      return settled(a) - settled(b);
+    });
+
     const list = document.getElementById('list');
     if(!data.rides.length){
       const scope = windowDays === '1' ? 'today' : windowDays === '30' ? 'this month' : windowDays === 'all' ? '' : 'this week';
@@ -803,6 +834,15 @@
       const isDone = String(r.rideStatus || '').toLowerCase() === 'completed';
       const isConfirmed = /^confirmed$/i.test(String(r.rideStatus || '').trim());
       const isSettled = /^(completed|cancelled|no-?show)$/i.test(String(r.rideStatus || '').trim());
+
+      // Cancelled and no-show are red, completed green, confirmed gold, and a
+      // ride nobody has touched yet gets nothing - a tag on every card would
+      // make the tag worthless.
+      const sTxt = String(r.rideStatus || '').trim();
+      const statusTag = !sTxt ? ''
+        : '<span class="ride-status ' +
+            (/cancel|no-?show/i.test(sTxt) ? 'off' : isDone ? 'ok' : 'pending') + '">' +
+            esc(sTxt) + '</span>';
       const statusRow = data.hasRideStatusColumn
         ? '<div class="status-row">' +
             '<span class="lbl">After the ride</span>' +
@@ -852,7 +892,7 @@
 
       return '<div class="ride' + (r.driver ? ' assigned' : '') + (isDone ? ' completed' : '') +
              (isSettled ? ' done' : '') + '" data-i="' + i + '">' +
-        '<div class="ride-when">' + esc(r.when || 'time not recorded') + '</div>' +
+        '<div class="ride-when">' + esc(r.when || 'time not recorded') + statusTag + '</div>' +
         '<div class="ride-route">' + esc(r.pickup) + '<span class="arrow">&rarr;</span>' + esc(r.dropoff) + '</div>' +
         standing +
         '<div class="ride-meta">' + tags.join('') +
@@ -1095,7 +1135,19 @@
         card.querySelectorAll('.st').forEach(b => b.classList.remove('on'));
         st.classList.add('on');
         card.classList.toggle('completed', wanted === 'Completed');
+        card.classList.add('done');
         ride.rideStatus = wanted;
+
+        // The word, there and then. Waiting for a refresh to show it is how
+        // you end up driving to a cancelled pickup.
+        var when = card.querySelector('.ride-when');
+        if (when) {
+          var tag = when.querySelector('.ride-status');
+          if (!tag) { tag = document.createElement('span'); when.appendChild(tag); }
+          tag.className = 'ride-status ' +
+            (/cancel|no-?show/i.test(wanted) ? 'off' : wanted === 'Completed' ? 'ok' : 'pending');
+          tag.textContent = wanted;
+        }
 
         if(j.customer){
           out.innerHTML = '<span class="good">' + esc(j.customer.standing) + '</span>' +
