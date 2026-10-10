@@ -322,6 +322,7 @@
       <p class="sub" style="margin:0" id="topSub">Upcoming rides</p>
     </div>
     <button class="btn-line" id="refresh">Refresh</button>
+    <button class="btn-line" id="signout">Sign out</button>
   </div>
   <nav class="toolbar">
     <button type="button" id="tabRides" class="on">Rides</button>
@@ -541,8 +542,28 @@
 </div>
 
 <script>
+  // REMEMBERED ON THIS DEVICE, NOT FOR THIS TAB.
+  //
+  // sessionStorage forgot the passcode every time the tab closed, which on a
+  // phone is every time you switch apps for long enough. Typing a long
+  // passcode at 4am in a car is the kind of friction that ends with somebody
+  // asking for the password to be taken off altogether - and this page carries
+  // customers' names, phone numbers and home addresses, so that was never
+  // going to happen.
+  //
+  // localStorage keeps it on THIS device until Sign out is tapped. Another
+  // phone, another browser, anyone else: still asked. And the passcode itself
+  // lives in Netlify, so changing it there locks every device at once, which
+  // is what you want the moment a phone goes missing.
   const KEY = 'standard-dispatch-token';
-  let token = sessionStorage.getItem(KEY) || '';
+  function readToken(){
+    // Private windows and locked-down browsers throw on access rather than
+    // returning null, and a dispatch page that refuses to load because storage
+    // is unavailable is worse than one that asks for the passcode again.
+    try { return localStorage.getItem(KEY) || sessionStorage.getItem(KEY) || ''; }
+    catch(e){ return ''; }
+  }
+  let token = readToken();
   let data = { rides: [], drivers: [] };
 
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
@@ -1489,7 +1510,10 @@
     msg.textContent = 'Checking…';
     try{
       await load();
-      sessionStorage.setItem(KEY, token);
+      // Best effort. If storage refuses, the page still works - it just asks
+      // again next time, which is the old behaviour and not a failure worth
+      // stopping for.
+      try { localStorage.setItem(KEY, token); } catch(e){}
       msg.textContent = '';
       open_();
     }catch(err){
@@ -1500,6 +1524,14 @@
     if(e.key === 'Enter') document.getElementById('unlock').click();
   });
   document.getElementById('refresh').addEventListener('click', () => load().catch(()=>{}));
+
+  // Forgets this device only. The passcode itself is unchanged, so every other
+  // phone stays signed in - to lock all of them, change ADMIN_TOKEN in Netlify.
+  document.getElementById('signout').addEventListener('click', () => {
+    try { localStorage.removeItem(KEY); } catch(e){}
+    try { sessionStorage.removeItem(KEY); } catch(e){}
+    location.reload();
+  });
 
   if(token) open_();
 
