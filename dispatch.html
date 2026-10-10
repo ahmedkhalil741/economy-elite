@@ -739,7 +739,7 @@
           '$' + (rules ? rules.repeat : 10) + ' every ten after that\n' +
           '$' + (rules ? rules.referral : 10) + ' when you send us someone\n' +
           '$' + (rules ? rules.birthday : 15) + ' on your birthday\n\n' +
-          'Book at standardnj.com or text this number.'
+          ''
 
         // Every ride after that: what they have, what’s next, nothing else.
         // They were told the rules once; repeating them every trip is how a
@@ -749,7 +749,7 @@
           (pts ? 'That\u2019s ' + pts + ' ride' + (pts === 1 ? '' : 's') +
                  (loyalNow ? ' \u2014 you\u2019re a loyal customer now. ' : '. ') : '') +
           aheadLine +
-          'Book at standardnj.com or text this number.',
+          '',
     };
   }
 
@@ -797,12 +797,12 @@
     if (lead.kind === 'birthday') {
       return hi + 'Hany here, from The Standard. Happy birthday from us \u2014 there\u2019s $' + gift +
         ' on your account for it' + alsoThere + ', and it comes off your next ride. ' +
-        'Use it whenever suits you. Book at standardnj.com or just text this number.';
+        'Use it whenever suits you.';
     }
     if (lead.kind === 'quiet') {
       return hi + 'Hany here, from The Standard. It\u2019s been a while since we drove you, and we\u2019d like to ' +
         'again \u2014 there\u2019s $' + gift + ' on your account waiting' + alsoThere +
-        ', off your next ride. Book at standardnj.com or text this number and I\u2019ll sort it.';
+        ', off your next ride.';
     }
     // Credit already earned by riding and never mentioned to them. Nothing is
     // being granted here, so the balance IS the whole story.
@@ -812,7 +812,7 @@
          ' and another $' + nx.amount + ' comes off' +
          (nx.becomesLoyal ? ', and you\u2019re a loyal customer' : '') + '. '
        : '. ') +
-      'Book at standardnj.com or text this number.';
+      '';
   }
 
   // What the row says about why this person is on the list. Plain facts - the
@@ -1012,10 +1012,27 @@
     credit:    'You have credit with The Standard',
   };
 
-  const SIGN_OFF = '\n\n\u2014 Hany\nThe Standard\n(908) 666-3777\nstandardnj.com';
+  // THE SIGN-OFF, ON EVERY MESSAGE AND SAID ONCE.
+  //
+  // Ahmed's: the booking line, best regards, his name, the number and the
+  // address. It used to be email-only; it is on texts too now, because plenty
+  // of customers have not saved the number and a text from a stranger with no
+  // name on it is a text people ignore.
+  //
+  // Which is why the bodies no longer end with "Book at standardnj.com or
+  // text this number" - that is this block's job now, and saying it twice in
+  // four lines is how a short message starts to feel like a leaflet.
+  const SIGN_OFF =
+    '\n\nYou can book at standardnj.com, or text or call us.' +
+    '\n\nBest regards,' +
+    '\nHany \u2014 The Standard' +
+    '\n(908) 666-3777 \u00b7 hany@standardnj.com';
 
+  // A text is the body plus the sign-off. An email is the same thing with a
+  // subject on top. One function each so there is no third version anywhere.
+  function asText(body){ return String(body).trimEnd() + SIGN_OFF; }
   function asEmail(kind, body){
-    return 'Subject: ' + (SUBJECTS[kind] || 'The Standard') + '\n\n' + body + SIGN_OFF;
+    return 'Subject: ' + (SUBJECTS[kind] || 'The Standard') + '\n\n' + String(body).trim();
   }
 
   // Both copy buttons, built once so every message box offers the same pair.
@@ -1033,7 +1050,7 @@
         setTimeout(() => { b.textContent = label; }, 2400);
       });
     };
-    wire('.c-text', () => body(), 'Copied');
+    wire('.c-text', () => body().trim(), 'Copied');
     wire('.c-mail', () => asEmail(kind, body()), 'Copied with subject');
     return row;
   }
@@ -1337,20 +1354,27 @@
         'Edit the box first if you like; the buttons copy what it says.</span>';
 
       const ta = box.querySelector('.msg-text');
-      ta.value = m.body;
+      ta.value = asText(m.body);
       // A blank message should land with the cursor in it, not make him tap again.
-      if (kindLabel === 'Write my own') setTimeout(() => { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, 0);
+      // Cursor goes where he types, which is after the greeting and well
+      // above the sign-off - not at the very end, underneath his own name.
+      if (kindLabel === 'Write my own') setTimeout(() => {
+        const at = asText('').indexOf(SIGN_OFF.trimStart().slice(0, 12));
+        const pos = ta.value.indexOf('\n\nYou can book at');
+        ta.focus();
+        ta.setSelectionRange(pos > 0 ? pos : ta.value.length, pos > 0 ? pos : ta.value.length);
+      }, 0);
 
       const acts = copyRow(box, m.kind, () => ta.value);
       if (p.phone) {
         const a1 = document.createElement('a');
         a1.className = 'btn-line';
         a1.style.cssText = 'text-decoration:none;display:inline-block';
-        a1.href = smsLink(p.phone, ta.value);
+        a1.href = smsLink(p.phone, ta.value.trim());
         a1.textContent = 'Text';
         // Rebuilt on every edit, because an sms: link freezes its body the
         // moment it is written and would otherwise send the draft he replaced.
-        ta.addEventListener('input', () => { a1.href = smsLink(p.phone, ta.value); });
+        ta.addEventListener('input', () => { a1.href = smsLink(p.phone, ta.value.trim()); });
         acts.appendChild(a1);
       }
       if (p.email) {
@@ -1359,7 +1383,7 @@
         a2.style.cssText = 'text-decoration:none;display:inline-block';
         const mailto = () => 'mailto:' + encodeURIComponent(p.email) +
           '?subject=' + encodeURIComponent(SUBJECTS[m.kind] || 'The Standard') +
-          '&body=' + encodeURIComponent(ta.value + SIGN_OFF);
+          '&body=' + encodeURIComponent(ta.value.trim());
         a2.href = mailto();
         a2.textContent = 'Email';
         ta.addEventListener('input', () => { a2.href = mailto(); });
@@ -1455,12 +1479,12 @@
         'and it goes out from (908) 666-3777. <b>Copy for email</b> adds a subject line and signs it off.</span>';
 
       const ta = box.querySelector('.msg-text');
-      ta.value = text;
+      ta.value = asText(text);
       const acts = copyRow(box, lead.kind, () => ta.value);
       const a = document.createElement('a');
       a.className = 'btn';
       a.style.cssText = 'text-decoration:none;display:inline-block';
-      a.href = smsLink(p.phone, text);
+      a.href = smsLink(p.phone, asText(text).trim());
       a.textContent = 'Text from this phone';
       acts.appendChild(a);
       box.insertBefore(acts, box.querySelector('.hint'));
@@ -1643,7 +1667,7 @@
         'subject line and signs it off. Edit the box first if you want to; both buttons copy what it says.</span>';
 
       const ta = box.querySelector('.msg-text');
-      ta.value = text;
+      ta.value = asText(text);
 
       // Reads the textarea, not the original string, so an edit Ahmed makes in
       // the box is what actually gets copied - otherwise the change he just
@@ -1653,7 +1677,7 @@
         const a = document.createElement('a');
         a.className = 'btn';
         a.style.cssText = 'text-decoration:none;display:inline-block';
-        a.href = smsLink(ride.phone, text);
+        a.href = smsLink(ride.phone, asText(text).trim());
         a.textContent = 'Text from this phone';
         row.appendChild(a);
       }
@@ -1862,19 +1886,19 @@
     if (kind === 'Birthday') {
       return { kind:'birthday', body: hi + 'Hany here, from The Standard. Happy birthday from us \u2014 ' +
         'there\u2019s $' + (rules ? rules.birthday : 15) + ' on your account for it, and it comes off your ' +
-        'next ride. Use it whenever suits you. Book at standardnj.com or just text this number.' };
+        'next ride. Use it whenever suits you.' };
     }
     if (kind === 'We miss you') {
       return { kind:'quiet', body: hi + 'Hany here, from The Standard. It\u2019s been a while since we drove ' +
         'you, and we\u2019d like to again \u2014 there\u2019s $' + (rules ? rules.winBack : 10) + ' on your ' +
-        'account waiting, off your next ride. Book at standardnj.com or text this number and I\u2019ll sort it.' };
+        'account waiting, off your next ride.' };
     }
     if (kind === 'You have credit') {
       return { kind:'credit', body: hi + 'Hany here, from The Standard. You\u2019ve got $' + bal + ' credit on ' +
         'your account, and it comes off your next ride automatically' +
         (nx && nx.ridesAway ? '. ' + nx.ridesAway + ' more ride' + (nx.ridesAway === 1 ? '' : 's') +
            ' and another $' + nx.amount + ' comes off' + (nx.becomesLoyal ? ', and you\u2019re a loyal customer' : '') + '. '
-         : '. ') + 'Book at standardnj.com or text this number.' };
+         : '. ') + '' };
     }
     if (kind === 'Rewards explained') {
       return { kind:'completed', body: hi + 'Hany here, from The Standard. A quick note on how our rewards ' +
@@ -1884,7 +1908,7 @@
         '$' + (rules ? rules.repeat : 10) + ' every ten after that\n' +
         '$' + (rules ? rules.referral : 10) + ' when you send us someone\n' +
         '$' + (rules ? rules.birthday : 15) + ' on your birthday\n\n' +
-        'Book at standardnj.com or text this number.' };
+        '' };
     }
     return { kind:'credit', body: hi + '' };
   }
