@@ -347,7 +347,7 @@
     <div>
       <h1>Dispatch</h1>
       <p class="sub" style="margin:0" id="topSub">Upcoming rides</p>
-      <p class="build" id="buildLine">Version 10 Oct 2026, 8:40pm</p>
+      <p class="build" id="buildLine">Version 10 Oct 2026, 8:53pm</p>
     </div>
     <button class="btn-line" id="refresh">Refresh</button>
     <button class="btn-line" id="signout">Sign out</button>
@@ -601,7 +601,7 @@
   // compares the build stamp baked into what it fetched with the one baked
   // into what is running. Different means this copy is old, and it says so
   // with a button rather than leaving anybody to guess.
-  const BUILD = '10 Oct 2026, 8:40pm';
+  const BUILD = '10 Oct 2026, 8:53pm';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -706,9 +706,15 @@
       : '';
 
     return {
+      // NO TRIP DETAILS IN THIS ONE. Ahmed's call, 10 Oct.
+      //
+      // Reading the date and the route back at somebody is a confirmation,
+      // and nothing is confirmed yet - Hany still has to agree it. Repeating
+      // it here either says nothing they did not just type, or quietly
+      // commits the business to a run it has not accepted. The details belong
+      // in the Confirmed message, which is where they already are.
       received:
-        hi + 'Thanks for booking with The Standard. We have your request for ' +
-        (ride.when || 'your ride') + (route ? ', ' + route : '') + '. ' +
+        hi + 'Thanks for booking with The Standard \u2014 we\u2019ve got your request. ' +
         'Hany will text you back shortly to confirm it, or with anything that needs adjusting. ' +
         'This number is the one to use for any change.',
 
