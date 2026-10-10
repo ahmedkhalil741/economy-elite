@@ -605,7 +605,7 @@
   // ------------------------------------------------------------------
   function custMsg(ride){
     const first = String(ride.name || '').trim().split(/\s+/)[0];
-    const hi = first ? 'Hi ' + first + ' \u2014 ' : '';
+    const hi = first ? 'Hi ' + first + ',\n\n' : '';
     const num = (v) => { const t = String(v == null ? '' : v).replace(/[$,\s]/g,'');
                          return /^\d+(\.\d+)?$/.test(t) ? parseFloat(t) : null; };
     const tipN = num(ride.tip) || 0;
@@ -637,13 +637,13 @@
 
     return {
       received:
-        hi + 'thanks for booking with The Standard. We have your request for ' +
+        hi + 'Thanks for booking with The Standard. We have your request for ' +
         (ride.when || 'your ride') + (route ? ', ' + route : '') + '. ' +
         'Hany will text you back shortly to confirm it, or with anything that needs adjusting. ' +
         'This number is the one to use for any change.',
 
       confirmed:
-        hi + 'Hany from The Standard. You\u2019re confirmed for ' + (ride.when || 'your ride') + '. ' +
+        hi + 'Hany here, from The Standard. You\u2019re confirmed for ' + (ride.when || 'your ride') + '. ' +
         'Pickup ' + route + '. ' +
         (ride.vehicle ? ride.vehicle + '. ' : '') +
         (ride.fare ? 'Total ' + money(ride.fare) + '. ' : '') +
@@ -662,7 +662,7 @@
         // fraction of the effort.
         //
         // Every figure comes from the server, which reads _loyalty.js.
-        ? hi + 'thanks for riding with The Standard.\n\n' +
+        ? hi + 'Thanks for riding with The Standard.\n\n' +
           'You\u2019re in our rewards now \u2014 no sign-up, your phone number is the account.\n\n' +
           '$' + (rules ? rules.firstRide : 10) + ' off your next ride, already on\n' +
           '$' + (rules ? rules.loyal : 15) + ' at ten rides\n' +
@@ -674,7 +674,7 @@
         // Every ride after that: what they have, what’s next, nothing else.
         // They were told the rules once; repeating them every trip is how a
         // thank-you turns into junk mail.
-        : hi + 'thanks for riding with The Standard. ' +
+        : hi + 'Thanks for riding with The Standard. ' +
           (credit ? 'You have $' + credit + ' on your account, off your next ride. ' : '') +
           (pts ? 'That\u2019s ' + pts + ' ride' + (pts === 1 ? '' : 's') +
                  (loyalNow ? ' \u2014 you\u2019re a loyal customer now. ' : '. ') : '') +
@@ -706,7 +706,7 @@
   // ------------------------------------------------------------------
   function outreachMsg(p){
     const first = String(p.name || '').trim().split(/\s+/)[0];
-    const hi = first ? 'Hi ' + first + ' \u2014 ' : '';
+    const hi = first ? 'Hi ' + first + ',\n\n' : '';
     const lead = p.reasons[0];
     const bal = Number(p.creditOwed) || 0;
     const nx = p.next;
@@ -725,18 +725,18 @@
     const alsoThere = total > gift ? ', $' + total + ' on there in total' : '';
 
     if (lead.kind === 'birthday') {
-      return hi + 'Hany from The Standard. Happy birthday from us \u2014 there\u2019s $' + gift +
+      return hi + 'Hany here, from The Standard. Happy birthday from us \u2014 there\u2019s $' + gift +
         ' on your account for it' + alsoThere + ', and it comes off your next ride. ' +
         'Use it whenever suits you. Book at standardnj.com or just text this number.';
     }
     if (lead.kind === 'quiet') {
-      return hi + 'Hany from The Standard. It\u2019s been a while since we drove you, and we\u2019d like to ' +
+      return hi + 'Hany here, from The Standard. It\u2019s been a while since we drove you, and we\u2019d like to ' +
         'again \u2014 there\u2019s $' + gift + ' on your account waiting' + alsoThere +
         ', off your next ride. Book at standardnj.com or text this number and I\u2019ll sort it.';
     }
     // Credit already earned by riding and never mentioned to them. Nothing is
     // being granted here, so the balance IS the whole story.
-    return hi + 'Hany from The Standard. You\u2019ve got $' + bal + ' credit on your account from ' +
+    return hi + 'Hany here, from The Standard. You\u2019ve got $' + bal + ' credit on your account from ' +
       'riding with us, and it comes off your next ride automatically' +
       (nx && nx.ridesAway ? '. ' + nx.ridesAway + ' more ride' + (nx.ridesAway === 1 ? '' : 's') +
          ' and another $' + nx.amount + ' comes off' +
@@ -919,6 +919,53 @@
           'The ride is still completed \u2014 only this note failed.';
       }
     }));
+  }
+
+  // ------------------------------------------------------------------
+  // THE SAME WORDS, AS AN EMAIL.
+  //
+  // Ahmed wants one structure that fits both, and the difference between a
+  // text and an email is smaller than it looks: an email needs a SUBJECT and
+  // a SIGN-OFF, and a text needs neither. The body is identical, so it is
+  // written once and these two wrap it.
+  //
+  // Not a different message. A text that says one thing and an email that
+  // says another is how a customer ends up quoting the wrong figure back at
+  // you.
+  // ------------------------------------------------------------------
+  const SUBJECTS = {
+    received:  'We have your booking \u2014 The Standard',
+    confirmed: 'You\u2019re confirmed \u2014 The Standard',
+    completed: 'Thanks for riding with us \u2014 The Standard',
+    birthday:  'Happy birthday from The Standard',
+    quiet:     'We\u2019d like to drive you again',
+    credit:    'You have credit with The Standard',
+  };
+
+  const SIGN_OFF = '\n\n\u2014 Hany\nThe Standard\n(908) 666-3777\nstandardnj.com';
+
+  function asEmail(kind, body){
+    return 'Subject: ' + (SUBJECTS[kind] || 'The Standard') + '\n\n' + body + SIGN_OFF;
+  }
+
+  // Both copy buttons, built once so every message box offers the same pair.
+  function copyRow(box, kind, body){
+    const row = document.createElement('div');
+    row.className = 'sms-actions';
+    row.innerHTML = '<button class="btn-line c-text">Copy</button>' +
+                    '<button class="btn-line c-mail">Copy for email</button>';
+    const wire = (sel, text, done) => {
+      const b = row.querySelector(sel);
+      b.addEventListener('click', async () => {
+        const label = b.textContent;
+        try { await navigator.clipboard.writeText(text()); b.textContent = done; }
+        catch (err) { b.textContent = 'Press Cmd-C'; }
+        setTimeout(() => { b.textContent = label; }, 2400);
+      });
+    };
+    wire('.c-text', () => body(), 'Copied');
+    wire('.c-mail', () => asEmail(kind, body()), 'Copied with subject');
+    return row;
   }
 
   const MSG_LABEL = { received: 'Got your booking', confirmed: 'Confirmed', completed: 'After the ride' };
@@ -1272,23 +1319,19 @@
       box.hidden = false;
       box.innerHTML =
         '<textarea class="msg-text" spellcheck="false"></textarea>' +
-        '<div class="sms-actions">' +
-          '<button class="btn-line omsg-copy">Copy it</button>' +
-          '<a class="btn" style="text-decoration:none;display:inline-block" href="' +
-            esc(smsLink(p.phone, text)) + '">Text from this phone</a>' +
-        '</div>' +
-        '<span class="hint">Copy it, open the messages app on the company phone, paste, send &mdash; ' +
-        'that way it goes out from (908) 666-3777. &ldquo;Text from this phone&rdquo; uses whatever ' +
-        'number this device sends from.</span>';
+        '<span class="hint"><b>Copy</b> for a text &mdash; paste it into Messages on the company phone ' +
+        'and it goes out from (908) 666-3777. <b>Copy for email</b> adds a subject line and signs it off.</span>';
 
       const ta = box.querySelector('.msg-text');
       ta.value = text;
-      const cp = box.querySelector('.omsg-copy');
-      cp.addEventListener('click', async () => {
-        try { await navigator.clipboard.writeText(ta.value); cp.textContent = 'Copied'; }
-        catch (err) { ta.select(); cp.textContent = 'Press Cmd-C'; }
-        setTimeout(() => { cp.textContent = 'Copy it'; }, 2400);
-      });
+      const acts = copyRow(box, lead.kind, () => ta.value);
+      const a = document.createElement('a');
+      a.className = 'btn';
+      a.style.cssText = 'text-decoration:none;display:inline-block';
+      a.href = smsLink(p.phone, text);
+      a.textContent = 'Text from this phone';
+      acts.appendChild(a);
+      box.insertBefore(acts, box.querySelector('.hint'));
       return;
     }
 
@@ -1463,25 +1506,26 @@
       box.hidden = false;
       box.innerHTML =
         '<textarea class="msg-text" spellcheck="false"></textarea>' +
-        '<div class="sms-actions">' +
-          '<button class="btn-line msg-copy">Copy it</button>' +
-          (ride.phone
-            ? '<a class="btn" style="text-decoration:none;display:inline-block" href="' +
-                esc(smsLink(ride.phone, text)) + '">Text from this phone</a>'
-            : '') +
-        '</div>' +
-        '<span class="hint">' + esc(MSG_LABEL[kind] || '') + '. Copy it, open the messages app on the ' +
-        'company phone, paste, send &mdash; that way it goes out from (908) 666-3777. ' +
-        '&ldquo;Text from this phone&rdquo; uses whatever number this device sends from.</span>';
+        '<span class="hint">' + esc(MSG_LABEL[kind] || '') + '. <b>Copy</b> for a text &mdash; paste it into ' +
+        'Messages on the company phone and it goes out from (908) 666-3777. <b>Copy for email</b> adds a ' +
+        'subject line and signs it off. Edit the box first if you want to; both buttons copy what it says.</span>';
 
       const ta = box.querySelector('.msg-text');
       ta.value = text;
-      const cp = box.querySelector('.msg-copy');
-      cp.addEventListener('click', async () => {
-        try { await navigator.clipboard.writeText(ta.value); cp.textContent = 'Copied'; }
-        catch (err) { ta.select(); cp.textContent = 'Press Cmd-C'; }
-        setTimeout(() => { cp.textContent = 'Copy it'; }, 2400);
-      });
+
+      // Reads the textarea, not the original string, so an edit Ahmed makes in
+      // the box is what actually gets copied - otherwise the change he just
+      // typed is silently thrown away.
+      const row = copyRow(box, kind, () => ta.value);
+      if (ride.phone) {
+        const a = document.createElement('a');
+        a.className = 'btn';
+        a.style.cssText = 'text-decoration:none;display:inline-block';
+        a.href = smsLink(ride.phone, text);
+        a.textContent = 'Text from this phone';
+        row.appendChild(a);
+      }
+      box.insertBefore(row, box.querySelector('.hint'));
       return;
     }
 
