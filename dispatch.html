@@ -347,7 +347,7 @@
     <div>
       <h1>Dispatch</h1>
       <p class="sub" style="margin:0" id="topSub">Upcoming rides</p>
-      <p class="build">Version 10 Oct 2026</p>
+      <p class="build" id="buildLine">Version 10 Oct 2026, 8:40pm</p>
     </div>
     <button class="btn-line" id="refresh">Refresh</button>
     <button class="btn-line" id="signout">Sign out</button>
@@ -590,6 +590,51 @@
   // phone, another browser, anyone else: still asked. And the passcode itself
   // lives in Netlify, so changing it there locks every device at once, which
   // is what you want the moment a phone goes missing.
+  // IS THIS PAGE THE CURRENT ONE?
+  //
+  // Three times now a change has been live on the server while Ahmed's phone
+  // served a saved copy, and from the outside that is indistinguishable from
+  // the change not working. A date was not enough to tell them apart - eight
+  // builds went out on the same day.
+  //
+  // So the page asks. On load it fetches its own URL past every cache and
+  // compares the build stamp baked into what it fetched with the one baked
+  // into what is running. Different means this copy is old, and it says so
+  // with a button rather than leaving anybody to guess.
+  const BUILD = '10 Oct 2026, 8:40pm';
+  (async function checkBuild(){
+    try {
+      const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
+      const live = ((await res.text()).match(/const BUILD = '([^']+)'/) || [])[1];
+      if (!live || live === BUILD) return;
+
+      const bar = document.createElement('div');
+      bar.className = 'note';
+      bar.style.cssText = 'border-left-color:#8fbf8f;margin:0 0 14px';
+      bar.innerHTML = '<strong>There\u2019s a newer version of this page.</strong> ' +
+        'You\u2019re on ' + esc(BUILD) + ', the server has ' + esc(live) + '. ' +
+        '<button class="btn-line" id="getNew" style="margin-top:10px;display:block">Get the new one</button>';
+      document.getElementById('app').insertBefore(bar, document.getElementById('app').firstChild);
+
+      document.getElementById('getNew').addEventListener('click', async () => {
+        // Clear the offline copies first, or the reload serves the same old
+        // page back and nothing appears to happen - which is exactly the loop
+        // this is meant to end.
+        try {
+          if (window.caches) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+          }
+          if (navigator.serviceWorker) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map(r => r.unregister()));
+          }
+        } catch (err) { /* nothing to clear, or not allowed - reload anyway */ }
+        location.replace(location.pathname + '?v=' + Date.now());
+      });
+    } catch (err) { /* offline, or the check failed - never block the page */ }
+  })();
+
   const KEY = 'standard-dispatch-token';
   function readToken(){
     // Private windows and locked-down browsers throw on access rather than
