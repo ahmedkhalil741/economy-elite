@@ -28,6 +28,9 @@
   input,select{width:100%;background:var(--raised);border:1px solid var(--line);color:var(--ink);padding:11px 13px;border-radius:9px}
   input:focus,select:focus{outline:none;border-color:var(--accent)}
   button{cursor:pointer;border:none;border-radius:100px;padding:11px 20px;font-weight:600}
+  a.btn, a.btn-line{display:inline-block;border-radius:100px;padding:11px 20px;font-weight:600;
+                    text-decoration:none;line-height:1.1;font-size:1rem}
+  a.btn-line{font-weight:500}
   .btn{background:var(--ink);color:#0B0A08}
   .btn:hover{background:#E3DCC9}
   .btn-line{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:500}
@@ -60,6 +63,21 @@
   .person-why b{color:var(--ink);font-weight:500}
   .person-acts{display:flex;gap:9px;flex-wrap:wrap}
   .person .msg-box{margin-top:12px}
+  /* Messages: pick a passenger, write to them. */
+  .search{width:100%;background:var(--raised);border:1px solid var(--line);color:var(--ink);
+          font-family:inherit;font-size:1rem;padding:12px 14px;border-radius:10px;margin-bottom:14px}
+  .search::placeholder{color:var(--steel)}
+  .search:focus{outline:none;border-color:var(--accent)}
+  .pax{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+  .pax.open{border-color:var(--accent)}
+  .pax-name{font-size:0.98rem;font-weight:500;margin-bottom:4px}
+  .pax-name .loyal{color:var(--accent);font-size:0.85em}
+  .pax-meta{font-size:0.8rem;color:var(--steel);line-height:1.65}
+  .pax-meta a{color:var(--dim)}
+  .pax-meta .owed{color:var(--accent)}
+  .pax-pick{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .pax .msg-box{margin-top:12px}
+
   .card-box{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
   .card-box .lbl{font-family:var(--mono);font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase;
                  color:var(--steel);display:block;margin-bottom:9px}
@@ -337,6 +355,7 @@
   <nav class="toolbar">
     <button type="button" id="tabRides" class="on">Rides</button>
     <button type="button" id="tabNew">New booking</button>
+    <button type="button" id="tabMsg">Messages</button>
   </nav>
 
   <section id="ridesView">
@@ -349,6 +368,12 @@
   <!-- Was admin-booking.html. Its markup is unchanged apart from losing its
        own passcode box and its own switcher, both of which this page now
        owns. -->
+  <section id="msgView" hidden>
+    <input class="search" id="pSearch" type="search" placeholder="Find a passenger &mdash; name or number"
+           autocomplete="off" aria-label="Find a passenger">
+    <div id="pList"></div>
+  </section>
+
   <section id="bookingView" hidden>
 
 
@@ -1237,6 +1262,68 @@
   }
 
   document.addEventListener('click', async (e) => {
+    // ---- Messages tab: pick a passenger, pick a message ----
+    const pk = e.target.closest('.ppick');
+    if (pk) {
+      const row = pk.closest('.pax');
+      const p = (document.getElementById('pList')._rows || [])[Number(row.dataset.p)];
+      const box = row.querySelector('.msg-box');
+      if (!p) return;
+
+      const kindLabel = pk.textContent.trim();
+      // Same button twice closes it.
+      if (!box.hidden && box.dataset.pick === kindLabel) {
+        box.hidden = true;
+        row.classList.remove('open');
+        row.querySelectorAll('.ppick').forEach(b => b.classList.remove('on'));
+        return;
+      }
+      row.querySelectorAll('.ppick').forEach(b => b.classList.toggle('on', b === pk));
+      row.classList.add('open');
+
+      const m = paxMsg(p, kindLabel);
+      box.dataset.pick = kindLabel;
+      box.hidden = false;
+      box.innerHTML =
+        '<textarea class="msg-text" spellcheck="false"></textarea>' +
+        '<span class="hint"><b>Copy</b> for a text. <b>Copy for email</b> adds a subject and signs it off. ' +
+        (p.email ? '<b>Email</b> opens your mail app with it already written. '
+                 : 'No email on file for this one \u2014 text it, or add their address to the Customers tab. ') +
+        'Edit the box first if you like; the buttons copy what it says.</span>';
+
+      const ta = box.querySelector('.msg-text');
+      ta.value = m.body;
+      // A blank message should land with the cursor in it, not make him tap again.
+      if (kindLabel === 'Write my own') setTimeout(() => { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, 0);
+
+      const acts = copyRow(box, m.kind, () => ta.value);
+      if (p.phone) {
+        const a1 = document.createElement('a');
+        a1.className = 'btn-line';
+        a1.style.cssText = 'text-decoration:none;display:inline-block';
+        a1.href = smsLink(p.phone, ta.value);
+        a1.textContent = 'Text';
+        // Rebuilt on every edit, because an sms: link freezes its body the
+        // moment it is written and would otherwise send the draft he replaced.
+        ta.addEventListener('input', () => { a1.href = smsLink(p.phone, ta.value); });
+        acts.appendChild(a1);
+      }
+      if (p.email) {
+        const a2 = document.createElement('a');
+        a2.className = 'btn';
+        a2.style.cssText = 'text-decoration:none;display:inline-block';
+        const mailto = () => 'mailto:' + encodeURIComponent(p.email) +
+          '?subject=' + encodeURIComponent(SUBJECTS[m.kind] || 'The Standard') +
+          '&body=' + encodeURIComponent(ta.value + SIGN_OFF);
+        a2.href = mailto();
+        a2.textContent = 'Email';
+        ta.addEventListener('input', () => { a2.href = mailto(); });
+        acts.appendChild(a2);
+      }
+      box.insertBefore(acts, box.querySelector('.hint'));
+      return;
+    }
+
     // ---- text somebody who is not on a ride ----
     //
     // ORDER MATTERS HERE AND IT IS THE WHOLE POINT OF THIS BRANCH. For a
@@ -1705,8 +1792,101 @@
   // ---- the two views ----
   // A hash so the browser's back button and a home-screen shortcut can land
   // straight on either one: /dispatch is the rides, /dispatch#new is the form.
+  // ------------------------------------------------------------------
+  // MESSAGES: pick a passenger, write to them.
+  //
+  // The other two message routes are both tied to something happening - a
+  // ride on a card, or a credit the system noticed. This one is for the times
+  // there is nothing to react to and Ahmed simply wants to write to somebody:
+  // a change of plan, a thank-you, a note to a regular. Precisely because
+  // nothing flagged them, the to-text list is no use for finding them.
+  //
+  // Five ready messages and a blank one. The ready ones are the same words
+  // the rest of the page sends, so a customer never gets two different
+  // versions of the same promise.
+  // ------------------------------------------------------------------
+  const PICKS = ['Birthday', 'We miss you', 'You have credit', 'Rewards explained', 'Write my own'];
+
+  function paxMsg(p, kind){
+    const first = String(p.name || '').trim().split(/\s+/)[0];
+    const hi = first ? 'Hi ' + first + ',\n\n' : '';
+    const rules = (data && data.loyalty) || null;
+    const bal = Number(p.creditOwed) || 0;
+    const nx = p.next;
+
+    if (kind === 'Birthday') {
+      return { kind:'birthday', body: hi + 'Hany here, from The Standard. Happy birthday from us \u2014 ' +
+        'there\u2019s $' + (rules ? rules.birthday : 15) + ' on your account for it, and it comes off your ' +
+        'next ride. Use it whenever suits you. Book at standardnj.com or just text this number.' };
+    }
+    if (kind === 'We miss you') {
+      return { kind:'quiet', body: hi + 'Hany here, from The Standard. It\u2019s been a while since we drove ' +
+        'you, and we\u2019d like to again \u2014 there\u2019s $' + (rules ? rules.winBack : 10) + ' on your ' +
+        'account waiting, off your next ride. Book at standardnj.com or text this number and I\u2019ll sort it.' };
+    }
+    if (kind === 'You have credit') {
+      return { kind:'credit', body: hi + 'Hany here, from The Standard. You\u2019ve got $' + bal + ' credit on ' +
+        'your account, and it comes off your next ride automatically' +
+        (nx && nx.ridesAway ? '. ' + nx.ridesAway + ' more ride' + (nx.ridesAway === 1 ? '' : 's') +
+           ' and another $' + nx.amount + ' comes off' + (nx.becomesLoyal ? ', and you\u2019re a loyal customer' : '') + '. '
+         : '. ') + 'Book at standardnj.com or text this number.' };
+    }
+    if (kind === 'Rewards explained') {
+      return { kind:'completed', body: hi + 'Hany here, from The Standard. A quick note on how our rewards ' +
+        'work \u2014 no sign-up, your phone number is the account.\n\n' +
+        '$' + (rules ? rules.firstRide : 10) + ' after your first ride\n' +
+        '$' + (rules ? rules.loyal : 15) + ' at ten rides\n' +
+        '$' + (rules ? rules.repeat : 10) + ' every ten after that\n' +
+        '$' + (rules ? rules.referral : 10) + ' when you send us someone\n' +
+        '$' + (rules ? rules.birthday : 15) + ' on your birthday\n\n' +
+        'Book at standardnj.com or text this number.' };
+    }
+    return { kind:'credit', body: hi + '' };
+  }
+
+  function renderPeople(){
+    const wrap = document.getElementById('pList');
+    if (!wrap) return;
+    const q = (document.getElementById('pSearch').value || '').trim().toLowerCase();
+    const digits = q.replace(/\D/g, '');
+    const all = data.people || [];
+    const rows = !q ? all : all.filter(p =>
+      String(p.name).toLowerCase().indexOf(q) !== -1 ||
+      (digits && String(p.phone).replace(/\D/g, '').indexOf(digits) !== -1) ||
+      String(p.email || '').toLowerCase().indexOf(q) !== -1);
+
+    if (!all.length) {
+      wrap.innerHTML = '<p class="empty">No customers yet.</p>';
+      return;
+    }
+    if (!rows.length) {
+      wrap.innerHTML = '<p class="empty">Nobody by that name or number.</p>';
+      return;
+    }
+
+    wrap.innerHTML = rows.map((p, i) => {
+      const star = p.status === 'Loyal' ? ' <span class="loyal">&#9733;</span>' : '';
+      const bits = [];
+      if (p.phone) bits.push('<a href="tel:' + esc(p.phone) + '">' + esc(p.phone) + '</a>');
+      bits.push(p.email ? '<a href="mailto:' + esc(p.email) + '">' + esc(p.email) + '</a>' : 'no email');
+      bits.push(p.completedRides + ' ride' + (p.completedRides === 1 ? '' : 's'));
+      if (p.creditOwed > 0) bits.push('<span class="owed">$' + p.creditOwed + ' credit</span>');
+      if (p.birthday) bits.push('birthday ' + esc(p.birthday));
+      return '<div class="pax" data-p="' + i + '">' +
+        '<div class="pax-name">' + esc(p.name) + star + '</div>' +
+        '<div class="pax-meta">' + bits.join(' &middot; ') + '</div>' +
+        '<div class="pax-pick">' +
+          PICKS.map(k => '<button class="why ppick">' + k + '</button>').join('') +
+        '</div>' +
+        '<div class="msg-box" hidden></div>' +
+      '</div>';
+    }).join('');
+    wrap._rows = rows;
+  }
+
   const TABS = { rides:['tabRides','ridesView','Upcoming rides'],
-                 nu:['tabNew','bookingView','Phone, text and email bookings'] };
+                 nu:['tabNew','bookingView','Phone, text and email bookings'],
+                 msg:['tabMsg','msgView','Write to a passenger'] };
   function showView(which){
     const [btnOn, viewOn, sub] = TABS[which];
     for(const k in TABS){
@@ -1716,13 +1896,18 @@
     }
     document.getElementById('topSub').textContent = sub;
     document.getElementById('refresh').hidden = which !== 'rides';
-    if (location.hash !== (which === 'nu' ? '#new' : '')) {
-      history.replaceState(null, '', which === 'nu' ? '#new' : location.pathname);
+    const hash = which === 'nu' ? '#new' : which === 'msg' ? '#messages' : '';
+    if (location.hash !== hash) {
+      history.replaceState(null, '', hash || location.pathname);
     }
+    if (which === 'msg') renderPeople();
   }
   document.getElementById('tabRides').addEventListener('click', () => showView('rides'));
   document.getElementById('tabNew').addEventListener('click', () => showView('nu'));
+  document.getElementById('tabMsg').addEventListener('click', () => showView('msg'));
+  document.getElementById('pSearch').addEventListener('input', renderPeople);
   if (location.hash === '#new') showView('nu');
+  if (location.hash === '#messages') showView('msg');
 </script>
 
 <!-- The booking view's own script, wrapped so its names cannot collide with

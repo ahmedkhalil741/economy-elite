@@ -132,6 +132,12 @@ exports.handler = async function (event) {
     // Friday who is also owed $10 is one text, not two, and splitting them is
     // how a customer gets messaged twice in an hour.
     const toText = [];
+
+    // EVERY customer, for the Messages tab - name, phone, email and standing.
+    // toText is "who needs a text today"; this is "everyone, so Ahmed can pick
+    // one". Two different questions, and the first is useless for the second:
+    // he wants to write to somebody precisely BECAUSE nothing flagged them.
+    const people = [];
     const today = new Date();
 
     try {
@@ -170,6 +176,15 @@ exports.handler = async function (event) {
         if (completedRides > 0 && L.justWentQuiet(c.last_ride, today)) {
           reasons.push({ kind: 'quiet', amount: L.WIN_BACK_CREDIT, days: L.daysSince(c.last_ride, today) });
         }
+        people.push({
+          rowNumber: ri + 2,
+          name: c.name || c.phone, phone: c.phone || '', email: c.email || '',
+          status, activity, points, completedRides, creditOwed,
+          birthday: c.birthday || '',
+          lastRide: c.last_ride || '',
+          next: L.nextMilestone(points),
+        });
+
         if (reasons.length) {
           toText.push({
             rowNumber: ri + 2,
@@ -187,6 +202,11 @@ exports.handler = async function (event) {
 
     // Birthdays first - they have a date on them and stop being true. A credit
     // owed is true for as long as it takes.
+    // Most recently in the car first: the person Ahmed wants to write to is
+    // usually somebody he has just thought about, and he has just driven them.
+    people.sort((a, b) => String(b.lastRide || '').localeCompare(String(a.lastRide || '')) ||
+                          String(a.name).localeCompare(String(b.name)));
+
     const ORDER = { birthday: 0, quiet: 1, credit: 2 };
     toText.sort((a, b) => ORDER[a.reasons[0].kind] - ORDER[b.reasons[0].kind] ||
                           String(a.name).localeCompare(String(b.name)));
@@ -288,6 +308,7 @@ exports.handler = async function (event) {
         rides,
         beyond,
         toText,
+        people,
         // Every figure the dispatch page quotes to a customer comes from here,
         // which reads _loyalty.js. Nothing in the page hardcodes a dollar
         // amount, so a rule change in one file can never leave a text message
