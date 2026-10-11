@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>How was your ride? — The Standard Private Car Service</title>
+<meta name="description" content="Tell The Standard how your ride went.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="icon.svg">
+<meta name="theme-color" content="#0B0A08">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0A08; --raised:#161310; --panel:#1C1815; --line:#332D26;
+    --ink:#F2EDE3; --dim:#B5ADA0; --steel:#8A8272; --accent:#C9A96B;
+    --display:'Fraunces',Georgia,serif;
+    --body:'Inter',system-ui,-apple-system,sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);
+       font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:560px;margin:0 auto;padding:36px 20px 64px}
+
+  .mark{width:38px;height:38px;color:var(--accent);margin-bottom:18px}
+  h1{font-family:var(--display);font-weight:700;font-size:1.75rem;line-height:1.15;margin:0 0 10px}
+  .lede{color:var(--dim);font-size:0.95rem;margin:0 0 30px}
+
+  .q{margin-bottom:26px}
+  .q > label{display:block;font-size:0.95rem;font-weight:500;margin-bottom:10px}
+  .q .hint{display:block;font-size:0.82rem;color:var(--steel);font-weight:400;margin-top:3px}
+
+  /* Stars are taps, not a dropdown. On a phone, five big targets beat a
+     menu that has to be opened, scrolled and dismissed. */
+  .stars{display:flex;gap:8px}
+  .star{flex:1;background:transparent;border:1px solid var(--line);color:var(--steel);
+        border-radius:12px;padding:14px 0;font-size:1.5rem;line-height:1;cursor:pointer}
+  .star.on{border-color:var(--accent);color:var(--accent);background:rgba(201,169,107,0.1)}
+  .star:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{background:transparent;border:1px solid var(--line);color:var(--dim);
+        border-radius:100px;padding:10px 15px;font-size:0.88rem;font-family:inherit;cursor:pointer}
+  .chip.on{border-color:var(--accent);color:var(--accent);background:rgba(201,169,107,0.1)}
+
+  textarea,input[type=text]{width:100%;background:var(--raised);border:1px solid var(--line);
+    color:var(--ink);border-radius:12px;padding:13px 14px;font-family:inherit;font-size:1rem;
+    line-height:1.6;resize:vertical}
+  textarea{min-height:88px}
+  textarea:focus,input:focus{outline:none;border-color:var(--accent)}
+
+  .send{width:100%;background:var(--ink);color:#0B0A08;border:none;border-radius:100px;
+        padding:15px 20px;font-family:inherit;font-size:1rem;font-weight:600;cursor:pointer;margin-top:6px}
+  .send:disabled{opacity:0.55}
+  .note{font-size:0.82rem;color:var(--steel);margin-top:14px;line-height:1.6}
+  .result{margin-top:16px;font-size:0.9rem;line-height:1.6;display:none}
+  .result.show{display:block}
+  .bad{color:#E0A0A0}
+
+  .done{text-align:center;padding:40px 0}
+  .done h2{font-family:var(--display);font-weight:600;font-size:1.5rem;margin:0 0 10px}
+  .done p{color:var(--dim);margin:0 0 22px}
+  .done a{color:var(--accent)}
+  [hidden]{display:none !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <form id="form">
+    <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M70 25C70 12 30 12 30 33C30 43 42 47.5 52 49.5" stroke="currentColor" stroke-width="11" stroke-linecap="round" fill="none"/>
+      <path d="M48 52.5C58 54.5 70 57 70 67C70 88 30 88 30 75" stroke="currentColor" stroke-width="11" stroke-linecap="round" fill="none"/>
+    </svg>
+
+    <h1>How was your ride?</h1>
+    <p class="lede">Four questions, under a minute. It goes straight to Hany and
+      it changes how we drive you next time.</p>
+
+    <div class="q">
+      <label id="rateLabel">How did we do?</label>
+      <div class="stars" role="group" aria-labelledby="rateLabel">
+        <button type="button" class="star" data-v="1" aria-label="1 star">&#9733;</button>
+        <button type="button" class="star" data-v="2" aria-label="2 stars">&#9733;</button>
+        <button type="button" class="star" data-v="3" aria-label="3 stars">&#9733;</button>
+        <button type="button" class="star" data-v="4" aria-label="4 stars">&#9733;</button>
+        <button type="button" class="star" data-v="5" aria-label="5 stars">&#9733;</button>
+      </div>
+    </div>
+
+    <div class="q">
+      <label id="heardLabel">How did you hear about us?</label>
+      <div class="chips" role="group" aria-labelledby="heardLabel" id="heard">
+        <button type="button" class="chip">Google</button>
+        <button type="button" class="chip">Yelp</button>
+        <button type="button" class="chip">Nextdoor</button>
+        <button type="button" class="chip">A friend</button>
+        <button type="button" class="chip">Card or flyer</button>
+        <button type="button" class="chip">Saw the car</button>
+        <button type="button" class="chip">Other</button>
+      </div>
+    </div>
+
+    <div class="q">
+      <label for="liked">What did we get right?</label>
+      <textarea id="liked" placeholder="Anything at all."></textarea>
+    </div>
+
+    <div class="q">
+      <label for="improve">What could we have done better?
+        <span class="hint">Say it plainly. It is more use to us than a compliment.</span>
+      </label>
+      <textarea id="improve" placeholder="Nothing is too small."></textarea>
+    </div>
+
+    <div class="q">
+      <label for="remember">Anything we should remember for next time?
+        <span class="hint">Temperature, a quieter ride, help with bags, a car seat, where you like to be collected.</span>
+      </label>
+      <textarea id="remember" placeholder="We will put it on your account."></textarea>
+    </div>
+
+    <div class="q" id="phoneQ">
+      <label for="phone">Your phone number
+        <span class="hint">So we know whose account to put it on.</span>
+      </label>
+      <input type="text" id="phone" inputmode="tel" autocomplete="tel" placeholder="(908) 555-0123">
+    </div>
+
+    <button type="submit" class="send" id="send">Send it to Hany</button>
+    <p class="note">No account, no password, nothing shared with anyone else.
+      We read every one of these.</p>
+    <div class="result" id="result"></div>
+  </form>
+
+  <div class="done" id="done" hidden>
+    <svg class="mark" viewBox="0 0 100 100" aria-hidden="true" style="margin:0 auto 18px">
+      <path d="M70 25C70 12 30 12 30 33C30 43 42 47.5 52 49.5" stroke="currentColor" stroke-width="11" stroke-linecap="round" fill="none"/>
+      <path d="M48 52.5C58 54.5 70 57 70 67C70 88 30 88 30 75" stroke="currentColor" stroke-width="11" stroke-linecap="round" fill="none"/>
+    </svg>
+    <h2>Thank you.</h2>
+    <p>Hany reads these himself. If you asked for something, it is on your
+      account for next time.</p>
+    <p><a href="/">Book another ride</a></p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var rating = '';
+  var heard = '';
+
+  // The phone number comes from the link in their own thank-you message, so
+  // most people never see this field. Asked for only when the link did not
+  // carry it - a form that demands a number somebody has already given is a
+  // form people abandon.
+  var params = new URLSearchParams(location.search);
+  var fromLink = (params.get('p') || '').replace(/\D/g, '');
+  if (fromLink.length >= 10) {
+    document.getElementById('phone').value = fromLink;
+    document.getElementById('phoneQ').hidden = true;
+  }
+  var name = params.get('n') || '';
+
+  document.querySelectorAll('.star').forEach(function (b) {
+    b.addEventListener('click', function () {
+      rating = b.dataset.v;
+      // Fill every star up to the one tapped, the way people expect.
+      document.querySelectorAll('.star').forEach(function (o) {
+        o.classList.toggle('on', Number(o.dataset.v) <= Number(rating));
+      });
+    });
+  });
+
+  document.querySelectorAll('#heard .chip').forEach(function (b) {
+    b.addEventListener('click', function () {
+      heard = b.textContent.trim();
+      document.querySelectorAll('#heard .chip').forEach(function (o) {
+        o.classList.toggle('on', o === b);
+      });
+    });
+  });
+
+  document.getElementById('form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var btn = document.getElementById('send');
+    var out = document.getElementById('result');
+    var payload = {
+      phone: document.getElementById('phone').value,
+      name: name,
+      rating: rating,
+      heard: heard,
+      liked: document.getElementById('liked').value,
+      improve: document.getElementById('improve').value,
+      remember: document.getElementById('remember').value
+    };
+
+    if (!payload.rating && !payload.heard && !payload.liked &&
+        !payload.improve && !payload.remember) {
+      out.className = 'result show';
+      out.innerHTML = '<span class="bad">Tell us one thing first — even just a rating.</span>';
+      return;
+    }
+
+    btn.disabled = true;
+    var was = btn.textContent;
+    btn.textContent = 'Sending…';
+    out.className = 'result';
+
+    try {
+      var res = await fetch('/.netlify/functions/save-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      var j = await res.json();
+      if (!res.ok || j.error) throw new Error(j.error || ('Error ' + res.status));
+
+      document.getElementById('form').hidden = true;
+      document.getElementById('done').hidden = false;
+      window.scrollTo(0, 0);
+    } catch (err) {
+      // Never swallow it. Somebody who took the trouble to write something
+      // deserves to know it did not arrive, and to be given another way.
+      out.className = 'result show';
+      out.innerHTML = '<span class="bad">' + String(err.message) + '</span><br>' +
+        'Sorry — that did not send. Text it to (908) 666-3777 and it will reach us.';
+      btn.disabled = false;
+      btn.textContent = was;
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -673,6 +673,18 @@
   // same fact in words a customer does not have to translate, and it names the
   // next milestone, which a bare count never does.
   // ------------------------------------------------------------------
+  // The feedback link, carrying the phone number so nobody is asked for
+  // something they have already given. A survey that opens by demanding your
+  // details is a survey people abandon on the first screen.
+  function feedbackLink(ride){
+    const ph = String((ride && ride.phone) || '').replace(/\D/g, '').slice(-10);
+    const nm = String((ride && ride.name) || '').trim();
+    const q = [];
+    if (ph) q.push('p=' + ph);
+    if (nm) q.push('n=' + encodeURIComponent(nm));
+    return 'standardnj.com/feedback' + (q.length ? '?' + q.join('&') : '');
+  }
+
   function custMsg(ride){
     const first = String(ride.name || '').trim().split(/\s+/)[0];
     const hi = first ? 'Hi ' + first + ',\n\n' : '';
@@ -745,7 +757,14 @@
           '$' + (rules ? rules.repeat : 10) + ' every ten after that\n' +
           '$' + (rules ? rules.referral : 10) + ' when you send us someone\n' +
           '$' + (rules ? rules.birthday : 15) + ' on your birthday\n\n' +
-          ''
+
+          // THE ASK GOES ON THE FIRST RIDE AND NOWHERE ELSE.
+          //
+          // It is the one trip where somebody has an impression worth having
+          // and has not been asked anything yet. On every ride after, the
+          // thank-you is three lines and adding a survey to it every time is
+          // how a short message becomes something people stop opening.
+          'One favour, if you have a minute \u2014 how did we do? ' + feedbackLink(ride)
 
         // Every ride after that: what they have, what’s next, nothing else.
         // They were told the rules once; repeating them every trip is how a
