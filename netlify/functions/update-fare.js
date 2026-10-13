@@ -27,16 +27,37 @@ exports.handler = async function (event) {
   const steps = { sheet: 'skipped', calendar: 'skipped' };
 
   try {
-    const { token, rowNumber, pickup, dropoff, dateTime, fare, toll, note } = JSON.parse(event.body || '{}');
+    const { token, rowNumber, pickup, dropoff, dateTime, fare, baseFare, cardFee, toll, note } =
+      JSON.parse(event.body || '{}');
     if (token !== expected) return { statusCode: 401, body: JSON.stringify({ error: 'Wrong passcode.' }) };
 
-    const amount = parseFloat(fare);
-    if (isNaN(amount) || amount < 0) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'That fare is not a number.' }) };
+    // Two ways in, and the difference matters.
+    //
+    // The old way sends `fare` and means the TOTAL — one agreed number, no
+    // parts behind it. The price box on the dispatch now sends the parts
+    // instead: baseFare, toll, cardFee. The total is their sum, so a ride
+    // priced by hand ends up with the same columns filled in as one the rate
+    // card priced, instead of a total sitting next to three empty cells.
+    const money = (v) => (v === '' || v === null || v === undefined) ? null : parseFloat(v);
+    const baseAmount = money(baseFare);
+    const tollAmount = money(toll);
+    const cardAmount = money(cardFee);
+    const byParts = baseAmount !== null;
+
+    for (const [value, label] of [[baseAmount, 'fare'], [tollAmount, 'toll'], [cardAmount, 'card fee']]) {
+      if (value !== null && (isNaN(value) || value < 0)) {
+        return { statusCode: 400, body: JSON.stringify({ error: `That ${label} is not a number.` }) };
+      }
     }
-    const tollAmount = (toll === '' || toll === null || toll === undefined) ? null : parseFloat(toll);
-    if (tollAmount !== null && (isNaN(tollAmount) || tollAmount < 0)) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'That toll is not a number.' }) };
+
+    let amount;
+    if (byParts) {
+      amount = Math.round((baseAmount + (tollAmount || 0) + (cardAmount || 0)) * 100) / 100;
+    } else {
+      amount = parseFloat(fare);
+      if (isNaN(amount) || amount < 0) {
+        return { statusCode: 400, body: JSON.stringify({ error: 'That fare is not a number.' }) };
+      }
     }
 
     const auth = new google.auth.JWT(
@@ -63,7 +84,23 @@ exports.handler = async function (event) {
     }
 
     const cells = { fare_total: amount };
-    if (tollAmount !== null) cells.toll = tollAmount;
+    let tipAmount = null;
+    if (byParts) {
+      // base_fare is the figure BEFORE any discount everywhere else in this
+      // sheet, and the breakdown on the card relies on that. He types what he
+      // is actually charging, so the discount already on the row gets added
+      // back here — otherwise the card subtracts it a second time and the
+      // column stops adding up.
+      const discount = parseFloat(existing.discount);
+      const prior = isFinite(discount) && discount > 0 ? discount : 0;
+      tipAmount = Math.round(baseAmount * 0.2);
+      cells.base_fare = Math.round((baseAmount + prior) * 100) / 100;
+      cells.toll = tollAmount === null ? 0 : tollAmount;
+      cells.card_fee = cardAmount === null ? 0 : cardAmount;
+      cells.tip = tipAmount;
+    } else if (tollAmount !== null) {
+      cells.toll = tollAmount;
+    }
     if (note) cells.notes = [existing.notes, note].filter((x) => x && x !== 'N/A').join(' · ');
 
     await sheets.spreadsheets.values.update({
@@ -95,7 +132,17 @@ exports.handler = async function (event) {
       steps.calendar = `failed: ${err.message}`;
     }
 
-    return { statusCode: 200, body: JSON.stringify({ success: true, fare: amount, toll: tollAmount, steps }) };
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        success: true,
+        fare: amount,
+        toll: tollAmount,
+        cardFee: cardAmount,
+        tip: tipAmount,
+        steps,
+      }),
+    };
   } catch (err) {
     return { statusCode: 500, body: JSON.stringify({ error: err.message, steps }) };
   }

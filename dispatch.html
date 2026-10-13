@@ -163,6 +163,25 @@
   .fare-box .lbl{font-family:var(--mono);font-size:0.68rem;letter-spacing:0.08em;
                  text-transform:uppercase;color:var(--steel)}
   .fare-box button{padding:9px 16px;font-size:0.85rem}
+  /* The price box used to be one field called "New fare", which meant a
+     hand-priced ride got a total with nothing behind it - no toll, no card
+     fee, no tip - while every ride the calculator priced had the full
+     breakdown. Same parts here as on the booking form now, and the total
+     adds itself up as he types. */
+  .fare-box{flex-direction:column;align-items:stretch}
+  .fare-edit-grid{display:flex;gap:10px;flex-wrap:wrap}
+  .fare-edit-grid label{display:flex;flex-direction:column;gap:5px}
+  .fare-edit-sum{border-top:1px solid var(--line);padding-top:10px}
+  .fare-edit-sum .fsr{display:flex;justify-content:space-between;align-items:baseline;
+                      gap:16px;font-size:0.8rem;padding:2px 0}
+  .fare-edit-sum .fsr .k{color:var(--steel)}
+  .fare-edit-sum .fsr .v{font-family:var(--mono);color:var(--ink)}
+  .fare-edit-sum .fsr.total .v{font-size:1rem;font-weight:600}
+  /* Outside the sum, same as everywhere else, because a tip is never collected. */
+  .fare-edit-sum .fsr.tip{margin-top:4px;padding-top:6px;border-top:1px dashed var(--line)}
+  .fare-edit-sum .fsr.tip .k,.fare-edit-sum .fsr.tip .v{color:#6f6a5e;font-size:0.76rem}
+  .fare-edit-sum .fsnote{font-size:0.7rem;color:#5f594e;line-height:1.5;margin-top:5px}
+  .fare-edit-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   /* SAY THE WORD. A cancelled ride used to be a thin ring on a small button
      and half the usual opacity - nothing on the card actually said cancelled,
      and at a glance in a car it read as a live booking. Ahmed found this the
@@ -601,7 +620,7 @@
   // compares the build stamp baked into what it fetched with the one baked
   // into what is running. Different means this copy is old, and it says so
   // with a button rather than leaving anybody to guess.
-  const BUILD = '10 Oct 2026, 8:53pm';
+  const BUILD = '12 Oct 2026, 10:45pm';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -1336,17 +1355,49 @@
           '<button class="btn go">' + (r.driver ? 'Reassign' : 'Assign') + '</button>' +
         '</div>' +
         '<div class="fare-box" hidden>' +
-          '<span class="lbl">New fare</span>' +
-          '<input type="number" class="fare-in" min="0" step="1" placeholder="0">' +
-          '<button class="btn fare-save">Save</button>' +
-          '<button class="btn-line fare-cancel">Cancel</button>' +
-          '<span class="result fareres"></span>' +
+          '<div class="fare-edit-grid">' +
+            '<label><span class="lbl">Fare</span>' +
+              '<input type="number" class="fare-in f-fare" min="0" step="1" placeholder="0"></label>' +
+            '<label><span class="lbl">Tolls</span>' +
+              '<input type="number" class="fare-in f-toll" min="0" step="1" placeholder="0"></label>' +
+            '<label><span class="lbl">Card fee</span>' +
+              '<input type="number" class="fare-in f-card" min="0" step="0.01" placeholder="0"></label>' +
+          '</div>' +
+          '<div class="fare-edit-sum">' +
+            '<div class="fsr total"><span class="k">Total to collect</span>' +
+              '<span class="v f-total">$0</span></div>' +
+            '<div class="fsr tip"><span class="k">Suggested tip</span>' +
+              '<span class="v f-tip">$0</span></div>' +
+            '<div class="fsnote">The tip is 20% of the fare, suggested and not part of the total. ' +
+              'Tolls to Newark are nothing, $29 to Manhattan, $50 to JFK and LaGuardia.</div>' +
+          '</div>' +
+          '<div class="fare-edit-acts">' +
+            '<button class="btn fare-save">Save</button>' +
+            '<button class="btn-line fare-cancel">Cancel</button>' +
+            '<span class="result fareres"></span>' +
+          '</div>' +
         '</div>' +
         '<div class="result"></div>' +
         statusRow +
       '</div>';
     }).join('');
   }
+
+  // The parts add themselves up while he types, so he never has to do the
+  // arithmetic in his head on the phone with a customer waiting.
+  function fareBoxSum(box){
+    const n = (v) => { const x = parseFloat(String(v || '').trim()); return isFinite(x) && x >= 0 ? x : 0; };
+    const fare = n(box.querySelector('.f-fare').value);
+    const toll = n(box.querySelector('.f-toll').value);
+    const card = n(box.querySelector('.f-card').value);
+    const total = Math.round((fare + toll + card) * 100) / 100;
+    box.querySelector('.f-total').textContent = '$' + total;
+    box.querySelector('.f-tip').textContent = '$' + Math.round(fare * 0.2);
+  }
+  document.addEventListener('input', (e) => {
+    const inp = e.target.closest('.fare-box input');
+    if (inp) fareBoxSum(inp.closest('.fare-box'));
+  });
 
   document.addEventListener('click', async (e) => {
     // ---- Messages tab: pick a passenger, pick a message ----
@@ -1523,9 +1574,17 @@
       const ride = data.rides[Number(edit.closest('.ride').dataset.i)];
       box.hidden = !box.hidden;
       if(!box.hidden){
-        const v = String(ride.fare || '').replace(/[^0-9.]/g,'');
-        box.querySelector('.fare-in').value = v;
-        box.querySelector('.fare-in').focus();
+        const num = (v) => { const x = parseFloat(String(v || '').replace(/[^0-9.]/g,'')); return isFinite(x) ? x : 0; };
+        // The Fare box shows the fare ALONE, not the total, because that is
+        // what he is actually changing. Tolls and the card fee keep their own
+        // lines, and the total underneath puts them back together.
+        const total = num(ride.fare), toll = num(ride.toll), card = num(ride.cardFee);
+        box.querySelector('.f-fare').value = Math.max(0, Math.round((total - toll - card) * 100) / 100) || '';
+        box.querySelector('.f-toll').value = toll || '';
+        box.querySelector('.f-card').value = card || '';
+        fareBoxSum(box);
+        box.querySelector('.f-fare').focus();
+        box.querySelector('.f-fare').select();
       }
       return;
     }
@@ -1538,11 +1597,13 @@
       const ride = data.rides[Number(card.dataset.i)];
       const box = saveFare.closest('.fare-box');
       const out = box.querySelector('.fareres');
-      const amount = box.querySelector('.fare-in').value.trim();
+      const baseFare = box.querySelector('.f-fare').value.trim();
+      const toll     = box.querySelector('.f-toll').value.trim();
+      const cardFee  = box.querySelector('.f-card').value.trim();
 
-      if(amount === ''){
+      if(baseFare === ''){
         out.className = 'result fareres show';
-        out.innerHTML = '<span class="bad">Put a number in.</span>';
+        out.innerHTML = '<span class="bad">Put a fare in. Tolls and the card fee can stay empty.</span>';
         return;
       }
 
@@ -1554,17 +1615,20 @@
           method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ token, rowNumber: ride.rowNumber, pickup: ride.pickup,
                                  dropoff: ride.dropoff, dateTime: ride.dateTime,
-                                 fare: amount })
+                                 baseFare, toll, cardFee })
         });
         const j = await res.json();
         if(!res.ok || j.error) throw new Error(j.error || ('Error ' + res.status));
 
-        ride.fare = String(j.fare);
-        const shown = card.querySelector('.fare-val');
-        if(shown) shown.textContent = j.fare;
+        // Put every part back on the ride, not just the total, so the
+        // breakdown on the card matches the sheet without a reload.
+        ride.fare    = String(j.fare);
+        ride.toll    = j.toll ? String(j.toll) : '';
+        ride.cardFee = j.cardFee ? String(j.cardFee) : '';
+        ride.tip     = j.tip ? String(j.tip) : '';
         out.innerHTML = '<span class="good">Sheet ' + esc(j.steps.sheet) +
                         ' &middot; calendar ' + esc(j.steps.calendar) + '</span>';
-        setTimeout(() => { box.hidden = true; }, 1800);
+        setTimeout(() => { render(); }, 1200);
       }catch(err){
         out.innerHTML = '<span class="bad">' + esc(err.message) + '</span>';
       }finally{
