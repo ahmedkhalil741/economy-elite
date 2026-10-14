@@ -43,7 +43,14 @@ const ACTIVE = 'Active';
 const INACTIVE = 'Inactive';
 
 // What a completed ride earns. Ahmed's settings, 2026-09-18.
-const FIRST_RIDE_CREDIT = 10;   // after their first completed ride
+// Taken off the FIRST ride at booking, not earned on it. The flyers, the
+// business cards and the car magnets have always said "$10 first ride", and
+// a promise printed on paper is the one the business has to keep. So a phone
+// number we have never driven books ten dollars cheaper, and creditEarned
+// below no longer grants anything for ride one — otherwise the same person
+// gets ten off ride one and ten more on ride two, which is twenty for a
+// promise of ten.
+const FIRST_RIDE_CREDIT = 10;   // off their first ride, applied at booking
 const LOYALTY_CREDIT = 15;      // once, on reaching Loyal at 10 rides
 const REPEAT_CREDIT = 10;       // every 10 after that — 20, 30, 40…
 const REFERRAL_CREDIT = 10;     // to the referrer, once the new rider completes
@@ -76,9 +83,8 @@ function activityFor(lastRide, today = new Date()) {
 // What this particular completed ride earned, if anything. Called with the
 // point total AFTER the ride has been counted.
 function creditEarned(pointsAfter) {
-  if (pointsAfter === 1) {
-    return { amount: FIRST_RIDE_CREDIT, reason: 'first completed ride' };
-  }
+  // Ride one earns nothing, because ride one was already ten dollars cheaper.
+  // See FIRST_RIDE_CREDIT above.
   if (pointsAfter > 0 && pointsAfter % LOYAL_POINTS === 0) {
     return pointsAfter === LOYAL_POINTS
       ? { amount: LOYALTY_CREDIT, reason: 'reached Loyal — 10 rides' }

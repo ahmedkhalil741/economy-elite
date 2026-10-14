@@ -620,7 +620,7 @@
   // compares the build stamp baked into what it fetched with the one baked
   // into what is running. Different means this copy is old, and it says so
   // with a button rather than leaving anybody to guess.
-  const BUILD = '12 Oct 2026, 11:05pm';
+  const BUILD = '14 Oct 2026, 9:10am';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -771,7 +771,10 @@
         // Every figure comes from the server, which reads _loyalty.js.
         ? hi + 'Thanks for riding with The Standard.\n\n' +
           'You\u2019re in our rewards now \u2014 no sign-up, your phone number is the account.\n\n' +
-          '$' + (rules ? rules.firstRide : 10) + ' off your next ride, already on\n' +
+          // The $10 came off the ride they have just taken, so this names it
+          // as something already received rather than something coming. The
+          // list below it is what they can still earn from here.
+          '$' + (rules ? rules.firstRide : 10) + ' came off this first ride\n' +
           '$' + (rules ? rules.loyal : 15) + ' at ten rides\n' +
           '$' + (rules ? rules.repeat : 10) + ' every ten after that\n' +
           '$' + (rules ? rules.referral : 10) + ' when you send us someone\n' +
@@ -1992,9 +1995,7 @@
     if (kind === 'Rewards explained') {
       return { kind:'completed', body: hi + 'Hany here, from The Standard. A quick note on how our rewards ' +
         'work \u2014 no sign-up, your phone number is the account.\n\n' +
-        // "After your first ride" read to people as money off that first ride.
-        // It is not - it is earned on the first and spent on the second. Say which.
-        '$' + (rules ? rules.firstRide : 10) + ' off your second ride (the first is the regular price)\n' +
+        '$' + (rules ? rules.firstRide : 10) + ' off your first ride\n' +
         '$' + (rules ? rules.loyal : 15) + ' at ten rides\n' +
         '$' + (rules ? rules.repeat : 10) + ' every ten after that\n' +
         '$' + (rules ? rules.referral : 10) + ' when you send us someone\n' +

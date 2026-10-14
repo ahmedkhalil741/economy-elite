@@ -992,18 +992,18 @@
          are both in comments. -->
     <div class="hero-proglabel">Our relationship program</div>
     <ul class="hero-credits">
-      <li><strong>$10</strong><span>off your second ride</span></li>
+      <li><strong>$10</strong><span>first ride</span></li>
       <li><strong>$15</strong><span>at ten rides</span></li>
       <li><strong>$10</strong><span>every ten rides after</span></li>
       <li><strong>$10</strong><span>when you send us someone</span></li>
       <li><strong>$15</strong><span>on your birthday</span></li>
     </ul>
 
-    <p class="hero-fine">Your first ride is the regular price. Credit is earned once a ride is
-      finished, so the $10 comes off the ride after it &mdash; and the same is true further
-      down the list. Nothing to sign up for; your phone number is the account, and we text
-      you when you&rsquo;ve earned something. Credit comes off a future ride rather than
-      being paid out in cash. One credit per ride, and it never expires.</p>
+    <p class="hero-fine">The $10 comes off your very first ride &mdash; you don&rsquo;t have to
+      earn it first. Everything below it is earned as you ride, and comes off a later trip.
+      Nothing to sign up for; your phone number is the account, and we text you when
+      you&rsquo;ve earned something. Credit comes off a future ride rather than being paid
+      out in cash. One credit per ride, and it never expires.</p>
 
     <div class="hero-actions">
       <a href="#book" class="btn-primary btn-lg">Book a ride &rarr;</a>
@@ -1518,6 +1518,8 @@
       (q.toll ? `<div class="q-note">The toll is what the road costs us and is passed straight
         through &mdash; we don&rsquo;t mark it up. It is in the total above, so there is nothing
         further to pay at the airport or the tunnel.</div>` : '') +
+      (q.firstRideOff ? `<div class="q-note">This is your first ride with us, so
+        ${money(q.firstRideOff)} is already off the fare above.</div>` : '') +
       `<div class="q-note">Nothing is charged now. Hany confirms the final figure before you ride.</div>`;
   }
 
@@ -1526,6 +1528,10 @@
   // paying, because both move the number - an estimate that went stale the
   // moment they picked Sedan would be worse than no estimate at all.
   let quoteSeq = 0;
+  // Set once the phone number is known - see lookupCustomer. Until then it
+  // stays false, so a stranger is shown the list price rather than a discount
+  // we cannot yet say they are owed. The server decides for real at booking.
+  let isFirstRide = false;
   async function refreshQuote(){
     const box = document.getElementById('quoteBox');
     const pickup  = document.getElementById('b-pickup').value.trim();
@@ -1539,6 +1545,7 @@
       vehicle:  document.getElementById('b-vehicle').value,
       payMethod: selectedPay,
       hours: hourly ? parseFloat(document.getElementById('b-hours').value) || null : null,
+      firstRide: isFirstRide,
     };
 
     const mine = ++quoteSeq;
@@ -1648,6 +1655,13 @@
             '&name=' + encodeURIComponent(name))
         .then(r => r.ok ? r.json() : null)
         .then(data => {
+          // Never driven this number before, or driven it but never finished a
+          // ride: either way the $10 first-ride discount applies, and the
+          // estimate is repainted so they see it before they commit.
+          const was = isFirstRide;
+          isFirstRide = !data || !data.found || !(parseInt(data.completedRides, 10) > 0);
+          if(was !== isFirstRide && !document.getElementById('quoteBox').hidden) refreshQuote();
+
           if(!data || !data.found) return;
 
           // Only ever FILL A BLANK. If someone has already typed something

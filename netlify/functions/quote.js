@@ -17,6 +17,7 @@
 // that looks like one - a quote that created a row would fill the dispatch
 // board with rides nobody asked for.
 const { estimateFare } = require('./_fare-calc');
+const { FIRST_RIDE_CREDIT } = require('./_loyalty');
 
 // Hours are an input to the price, not a correction of one - same shape the
 // booking function uses, so the two can never drift apart and quote a
@@ -32,13 +33,20 @@ exports.handler = async function (event) {
   }
 
   try {
-    const { pickup, dropoff, dateTime, vehicle, payMethod, hours } = JSON.parse(event.body || '{}');
+    const { pickup, dropoff, dateTime, vehicle, payMethod, hours, firstRide } =
+      JSON.parse(event.body || '{}');
 
     if (!pickup || !dropoff) {
       return { statusCode: 200, body: JSON.stringify({ matched: false, reason: 'need both ends' }) };
     }
 
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, withHours(undefined, hours));
+    // Somebody we have never driven sees the $10 already off, rather than a
+    // full price here and a different number at the end of the form. The
+    // page knows they are new because get-customer told it so; log-booking
+    // checks the sheet again before it writes anything down.
+    const firstRideOff = firstRide ? { discount: FIRST_RIDE_CREDIT } : undefined;
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod,
+                              withHours(firstRideOff, hours));
 
     // Only the figures a quote is made of. Nothing about zones, nothing about
     // how the table decides - the customer is owed their price, not ours.
@@ -56,6 +64,7 @@ exports.handler = async function (event) {
         cardFeeLabel: fare.cardFeeLabel || null,
         total: fare.total,
         tipSuggested: fare.tipSuggested || null,
+        firstRideOff: fare.discountApplied || 0,
       }),
     };
   } catch (err) {

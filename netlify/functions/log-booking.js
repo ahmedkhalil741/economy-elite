@@ -51,6 +51,7 @@ const { google } = require('googleapis');
 const { estimateFare } = require('./_fare-calc');
 const { formatTimestamp, formatRequestedDateTime } = require('./_format');
 const { readTab, buildRow, orNA } = require('./_sheet');
+const { firstRideOff } = require('./_first-ride');
 
 // The tab bookings are appended to.
 const SHEET_TAB = 'Bookings';
@@ -92,7 +93,13 @@ exports.handler = async function (event) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required booking details.' }) };
     }
 
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, withHours(overrides, hours));
+    // The sheet is opened before the price is worked out, because whether this
+    // is their first ride is part of the price.
+    const sheets = await getSheetsClient();
+    const first = await firstRideOff(phone, overrides, sheets);
+
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod,
+                              withHours(first.overrides, hours));
     const isSedan = (vehicle || '').trim().toLowerCase() === 'sedan';
 
     // Local (range) and unmatched routes don't break down into base + SUV,
@@ -166,7 +173,9 @@ exports.handler = async function (event) {
       // Completed, in set-ride-status.js, so a cancelled ride never spends a
       // credit the customer never got the benefit of.
       discount: fare.discountApplied ? fare.discountApplied : NA,
-      discount_reason: fare.discountApplied ? orNA(discountReason) : NA,
+      discount_reason: fare.discountApplied
+        ? orNA(discountReason || (first.applied ? 'First ride' : ''))
+        : NA,
       // This one still cannot be known at booking time — it depends on what
       // actually happened on the road.
       waiting_late_fee: NA,
@@ -183,8 +192,6 @@ exports.handler = async function (event) {
       hours: fare.hours ? fare.hours : NA,
       fare_total: hasNumericFare ? fare.total : (fare.matched ? fare.totalDisplay : fare.display),
     };
-
-    const sheets = await getSheetsClient();
 
     // Read the header row and build the row in whatever order the sheet is
     // currently arranged in.

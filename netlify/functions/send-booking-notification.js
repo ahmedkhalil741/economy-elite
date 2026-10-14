@@ -13,6 +13,7 @@
 //                       switch to a verified standardnj.com address later)
 
 const { estimateFare, isOvernightPickup } = require('./_fare-calc');
+const { firstRideOff } = require('./_first-ride');
 const { formatRequestedDateTime } = require('./_format');
 
 const LABEL_STYLE = 'padding:2px 14px 2px 0; color:#888; white-space:nowrap;';
@@ -71,7 +72,11 @@ exports.handler = async function (event) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required booking details.' }) };
     }
 
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, withHours(overrides, hours));
+    // The same check log-booking makes, from the same sheet, so this email
+    // and the row it is telling Ahmed about can never show two prices.
+    const first = await firstRideOff(phone, overrides);
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod,
+                              withHours(first.overrides, hours));
     const overnight = isOvernightPickup(dateTime);
 
     const emailBody = `
