@@ -128,6 +128,8 @@
   .st.on{border-color:var(--accent);color:var(--accent);background:rgba(201,169,107,0.1)}
   .st.done.on{border-color:#8fbf8f;color:#8fbf8f;background:rgba(143,191,143,0.1)}
   .ride.completed{border-color:#3d5a3d}
+  .status-row .undo-hint{opacity:.55; font-style:italic;}
+
   /* Finished and cancelled rides stay reachable but stop competing for
      attention — they are sorted to the bottom and faded, not hidden, because
      hiding them makes an accidental tap impossible to undo. */
@@ -465,6 +467,9 @@
         <select id="a-passengers">
           <option value="1">1</option><option value="2">2</option>
           <option value="3">3</option><option value="4" selected>4</option>
+          <option value="5">5</option><option value="6">6</option>
+          <option value="7">7</option><option value="8">8</option>
+          <option value="9">9</option><option value="10">10</option>
         </select>
       </div>
       <div class="field">
@@ -1272,6 +1277,8 @@
       const statusRow = data.hasRideStatusColumn
         ? '<div class="status-row">' +
             '<span class="lbl">After the ride</span>' +
+            // Said out loud, because an undo nobody knows about is no undo.
+            '<span class="lbl undo-hint">tap again to undo</span>' +
             '<button class="st done' + (isDone ? ' on' : '') + '" data-status="Completed">Completed</button>' +
             '<button class="st' + (/cancel/i.test(r.rideStatus) ? ' on' : '') + '" data-status="Cancelled">Cancelled</button>' +
             '<button class="st' + (/no-?show/i.test(r.rideStatus) ? ' on' : '') + '" data-status="No-show">No-show</button>' +
@@ -1656,7 +1663,16 @@
       const card = st.closest('.ride');
       const ride = data.rides[Number(card.dataset.i)];
       const out = card.querySelector('.stres');
-      const wanted = st.dataset.status;
+      // TAP IT AGAIN TO TAKE IT BACK.
+      //
+      // Cancelled is one tap away, and so is cancelling the wrong ride. There
+      // was no way back from this page — the row said Cancelled forever and the
+      // only fix was editing the sheet by hand. Tapping a status that is
+      // already on puts the ride back to Confirmed, which is where it was.
+      // set-ride-status already returns the point and the credit on the way out
+      // of Completed, so an undo undoes the whole of it, not just the word.
+      const undo = st.classList.contains('on');
+      const wanted = undo ? 'Confirmed' : st.dataset.status;
 
       st.disabled = true;
       out.className = 'result stres show';
@@ -1672,9 +1688,9 @@
         if(!res.ok || j.error) throw new Error(j.error || ('Error ' + res.status));
 
         card.querySelectorAll('.st').forEach(b => b.classList.remove('on'));
-        st.classList.add('on');
+        if(!undo) st.classList.add('on');
         card.classList.toggle('completed', wanted === 'Completed');
-        card.classList.add('done');
+        card.classList.toggle('done', !undo);
         ride.rideStatus = wanted;
         askWhy(card, ride, wanted);
         askCard(card, ride, wanted);
@@ -1709,7 +1725,8 @@
             ' point' + (j.customer.points === 1 ? '' : 's') + ' &middot; ' + j.customer.completedRides + ' completed' +
             (j.customer.creditOwed > 0 ? ' &middot; <span class="owed">$' + j.customer.creditOwed + ' credit owed</span>' : '');
         }else{
-          out.innerHTML = '<span class="good">Marked ' + esc(wanted) + '.</span>' +
+          out.innerHTML = '<span class="good">' +
+            (undo ? 'Put back \u2014 this ride is Confirmed again.' : 'Marked ' + esc(wanted) + '.') + '</span>' +
             (j.note ? ' <span class="bad">' + esc(j.note) + '</span>' : '');
         }
       }catch(err){
@@ -2150,7 +2167,7 @@
     }
 
     const ov = overrides();
-    const asking = [pickup, dropoff, vehicle, dateTime, selectedPay, JSON.stringify(ov)].join('|');
+    const asking = [pickup, dropoff, vehicle, dateTime, selectedPay, isFirstRideAdmin, JSON.stringify(ov)].join('|');
     if(asking === lastAsked) return;
     lastAsked = asking;
 
@@ -2161,6 +2178,7 @@
           method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ token, pickup, dropoff, vehicle, dateTime,
                                  payMethod: selectedPay, overrides: ov,
+                                 firstRide: isFirstRideAdmin,
                                  hours: hoursValue() })
         });
         const j = await r.json();
@@ -2174,7 +2192,7 @@
           if(!edited.cardFee) document.getElementById('a-cardfee').value = (j.parts.cardFee || 0).toFixed(2);
         }
         document.getElementById('cardLabel').textContent =
-          selectedPay === 'Cash' || selectedPay === 'Zelle' ? 'Card fee (none for ' + selectedPay + ')' : selectedPay + ' fee';
+          NO_FEE.indexOf(selectedPay) !== -1 ? 'Card fee (none for ' + selectedPay + ')' : selectedPay + ' fee';
 
         const tipLine = document.getElementById('tipLine');
         if(j.matched && j.tip){
@@ -2235,6 +2253,14 @@
   }
 
   // ---- Payment chip selection ----
+  //
+  // WHAT COSTS NOTHING TO ACCEPT. Card is the only method that adds anything —
+  // see _card-fee.js. The server has always priced Venmo, Zelle and cash at
+  // zero, but the fee box on this page did not: type a fee while Card is
+  // selected, switch to Venmo, and the typed figure stays 'edited' and rides
+  // along on a payment that never had a fee. So switching to one of these puts
+  // the box back to zero and hands it back to the server.
+  const NO_FEE = ['Venmo', 'Zelle', 'Cash'];
   let selectedPay = 'Card';
   document.getElementById('payOptions').addEventListener('click', e => {
     const chip = e.target.closest('.pay-chip');
@@ -2242,6 +2268,12 @@
     document.querySelectorAll('.pay-chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
     selectedPay = chip.dataset.pay;
+    if(NO_FEE.indexOf(selectedPay) !== -1){
+      const box = document.getElementById('a-cardfee');
+      box.value = '0.00';
+      edited.cardFee = false;
+      box.classList.remove('edited');
+    }
     lastAsked = ''; askForQuote();
   });
 
@@ -2255,6 +2287,11 @@
   //
   // Either field can be typed first, so both trigger it.
   let lookupTimer = null;
+  // Nobody until a phone number says otherwise. The $10 is only taken off once
+  // we have actually looked them up — guessing it onto a blank form would put a
+  // discount on screen that the booking might not honour.
+  let isFirstRideAdmin = false;
+
   function lookupCustomerAdmin(){
     const digits = document.getElementById('a-phone').value.replace(/\D/g, '');
     const name = document.getElementById('a-name').value.trim();
@@ -2265,6 +2302,13 @@
             '&name=' + encodeURIComponent(name))
         .then(r => r.ok ? r.json() : null)
         .then(data => {
+          // IS THIS THEIR FIRST RIDE? A number we have never seen, or one with
+          // no completed rides, gets the $10 — and the quote has to show it,
+          // because the price on this screen is the price Ahmed reads out.
+          const wasFirst = isFirstRideAdmin;
+          isFirstRideAdmin = !data || !data.found || !(parseInt(data.completedRides, 10) > 0);
+          if(wasFirst !== isFirstRideAdmin){ lastAsked = ''; askForQuote(); }
+
           if(!data || !data.found) return;
           const nameField = document.getElementById('a-name');
           if(!nameField.value && data.name) nameField.value = data.name;
@@ -2441,6 +2485,8 @@
 
     document.getElementById('bookForm').reset();
     document.getElementById('a-contact15').checked = true;
+    // A fresh form knows nobody, so it offers nobody the new-customer ten.
+    isFirstRideAdmin = false;
     document.querySelectorAll('.pay-chip').forEach(c => c.classList.remove('active'));
     document.getElementById('payOptions').firstElementChild.classList.add('active');
     document.getElementById('a-vehicle').value = 'SUV';

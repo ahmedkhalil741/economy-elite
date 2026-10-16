@@ -13,6 +13,7 @@
 // public. Same ADMIN_TOKEN as dispatch.
 
 const { estimateFare, isOvernightPickup, HOURLY_RATE } = require('./_fare-calc');
+const { FIRST_RIDE_CREDIT } = require('./_loyalty');
 
 // Hours are an input to the price, not a correction of one, so they travel
 // alongside the overrides rather than inside the caller's object.
@@ -28,14 +29,29 @@ exports.handler = async function (event) {
   if (!expected) return { statusCode: 503, body: JSON.stringify({ error: 'ADMIN_TOKEN is not set in Netlify.' }) };
 
   try {
-    const { token, pickup, dropoff, vehicle, dateTime, payMethod, overrides, hours, } = JSON.parse(event.body || '{}');
+    const { token, pickup, dropoff, vehicle, dateTime, payMethod, overrides, hours, firstRide } = JSON.parse(event.body || '{}');
     if (token !== expected) return { statusCode: 401, body: JSON.stringify({ error: 'Wrong passcode.' }) };
 
     if (!pickup || !dropoff) {
       return { statusCode: 200, body: JSON.stringify({ ready: false, reason: 'Need both a pickup and a drop-off.' }) };
     }
 
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, withHours(overrides, hours));
+    // THE PREVIEW HAS TO AGREE WITH WHAT GETS SAVED.
+    //
+    // log-booking takes $10 off a new customer's first ride by itself, but
+    // this preview knew nothing about it. So the dispatch showed one total and
+    // the sheet recorded another ten dollars lower — and the number Ahmed read
+    // out to the customer was the one on the screen in front of him. Same
+    // credit, same place in the arithmetic, so the two can never disagree.
+    //
+    // A discount already typed in wins: a loyalty balance being redeemed is
+    // not also owed the new-customer ten.
+    const asked = withHours(overrides, hours);
+    const withCredit = (firstRide && !asked.discount)
+      ? Object.assign({}, asked, { discount: FIRST_RIDE_CREDIT })
+      : asked;
+
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, withCredit);
 
     // The parts, so a price can be EXPLAINED on the phone rather than just
     // stated. "Seventy-five, plus thirty-five because it's the Suburban."
@@ -70,6 +86,7 @@ exports.handler = async function (event) {
         toll: fare.toll || 0,
         agreedFare: fare.agreedFare ?? null,
         discount: fare.discountApplied || 0,
+        firstRideOff: (firstRide && !asked.discount) ? (fare.discountApplied || 0) : 0,
         // Asked for more than the fare could take — the rest stays on their
         // balance, and the page says so rather than quietly swallowing it.
         discountUnused: fare.discountUnused || 0,

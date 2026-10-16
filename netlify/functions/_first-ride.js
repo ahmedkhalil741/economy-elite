@@ -14,6 +14,7 @@ const { readTab, rowToObject } = require('./_sheet');
 const { FIRST_RIDE_CREDIT } = require('./_loyalty');
 
 const CUSTOMERS_TAB = 'Customers';
+const BOOKINGS_TAB = 'Bookings';
 
 async function sheetsClient() {
   const auth = new google.auth.JWT(
@@ -49,6 +50,27 @@ async function firstRideOff(phone, overrides, existingSheets) {
       .map((r) => rowToObject(keys, r))
       .find((c) => tenDigits(c.phone) === digits);
     if (them && (parseInt(them.completed_rides, 10) || 0) > 0) return none;
+
+    // ONCE, EVEN ACROSS BOOKINGS THAT HAVE NOT HAPPENED YET.
+    //
+    // completed_rides answers "have they ridden before", which is a different
+    // question from "have they already been given the ten". Book a new
+    // customer's trip out and their trip back in the same sitting and neither
+    // has completed, so both took the credit. The promise on the flyer is $10
+    // off their first ride, not $10 off every ride booked before the first one
+    // happens.
+    //
+    // Whichever booking was entered first keeps it: it is already in the sheet
+    // with "First ride" against it, so the second one finds it and pays full
+    // price. Cancel the first and the credit is free again, which is right —
+    // a ride that never happened was never their first.
+    const bookings = await readTab(sheets, process.env.GOOGLE_SHEET_ID, BOOKINGS_TAB);
+    const alreadyGiven = bookings.rows
+      .map((r) => rowToObject(bookings.keys, r))
+      .some((b) => tenDigits(b.phone) === digits &&
+                   !/^(cancelled|no-?show)$/i.test(String(b.ride_status || '').trim()) &&
+                   /first ride/i.test(String(b.discount_reason || '')));
+    if (alreadyGiven) return none;
   } catch (err) {
     // No Customers tab yet, or the read failed. Full price is the safe wrong
     // answer: it takes ten seconds to correct on the dispatch, and a discount
