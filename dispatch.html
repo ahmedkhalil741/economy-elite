@@ -1062,6 +1062,7 @@
     birthday:  'Happy birthday from The Standard',
     quiet:     'We\u2019d like to drive you again',
     credit:    'You have credit with The Standard',
+    welcome:   'Welcome to The Standard',
   };
 
   // THE SIGN-OFF, ON EVERY MESSAGE AND SAID ONCE.
@@ -1983,7 +1984,7 @@
   // the rest of the page sends, so a customer never gets two different
   // versions of the same promise.
   // ------------------------------------------------------------------
-  const PICKS = ['Birthday', 'We miss you', 'You have credit', 'Rewards explained', 'Write my own'];
+  const PICKS = ['Welcome', 'Birthday', 'We miss you', 'You have credit', 'Rewards explained', 'Write my own'];
 
   function paxMsg(p, kind){
     const first = String(p.name || '').trim().split(/\s+/)[0];
@@ -1992,6 +1993,26 @@
     const bal = Number(p.creditOwed) || 0;
     const nx = p.next;
 
+    // THE NEW CUSTOMER'S FIRST MESSAGE. Ahmed's words, sent once, after their
+    // first booking. "Rewards explained" is the short version for somebody who
+    // asks later; this one does the welcoming as well, and is the only message
+    // that says we are glad they came.
+    //
+    // It stops before the booking line and the sign-off on purpose - SIGN_OFF
+    // already carries both, and a message that says them twice reads like a
+    // leaflet.
+    if (kind === 'Welcome') {
+      return { kind:'welcome', body: hi + 'Hany here, from The Standard. Thank you for choosing us \u2014 we ' +
+        'appreciate your trust, and we\u2019re glad to have you with us.\n\n' +
+        'You\u2019re now part of The Standard Rewards Program. There\u2019s no sign-up: your phone number ' +
+        'is your rewards account.\n\n' +
+        '$' + (rules ? rules.firstRide : 10) + ' off your first ride\n' +
+        '$' + (rules ? rules.loyal : 15) + ' reward after your tenth ride\n' +
+        '$' + (rules ? rules.repeat : 10) + ' for every ten rides after that\n' +
+        '$' + (rules ? rules.referral : 10) + ' for referring a new customer\n' +
+        '$' + (rules ? rules.birthday : 15) + ' birthday reward\n\n' +
+        'We look forward to a long relationship with you, built on trust, reliability and comfort.' };
+    }
     if (kind === 'Birthday') {
       return { kind:'birthday', body: hi + 'Hany here, from The Standard. Happy birthday from us \u2014 ' +
         'there\u2019s $' + (rules ? rules.birthday : 15) + ' on your account for it, and it comes off your ' +
