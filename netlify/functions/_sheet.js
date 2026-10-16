@@ -67,6 +67,30 @@ function orNA(value) {
   return value;
 }
 
+// THE SAME IDEA FOR A COLUMN OF MONEY, AND WHY IT HAD TO BE DIFFERENT.
+//
+// "N/A" and 0 do not mean the same thing. N/A means nobody knows; 0 means we
+// know, and it is nothing. A Zelle ride's card fee is the second: the price
+// was worked out at booking and the fee came to zero. Writing N/A there hides
+// an answer we already have.
+//
+// It also breaks the column. One piece of text in a column of numbers and
+// Google Sheets stops treating it as numeric: AVERAGE silently skips those
+// rows and reports a figure that is too high, COUNT disagrees with the number
+// of rides, and a pivot or a chart over it either refuses or misleads. SUM
+// happens to come out right, which is what makes this the kind of mistake you
+// find in December.
+//
+// So: a number we know goes in as a number, zero included. N/A is kept for
+// what genuinely is not known yet — the waiting fee before the ride, the
+// driver before one is assigned — and for columns of words, where nothing
+// will ever be calculated and "N/A" reads better than an empty cell.
+function orZero(value) {
+  if (value === null || value === undefined || value === '') return 0;
+  const n = Number(value);
+  return isFinite(n) ? n : 0;
+}
+
 // Reads a whole tab and returns its header row (normalized), plus the data
 // rows. `keys` lines up index-for-index with each row's cells.
 async function readTab(sheets, spreadsheetId, tab) {
@@ -108,6 +132,7 @@ module.exports = {
   normalizeHeader,
   columnLetter,
   orNA,
+  orZero,
   readTab,
   buildRow,
   rowToObject,

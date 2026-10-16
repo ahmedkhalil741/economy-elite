@@ -24,8 +24,13 @@
 // that isn't in your sheet is simply skipped.
 //
 // Anything the customer didn't provide is written as "N/A" rather than
-// left blank. toll and waiting_late_fee are always "N/A" — neither can be
-// known until the ride actually happens, so you fill those in by hand.
+// left blank — but only in columns of WORDS. A column of money gets a
+// number, zero included, because a column that mixes the two stops being
+// numeric and every average and chart over it goes quietly wrong. See
+// orZero in _sheet.js.
+//
+// waiting_late_fee is the exception that proves it: it stays "N/A" because
+// nobody knows it until the ride has happened. Fill it in by hand after.
 //
 // ---- ONE-TIME SETUP ----
 // 1. Enable the "Google Sheets API" in the same Google Cloud project used
@@ -50,7 +55,7 @@
 const { google } = require('googleapis');
 const { estimateFare } = require('./_fare-calc');
 const { formatTimestamp, formatRequestedDateTime } = require('./_format');
-const { readTab, buildRow, orNA } = require('./_sheet');
+const { readTab, buildRow, orNA, orZero } = require('./_sheet');
 const { firstRideOff } = require('./_first-ride');
 
 // The tab bookings are appended to.
@@ -151,7 +156,8 @@ exports.handler = async function (event) {
       // did city work earn me" is one SUMIFS instead of a fragile text match
       // against a free-typed address.
       zone: fare.zone || NA,
-      card_fee: orNA(fare.cardFee),
+      // Zero when the method costs nothing to accept, not N/A — we know.
+      card_fee: orZero(fare.cardFee),
       sedan: isSedan ? 'Yes' : 'No',
       // Says the vehicle outright so you never have to work it out from a
       // Yes/No. Paired with `zone`, this is what makes revenue splittable by
@@ -167,17 +173,25 @@ exports.handler = async function (event) {
       // charge, an airport run crosses the bridge only, Newark and local trips
       // cross nothing. Replace it with the real figure off the E-ZPass
       // statement if it differs; nothing else recalculates from it.
-      toll: orNA(fare.toll),
+      // Zero on a Newark or local run, where the car crosses nothing.
+      toll: orZero(fare.toll),
       // What came off the fare, and why. Written at booking time but NOT taken
       // off the customer's balance here — that happens when the ride is marked
       // Completed, in set-ride-status.js, so a cancelled ride never spends a
       // credit the customer never got the benefit of.
-      discount: fare.discountApplied ? fare.discountApplied : NA,
+      discount: orZero(fare.discountApplied),
+      // The reason stays words: N/A when nothing came off.
       discount_reason: fare.discountApplied
         ? orNA(discountReason || (first.applied ? 'First ride' : ''))
         : NA,
-      // This one still cannot be known at booking time — it depends on what
-      // actually happened on the road.
+      // Nothing is spent off a balance until the ride is completed - see
+      // set-ride-status.js. It starts at zero so the column is numeric from
+      // the first row rather than from the first completed ride.
+      discount_spent: 0,
+      // These two genuinely cannot be known yet, so they stay N/A. The waiting
+      // fee depends on what happened on the road, and the tip is a suggestion
+      // until somebody actually hands it over. Both become a number — zero
+      // included — once the ride has happened.
       waiting_late_fee: NA,
       tip: orNA(fare.tipSuggested),
       // The charge for an hourly job, and the hours it was billed for. N/A on
@@ -188,8 +202,8 @@ exports.handler = async function (event) {
       // known zone — unmatched means unknown, not hourly — and it wrote Yes/No
       // into a column holding an amount everywhere else. Now the booking form
       // actually offers hourly, it holds the amount it always should have.
-      hourly_trip: fare.hourlyAmount ? fare.hourlyAmount : NA,
-      hours: fare.hours ? fare.hours : NA,
+      hourly_trip: orZero(fare.hourlyAmount),
+      hours: orZero(fare.hours),
       fare_total: hasNumericFare ? fare.total : (fare.matched ? fare.totalDisplay : fare.display),
     };
 
