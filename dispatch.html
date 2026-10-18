@@ -668,7 +668,7 @@
     }catch(e){ /* no autocomplete is worse than none of the page */ }
   }
 
-  const BUILD = '18 Oct 2026, 8:20pm';
+  const BUILD = '18 Oct 2026, 10:05pm';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -759,7 +759,20 @@
                          return /^\d+(\.\d+)?$/.test(t) ? parseFloat(t) : null; };
     const tipN = num(ride.tip) || 0;
     const money = (v) => String(v).trim().startsWith('$') ? String(v).trim() : '$' + v;
-    const route = String(ride.pickup || '') + (ride.dropoff ? ' to ' + ride.dropoff : '');
+    // GOOGLE'S ADDRESS, SAID THE WAY A PERSON WOULD.
+    //
+    // The form stores what the autocomplete handed back: "88 Forest Way,
+    // Morris Plains, NJ, USA" and "Newark Liberty International Airport
+    // (EWR), Newark, NJ, USA". Read back to the customer, that is most of a
+    // text message spent telling somebody their own address and which country
+    // they are in.
+    const tidy = (a) => String(a || '')
+      .replace(/,\s*USA\s*$/i, '')
+      // The airport, then the town the airport is in, then the state. The
+      // code in brackets is what anybody actually says.
+      .replace(/\s*\(([A-Z]{3})\)[^,]*,[^,]*,\s*[A-Z]{2}\s*$/, ' ($1)')
+      .trim();
+    const route = tidy(ride.pickup) + (ride.dropoff ? ' \u2192 ' + tidy(ride.dropoff) : '');
     const c = ride.customer || null;
     const credit = c && Number(c.creditOwed) > 0 ? Number(c.creditOwed) : 0;
     const pts = c && Number(c.points) > 0 ? Number(c.points) : 0;
@@ -791,6 +804,11 @@
     // announced as a first-ride offer.
     const discN = num(ride.discount) || 0;
     const why = String(ride.discountReason || '');
+    const offShort = !discN ? ''
+      : /first ride/i.test(String(ride.discountReason || ''))
+        ? ' \u2014 $' + discN + ' first-ride discount already off.'
+        : ' \u2014 $' + discN + ' already off.';
+
     const offLine = !discN ? ''
       : /first ride/i.test(why)
         ? 'That\u2019s with your $' + discN + ' first-ride discount already taken off. '
@@ -813,17 +831,17 @@
     const ridesDone = c ? (Number(c.completedRides) || 0) : 0;
     const neverRidden = !c || ridesDone === 0;
     const closing = neverRidden
-      ? 'This is your first ride with us, so welcome. From here your phone number is ' +
-        'your rewards account \u2014 $' + (rules ? rules.loyal : 15) + ' at ten rides, and $' +
-        (rules ? rules.referral : 10) + ' whenever you send us someone. '
+      ? 'First ride with us \u2014 welcome. Your number is your rewards account: $' +
+        (rules ? rules.loyal : 15) + ' at ten rides, $' + (rules ? rules.birthday : 15) +
+        ' on your birthday, $' + (rules ? rules.referral : 10) + ' for anyone you send us.'
       : (c && c.status === 'Loyal')
-        ? 'Always good to have you back. '
-        : 'Good to have you back. ';
+        ? 'Always good to have you back.'
+        : 'Good to have you back.';
 
     // Credit they still hold AFTER this ride. If it was spent on this one it
     // is already in offLine above, and saying it twice reads as two discounts.
     const heldOver = (credit && !discN)
-      ? 'You\u2019ve also got $' + credit + ' on your account for whenever you want it. '
+      ? ' You\u2019ve also got $' + credit + ' on your account.'
       : '';
 
     const aheadLine = (nx && pts > 0)
@@ -844,15 +862,18 @@
         'Hany will text you back shortly to confirm it, or with anything that needs adjusting. ' +
         'This number is the one to use for any change.',
 
+      // SHORTER, AND NOT ONE FACT LIGHTER. Ahmed's call: a customer reading a
+      // paragraph is a customer skimming it, and the thing they skip is the
+      // price. The route and the money go on their own lines, where the eye
+      // finds them without reading a sentence to get there.
       confirmed:
-        hi + 'Hany here, from The Standard. You\u2019re confirmed for ' + (ride.when || 'your ride') + '. ' +
-        'Pickup ' + route + '. ' +
-        (ride.vehicle ? ride.vehicle + '. ' : '') +
-        (ride.fare ? 'Total ' + money(ride.fare) + '. ' : '') +
-        offLine +
-        (tipN ? 'A tip is separate, about $' + tipN + ' if you\u2019d like. ' : '') +
+        (first ? first + ' \u2014 you\u2019re' : 'You\u2019re') +
+        ' confirmed for ' + (ride.when || 'your ride') + '.\n\n' +
+        route + (ride.vehicle ? ', ' + String(ride.vehicle).toLowerCase() : '') + '.\n' +
+        (ride.fare ? money(ride.fare) + offShort : '') +
+        (tipN ? '\nTip separate, about $' + tipN + ' if you\u2019d like.' : '') +
         '\n\n' + closing + heldOver +
-        'Any changes, just text this number.',
+        '\nAny changes, just text this number.',
 
       completed: pts === 1
 
@@ -1168,10 +1189,8 @@
   // text this number" - that is this block's job now, and saying it twice in
   // four lines is how a short message starts to feel like a leaflet.
   const SIGN_OFF =
-    '\n\nYou can book at standardnj.com, or text or call us.' +
-    '\n\nBest regards,' +
-    '\nHany \u2014 The Standard' +
-    '\n(908) 666-3777 \u00b7 hany@standardnj.com';
+    '\n\nHany \u2014 The Standard' +
+    '\n(908) 666-3777 \u00b7 standardnj.com \u00b7 hany@standardnj.com';
 
   // A text is the body plus the sign-off. An email is the same thing with a
   // subject on top. One function each so there is no third version anywhere.
