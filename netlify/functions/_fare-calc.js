@@ -138,6 +138,10 @@ const TOWN_FARES = [
   { town: 'Millburn',         names: ['millburn'],                               ewr: 75,  manh: 135, lgajfk: 185 },
   { town: 'Millington',       names: ['millington'],                             ewr: 95,  manh: 150, lgajfk: 200 },
   { town: 'Morristown',       names: ['morristown'],                             ewr: 100, manh: 160, lgajfk: 210 },
+  // Added 18 Oct after a real booking the table could not price. It sits
+  // between Parsippany ($85) and Morristown ($100) on the map and on the
+  // clock, so it is priced between them.
+  { town: 'Morris Plains',    names: ['morris plains'],                          ewr: 95,  manh: 155, lgajfk: 205 },
   { town: 'Mountainside',     names: ['mountainside'],                           ewr: 75,  manh: 135, lgajfk: 185 },
   { town: 'Murray Hill',      names: ['murray hill', 'murray hills'],            ewr: 75,  manh: 135, lgajfk: 185 },
   { town: 'New Brunswick',    names: ['new brunswick'],                          ewr: 95,  manh: 145, lgajfk: 205 },
