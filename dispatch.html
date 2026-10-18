@@ -668,7 +668,7 @@
     }catch(e){ /* no autocomplete is worse than none of the page */ }
   }
 
-  const BUILD = '18 Oct 2026, 7:10pm';
+  const BUILD = '18 Oct 2026, 7:45pm';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -779,6 +779,25 @@
     const nx = c && c.next ? c.next : null;
     const loyalPts = rules ? rules.loyalPoints : 10;
     const loyalNow = pts === loyalPts;
+    // SAY WHAT CAME OFF, IN THE MESSAGE THAT CARRIES THE NUMBER.
+    //
+    // The confirmation gave a total and no reason for it. A customer told
+    // $87.36 has no way to know ten dollars already came off, so the one
+    // thing we most want them to notice about us is the one thing the message
+    // leaves out - and if they compare it to the rate card later it reads as
+    // an odd price rather than a discount.
+    //
+    // The wording follows the reason on the row, so a loyalty credit is not
+    // announced as a first-ride offer.
+    const discN = num(ride.discount) || 0;
+    const why = String(ride.discountReason || '');
+    const offLine = !discN ? ''
+      : /first ride/i.test(why)
+        ? 'That\u2019s with your $' + discN + ' first-ride discount already taken off. '
+        : /credit|loyal|reward/i.test(why)
+          ? 'That\u2019s with $' + discN + ' of your rewards credit already taken off. '
+          : 'That\u2019s with $' + discN + ' already taken off. ';
+
     const aheadLine = (nx && pts > 0)
       ? nx.ridesAway + ' more and $' + nx.amount + ' comes off' +
         (nx.becomesLoyal ? ', and you\u2019re a loyal customer' : '') + '. '
@@ -802,6 +821,7 @@
         'Pickup ' + route + '. ' +
         (ride.vehicle ? ride.vehicle + '. ' : '') +
         (ride.fare ? 'Total ' + money(ride.fare) + '. ' : '') +
+        offLine +
         (tipN ? 'A tip is separate, about $' + tipN + ' if you\u2019d like. ' : '') +
         'Any changes, just text this number.',
 
