@@ -130,6 +130,21 @@
   .ride.completed{border-color:#3d5a3d}
   .status-row .undo-hint{opacity:.55; font-style:italic;}
 
+  /* Fixing the details. Wider boxes than the price grid, because an address
+     is long and a half-shown address is how the wrong one gets saved. */
+  .det-box{margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:8px;
+           display:flex;flex-direction:column;gap:10px}
+  .det-grid{display:flex;gap:10px;flex-wrap:wrap}
+  .det-grid label{display:flex;flex-direction:column;gap:5px;flex:1 1 220px}
+  .det-grid label.wide{flex:1 1 100%}
+  .det-grid .lbl{font-family:var(--mono);font-size:0.68rem;letter-spacing:0.08em;
+                 text-transform:uppercase;color:var(--steel)}
+  .det-grid input,.det-grid select{background:var(--panel);border:1px solid var(--line);
+                 color:var(--ink);border-radius:6px;padding:9px 10px;font-size:0.95rem;width:100%}
+  .det-acts{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .det-note{font-size:0.8rem;color:var(--steel);line-height:1.5}
+  .det-offer{border-top:1px dashed var(--line);padding-top:10px;font-size:0.88rem}
+
   /* Finished and cancelled rides stay reachable but stop competing for
      attention — they are sorted to the bottom and faded, not hidden, because
      hiding them makes an accidental tap impossible to undo. */
@@ -625,7 +640,7 @@
   // compares the build stamp baked into what it fetched with the one baked
   // into what is running. Different means this copy is old, and it says so
   // with a button rather than leaving anybody to guess.
-  const BUILD = '14 Oct 2026, 9:10am';
+  const BUILD = '18 Oct 2026, 4:40pm';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -1341,6 +1356,7 @@
           (split ? split
                  : ' &middot; <span class="fare-val">' + esc(r.fare || 'no fare') + '</span>') +
           '<button class="fare-edit">change the price</button>' +
+          '<button class="fare-edit det-edit">fix the details</button>' +
         '</div>' +
         '<div class="confirm-row">' +
           '<span class="lbl">Confirm with the customer</span>' +
@@ -1364,6 +1380,34 @@
             '<button data-how="both"' + (notifyHow==='both'?' class="on"':'') + '>Both</button>' +
           '</div>' +
           '<button class="btn go">' + (r.driver ? 'Reassign' : 'Assign') + '</button>' +
+        '</div>' +
+        '<div class="det-box" hidden>' +
+          '<div class="det-grid">' +
+            '<label class="wide"><span class="lbl">Pickup</span>' +
+              '<input class="d-pickup" type="text" autocomplete="off"></label>' +
+            '<label class="wide"><span class="lbl">Drop-off</span>' +
+              '<input class="d-dropoff" type="text" autocomplete="off"></label>' +
+            '<label><span class="lbl">Date &amp; time</span>' +
+              '<input class="d-date" type="datetime-local"></label>' +
+            '<label><span class="lbl">Car</span>' +
+              '<select class="d-vehicle"><option>SUV</option><option>Sedan</option></select></label>' +
+            '<label><span class="lbl">Passengers</span>' +
+              '<input class="d-pax" type="number" min="1" max="10" step="1"></label>' +
+            '<label><span class="lbl">Phone</span>' +
+              '<input class="d-phone" type="tel" autocomplete="off"></label>' +
+            '<label><span class="lbl">Flight</span>' +
+              '<input class="d-flight" type="text" autocomplete="off"></label>' +
+          '</div>' +
+          '<div class="det-note">Write the town into the address, or the rate card ' +
+            'cannot price it. Saving updates the sheet and the calendar entry the driver reads. ' +
+            'The price is not touched &mdash; if the rate card now says something different, ' +
+            'you will be asked.</div>' +
+          '<div class="det-offer" hidden></div>' +
+          '<div class="det-acts">' +
+            '<button class="btn det-save">Save</button>' +
+            '<button class="btn-line det-cancel">Cancel</button>' +
+            '<span class="result detres"></span>' +
+          '</div>' +
         '</div>' +
         '<div class="fare-box" hidden>' +
           '<div class="fare-edit-grid">' +
@@ -1601,6 +1645,120 @@
     }
     const cancel = e.target.closest('.fare-cancel');
     if(cancel){ cancel.closest('.fare-box').hidden = true; return; }
+
+    // ---- FIXING THE DETAILS ----
+    //
+    // The address is the dangerous field. A price typed wrong is a phone call;
+    // an address typed wrong is a car outside the wrong house. So this writes
+    // the sheet and the calendar entry together, and it never moves the price
+    // on its own - it asks.
+    const detOpen = e.target.closest('.det-edit');
+    if(detOpen){
+      const card = detOpen.closest('.ride');
+      const ride = data.rides[Number(card.dataset.i)];
+      const box = card.querySelector('.det-box');
+      box.hidden = !box.hidden;
+      if(!box.hidden){
+        box.querySelector('.d-pickup').value  = ride.pickup || '';
+        box.querySelector('.d-dropoff').value = ride.dropoff || '';
+        box.querySelector('.d-date').value    = (ride.dateTime || '').slice(0,16);
+        box.querySelector('.d-vehicle').value = /sedan/i.test(ride.vehicle || '') ? 'Sedan' : 'SUV';
+        box.querySelector('.d-pax').value     = ride.passengers || '';
+        box.querySelector('.d-phone').value   = ride.phone || '';
+        box.querySelector('.d-flight').value  = (ride.flight && ride.flight !== 'N/A') ? ride.flight : '';
+        box.querySelector('.det-offer').hidden = true;
+        box.querySelector('.detres').className = 'result detres';
+        box.querySelector('.d-pickup').focus();
+      }
+      return;
+    }
+
+    const detCancel = e.target.closest('.det-cancel');
+    if(detCancel){ detCancel.closest('.det-box').hidden = true; return; }
+
+    // Take the rate card's new number only when it is asked for.
+    const takePrice = e.target.closest('.det-take');
+    if(takePrice){
+      const card = takePrice.closest('.ride');
+      const box  = card.querySelector('.det-box');
+      const fbox = card.querySelector('.fare-box');
+      fbox.hidden = false;
+      fbox.querySelector('.f-fare').value = takePrice.dataset.fare || '';
+      fbox.querySelector('.f-toll').value = takePrice.dataset.toll || '';
+      fbox.querySelector('.f-card').value = takePrice.dataset.card || '';
+      fareBoxSum(fbox);
+      box.hidden = true;
+      fbox.scrollIntoView({block:'nearest'});
+      return;
+    }
+
+    const detSave = e.target.closest('.det-save');
+    if(detSave){
+      const card = detSave.closest('.ride');
+      const ride = data.rides[Number(card.dataset.i)];
+      const box  = detSave.closest('.det-box');
+      const out  = box.querySelector('.detres');
+      const now  = {
+        pickup:     box.querySelector('.d-pickup').value.trim(),
+        dropoff:    box.querySelector('.d-dropoff').value.trim(),
+        dateTime:   box.querySelector('.d-date').value.trim(),
+        vehicle:    box.querySelector('.d-vehicle').value,
+        passengers: box.querySelector('.d-pax').value.trim(),
+        phone:      box.querySelector('.d-phone').value.trim(),
+        flight:     box.querySelector('.d-flight').value.trim(),
+      };
+
+      if(!now.pickup || !now.dropoff){
+        out.className = 'result detres show';
+        out.innerHTML = '<span class="bad">A ride needs both a pickup and a drop-off.</span>';
+        return;
+      }
+
+      detSave.disabled = true;
+      out.className = 'result detres show';
+      out.textContent = 'Saving\u2026';
+      try{
+        const res = await fetch('/.netlify/functions/update-booking', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ token, rowNumber: ride.rowNumber,
+                                 was: { pickup: ride.pickup, dropoff: ride.dropoff, dateTime: ride.dateTime },
+                                 now })
+        });
+        const j = await res.json();
+        if(!res.ok || j.error) throw new Error(j.error || ('Error ' + res.status));
+
+        ride.pickup = now.pickup; ride.dropoff = now.dropoff;
+        if(now.dateTime) ride.dateTime = now.dateTime;
+        ride.vehicle = now.vehicle; ride.passengers = now.passengers;
+        if(now.phone) ride.phone = now.phone;
+        ride.flight = now.flight;
+
+        out.innerHTML = '<span class="good">Sheet ' + esc(j.steps.sheet) +
+                        ' &middot; calendar ' + esc(j.steps.calendar || 'not touched') + '</span>';
+
+        // THE OFFER, NOT THE ACTION. The customer may already have been given
+        // a number, and a quote that moves by itself after it was said is
+        // worse than one that is simply out of date.
+        const offer = box.querySelector('.det-offer');
+        const nowTotal = Number(String(ride.fare || '').replace(/[^0-9.]/g,''));
+        if(j.repriced && Math.abs(j.repriced.total - nowTotal) >= 0.01){
+          offer.hidden = false;
+          offer.innerHTML = 'The rate card now says <strong>$' + j.repriced.total + '</strong> for this route' +
+            (j.repriced.label ? ' (' + esc(j.repriced.label) + ')' : '') +
+            '. The ride is still down as ' + esc(ride.fare || 'no fare') + '. ' +
+            '<button class="btn-line det-take" data-fare="' + j.repriced.fare + '" data-toll="' +
+            j.repriced.toll + '" data-card="' + j.repriced.cardFee + '">Use the new price</button>';
+        }else{
+          offer.hidden = true;
+          setTimeout(() => { render(); }, 1400);
+        }
+      }catch(err){
+        out.innerHTML = '<span class="bad">' + esc(err.message) + '</span>';
+      }finally{
+        detSave.disabled = false;
+      }
+      return;
+    }
 
     const saveFare = e.target.closest('.fare-save');
     if(saveFare){
