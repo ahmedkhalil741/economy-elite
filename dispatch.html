@@ -190,6 +190,9 @@
   .fare-box{flex-direction:column;align-items:stretch}
   .fare-edit-grid{display:flex;gap:10px;flex-wrap:wrap}
   .fare-edit-grid label{display:flex;flex-direction:column;gap:5px}
+  .fare-edit-grid .f-why-wrap{flex:1 1 100%}
+  .fare-edit-grid .f-why{width:100%}
+  .fare-first{margin:-2px 0 2px}
   .fare-edit-sum{border-top:1px solid var(--line);padding-top:10px}
   .fare-edit-sum .fsr{display:flex;justify-content:space-between;align-items:baseline;
                       gap:16px;font-size:0.8rem;padding:2px 0}
@@ -665,7 +668,7 @@
     }catch(e){ /* no autocomplete is worse than none of the page */ }
   }
 
-  const BUILD = '18 Oct 2026, 6:05pm';
+  const BUILD = '18 Oct 2026, 7:10pm';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -1442,10 +1445,19 @@
               '<input type="number" class="fare-in f-toll" min="0" step="1" placeholder="0"></label>' +
             '<label><span class="lbl">Card fee</span>' +
               '<input type="number" class="fare-in f-card" min="0" step="0.01" placeholder="0"></label>' +
+            '<label><span class="lbl">Came off</span>' +
+              '<input type="number" class="fare-in f-disc" min="0" step="1" placeholder="0"></label>' +
+            '<label class="f-why-wrap"><span class="lbl">Why</span>' +
+              '<input type="text" class="fare-in f-why" placeholder="first ride, loyalty credit\u2026"></label>' +
+          '</div>' +
+          '<div class="fare-first" hidden>' +
+            '<button class="btn-line f-first">New customer \u2014 take $10 off</button>' +
           '</div>' +
           '<div class="fare-edit-sum">' +
             '<div class="fsr total"><span class="k">Total to collect</span>' +
               '<span class="v f-total">$0</span></div>' +
+            '<div class="fsr f-disc-said" hidden><span class="k">Came off the fare</span>' +
+              '<span class="v">$0</span></div>' +
             '<div class="fsr tip"><span class="k">Suggested tip</span>' +
               '<span class="v f-tip">$0</span></div>' +
             '<div class="fsnote">The tip is 20% of the fare, suggested and not part of the total. ' +
@@ -1470,9 +1482,18 @@
     const fare = n(box.querySelector('.f-fare').value);
     const toll = n(box.querySelector('.f-toll').value);
     const card = n(box.querySelector('.f-card').value);
+    const disc = n(box.querySelector('.f-disc').value);
     const total = Math.round((fare + toll + card) * 100) / 100;
     box.querySelector('.f-total').textContent = '$' + total;
     box.querySelector('.f-tip').textContent = '$' + Math.round(fare * 0.2);
+    // The fare box asks for what is CHARGED, so the discount is not in the
+    // sum - it is the reason the fare is already lower. Said out loud anyway,
+    // because a number nobody can see is a number nobody checks.
+    const line = box.querySelector('.f-disc-said');
+    if(line){
+      line.hidden = !disc;
+      line.querySelector('.v').textContent = '\u2212 $' + disc;
+    }
   }
   document.addEventListener('input', (e) => {
     const inp = e.target.closest('.fare-box input');
@@ -1662,12 +1683,46 @@
         box.querySelector('.f-fare').value = Math.max(0, Math.round((total - toll - card) * 100) / 100) || '';
         box.querySelector('.f-toll').value = toll || '';
         box.querySelector('.f-card').value = card || '';
+        box.querySelector('.f-disc').value = num(ride.discount) || '';
+        box.querySelector('.f-why').value =
+          (ride.discountReason && ride.discountReason !== 'N/A') ? ride.discountReason : '';
+        // Offered, never applied. A customer with no completed rides is owed
+        // the ten and it is one tap away, but a discount that fills itself in
+        // on a price somebody may already have quoted is how a number moves
+        // without anyone deciding it should.
+        const first = box.querySelector('.fare-first');
+        const done = ride.customer ? (parseInt(ride.customer.completedRides, 10) || 0) : null;
+        first.hidden = !(done === 0 && !num(ride.discount));
         fareBoxSum(box);
         box.querySelector('.f-fare').focus();
         box.querySelector('.f-fare').select();
       }
       return;
     }
+    // ONE TAP, AND IT DOES THE WHOLE SUM. Taking $10 off means three things,
+    // not one: the fare charged drops by ten, the row records that ten came
+    // off and why, and the card fee - a percentage of what is actually
+    // swiped - has to be worked out again on the lower number. Doing two of
+    // the three by hand is how the row stops adding up.
+    const firstOff = e.target.closest('.f-first');
+    if(firstOff){
+      const card = firstOff.closest('.ride');
+      const ride = data.rides[Number(card.dataset.i)];
+      const box  = firstOff.closest('.fare-box');
+      const n = (v) => { const x = parseFloat(String(v || '').trim()); return isFinite(x) && x >= 0 ? x : 0; };
+      const fareEl = box.querySelector('.f-fare');
+      fareEl.value = Math.max(0, Math.round((n(fareEl.value) - 10) * 100) / 100);
+      box.querySelector('.f-disc').value = 10;
+      box.querySelector('.f-why').value = 'First ride';
+      if(/card/i.test(ride.payMethod || '')){
+        const basis = n(fareEl.value) + n(box.querySelector('.f-toll').value);
+        box.querySelector('.f-card').value = (Math.round((basis * 0.026 + 0.15) * 100) / 100).toFixed(2);
+      }
+      firstOff.closest('.fare-first').hidden = true;
+      fareBoxSum(box);
+      return;
+    }
+
     const cancel = e.target.closest('.fare-cancel');
     if(cancel){ cancel.closest('.fare-box').hidden = true; return; }
 
@@ -1796,6 +1851,8 @@
       const baseFare = box.querySelector('.f-fare').value.trim();
       const toll     = box.querySelector('.f-toll').value.trim();
       const cardFee  = box.querySelector('.f-card').value.trim();
+      const discount = box.querySelector('.f-disc').value.trim();
+      const discountReason = box.querySelector('.f-why').value.trim();
 
       if(baseFare === ''){
         out.className = 'result fareres show';
@@ -1811,7 +1868,7 @@
           method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ token, rowNumber: ride.rowNumber, pickup: ride.pickup,
                                  dropoff: ride.dropoff, dateTime: ride.dateTime,
-                                 baseFare, toll, cardFee })
+                                 baseFare, toll, cardFee, discount, discountReason })
         });
         const j = await res.json();
         if(!res.ok || j.error) throw new Error(j.error || ('Error ' + res.status));
@@ -1822,6 +1879,10 @@
         ride.toll    = j.toll ? String(j.toll) : '';
         ride.cardFee = j.cardFee ? String(j.cardFee) : '';
         ride.tip     = j.tip ? String(j.tip) : '';
+        if(j.discount !== null && j.discount !== undefined){
+          ride.discount = j.discount ? String(j.discount) : '';
+          ride.discountReason = j.discount ? (discountReason || 'Taken off by hand') : '';
+        }
         out.innerHTML = '<span class="good">Sheet ' + esc(j.steps.sheet) +
                         ' &middot; calendar ' + esc(j.steps.calendar) + '</span>';
         setTimeout(() => { render(); }, 1200);

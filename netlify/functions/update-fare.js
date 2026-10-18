@@ -27,7 +27,8 @@ exports.handler = async function (event) {
   const steps = { sheet: 'skipped', calendar: 'skipped' };
 
   try {
-    const { token, rowNumber, pickup, dropoff, dateTime, fare, baseFare, cardFee, toll, note } =
+    const { token, rowNumber, pickup, dropoff, dateTime, fare, baseFare, cardFee, toll, note,
+            discount, discountReason } =
       JSON.parse(event.body || '{}');
     if (token !== expected) return { statusCode: 401, body: JSON.stringify({ error: 'Wrong passcode.' }) };
 
@@ -40,11 +41,13 @@ exports.handler = async function (event) {
     // card priced, instead of a total sitting next to three empty cells.
     const money = (v) => (v === '' || v === null || v === undefined) ? null : parseFloat(v);
     const baseAmount = money(baseFare);
+    const discountAmount = money(discount);
     const tollAmount = money(toll);
     const cardAmount = money(cardFee);
     const byParts = baseAmount !== null;
 
-    for (const [value, label] of [[baseAmount, 'fare'], [tollAmount, 'toll'], [cardAmount, 'card fee']]) {
+    for (const [value, label] of [[baseAmount, 'fare'], [tollAmount, 'toll'], [cardAmount, 'card fee'],
+                                  [discountAmount, 'discount']]) {
       if (value !== null && (isNaN(value) || value < 0)) {
         return { statusCode: 400, body: JSON.stringify({ error: `That ${label} is not a number.` }) };
       }
@@ -91,13 +94,33 @@ exports.handler = async function (event) {
       // is actually charging, so the discount already on the row gets added
       // back here — otherwise the card subtracts it a second time and the
       // column stops adding up.
-      const discount = parseFloat(existing.discount);
-      const prior = isFinite(discount) && discount > 0 ? discount : 0;
+      // WHAT CAME OFF, AND WHY, BECAUSE THE ROW IS NOT ONLY A PRICE.
+      //
+      // The fare box asks for what is actually being charged, so a hand-priced
+      // first ride used to arrive here as $85 with nothing saying $10 had come
+      // off. Two things then went wrong quietly: the money was right but the
+      // reason was lost, and _first-ride.js looks for "First ride" against the
+      // phone number to stop the same customer being given the ten twice. No
+      // reason on the row, and the next booking hands it over again.
+      //
+      // So the discount is typed alongside the fare. Left empty it keeps
+      // whatever the row already had, which is what makes correcting only the
+      // tolls safe.
+      const onRow = parseFloat(existing.discount);
+      const prior = isFinite(onRow) && onRow > 0 ? onRow : 0;
+      const taken = discountAmount === null ? prior : discountAmount;
       tipAmount = Math.round(baseAmount * 0.2);
-      cells.base_fare = Math.round((baseAmount + prior) * 100) / 100;
+      cells.base_fare = Math.round((baseAmount + taken) * 100) / 100;
       cells.toll = tollAmount === null ? 0 : tollAmount;
       cells.card_fee = cardAmount === null ? 0 : cardAmount;
       cells.tip = tipAmount;
+      if (discountAmount !== null) {
+        cells.discount = discountAmount;
+        const why = String(discountReason == null ? '' : discountReason).trim().slice(0, 120);
+        // A discount with no reason beside it is the one that cannot be
+        // explained in December, so an unexplained one says so out loud.
+        cells.discount_reason = discountAmount > 0 ? (why || 'Taken off by hand') : 'N/A';
+      }
     } else if (tollAmount !== null) {
       cells.toll = tollAmount;
     }
@@ -139,6 +162,7 @@ exports.handler = async function (event) {
         fare: amount,
         toll: tollAmount,
         cardFee: cardAmount,
+        discount: discountAmount,
         tip: tipAmount,
         steps,
       }),
