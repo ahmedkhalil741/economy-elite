@@ -668,7 +668,7 @@
     }catch(e){ /* no autocomplete is worse than none of the page */ }
   }
 
-  const BUILD = '18 Oct 2026, 7:45pm';
+  const BUILD = '18 Oct 2026, 8:20pm';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -798,6 +798,34 @@
           ? 'That\u2019s with $' + discN + ' of your rewards credit already taken off. '
           : 'That\u2019s with $' + discN + ' already taken off. ';
 
+    // WHO IS THIS, AND WHAT DOES THAT CHANGE.
+    //
+    // One confirmation for everybody meant a stranger and a customer on their
+    // twelfth ride got the same sentence. The sheet already knows the
+    // difference - completed rides, standing, what is on their account - so
+    // the page works it out rather than Ahmed remembering to pick a template.
+    //
+    // Three cases and nothing clever. Never ridden: welcome them and say what
+    // their number is now worth, because this is the only message they will
+    // read before they have any reason to care. Ten rides or more: say so, a
+    // single line, no programme talk. In between: say nothing much, they know
+    // who we are.
+    const ridesDone = c ? (Number(c.completedRides) || 0) : 0;
+    const neverRidden = !c || ridesDone === 0;
+    const closing = neverRidden
+      ? 'This is your first ride with us, so welcome. From here your phone number is ' +
+        'your rewards account \u2014 $' + (rules ? rules.loyal : 15) + ' at ten rides, and $' +
+        (rules ? rules.referral : 10) + ' whenever you send us someone. '
+      : (c && c.status === 'Loyal')
+        ? 'Always good to have you back. '
+        : 'Good to have you back. ';
+
+    // Credit they still hold AFTER this ride. If it was spent on this one it
+    // is already in offLine above, and saying it twice reads as two discounts.
+    const heldOver = (credit && !discN)
+      ? 'You\u2019ve also got $' + credit + ' on your account for whenever you want it. '
+      : '';
+
     const aheadLine = (nx && pts > 0)
       ? nx.ridesAway + ' more and $' + nx.amount + ' comes off' +
         (nx.becomesLoyal ? ', and you\u2019re a loyal customer' : '') + '. '
@@ -823,6 +851,7 @@
         (ride.fare ? 'Total ' + money(ride.fare) + '. ' : '') +
         offLine +
         (tipN ? 'A tip is separate, about $' + tipN + ' if you\u2019d like. ' : '') +
+        '\n\n' + closing + heldOver +
         'Any changes, just text this number.',
 
       completed: pts === 1
