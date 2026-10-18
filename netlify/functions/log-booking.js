@@ -53,7 +53,7 @@
 // the customer's saved profile.
 
 const { google } = require('googleapis');
-const { estimateFare } = require('./_fare-calc');
+const { estimateFare, pricesAsSedan } = require('./_fare-calc');
 const { formatTimestamp, formatRequestedDateTime } = require('./_format');
 const { readTab, buildRow, orNA, orZero } = require('./_sheet');
 const { firstRideOff } = require('./_first-ride');
@@ -105,7 +105,7 @@ exports.handler = async function (event) {
 
     const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod,
                               withHours(first.overrides, hours));
-    const isSedan = (vehicle || '').trim().toLowerCase() === 'sedan';
+    const isSedan = pricesAsSedan(vehicle);
 
     // Local (range) and unmatched routes don't break down into base + SUV,
     // so those cells get N/A and the whole quote goes in fare_total rather
@@ -158,16 +158,21 @@ exports.handler = async function (event) {
       zone: fare.zone || NA,
       // Zero when the method costs nothing to accept, not N/A — we know.
       card_fee: orZero(fare.cardFee),
+      // Yes for anything priced as a sedan, so the column still answers
+      // "did this ride pay the Suburban surcharge" whatever the car is called.
       sedan: isSedan ? 'Yes' : 'No',
       // Says the vehicle outright so you never have to work it out from a
       // Yes/No. Paired with `zone`, this is what makes revenue splittable by
       // car and by destination at year-end.
-      vehicle: isSedan ? 'Sedan' : 'SUV',
+      // THE CAR THAT IS ACTUALLY COMING, not the tier it was priced in.
+      // Folding the Tesla into "Sedan" would lose which car turned up on
+      // every row, and the driver's calendar entry reads this.
+      vehicle: (vehicle || '').trim() || (isSedan ? 'Sedan' : 'SUV'),
       // A column headed "vehicle" or "car" normalises to car_type (see
       // HEADER_ALIASES in _sheet.js), so a row keyed only `vehicle` left that
       // column empty however it was spelled. Write both keys; whichever one
       // the sheet actually has gets filled and the other is ignored.
-      car_type: isSedan ? 'Sedan' : 'SUV',
+      car_type: (vehicle || '').trim() || (isSedan ? 'Sedan' : 'SUV'),
       // The toll is an ESTIMATE from the destination — a Manhattan run crosses
       // one Port Authority tolled bridge or tunnel and pays the congestion
       // charge, an airport run crosses the bridge only, Newark and local trips

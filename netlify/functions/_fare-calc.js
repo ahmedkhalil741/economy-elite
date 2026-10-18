@@ -41,6 +41,24 @@ function numOrNull(v) {
 const SUV_FEE = 35;        // to Newark
 const SUV_FEE_NY = 50;     // to Manhattan, LaGuardia, JFK
 
+// WHICH CARS PRICE AS A SEDAN.
+//
+// The Suburban is the only one that costs more, so this is the whole of the
+// question "does the surcharge apply". The Tesla seats four and takes the
+// same roads; charging Suburban money for it would be charging for a car
+// nobody is getting.
+//
+// Named rather than written as "anything that isn't an SUV", because the
+// vehicle arrives as free text from a form and from the sheet, and a typo
+// would then quietly bill somebody the Suburban rate. Unknown pays the
+// higher price: being asked for $35 you do not owe is a phone call, giving
+// away $35 is gone.
+const SEDAN_CARS = ['sedan', 'tesla', 'model y'];
+function pricesAsSedan(vehicle) {
+  const v = String(vehicle || '').trim().toLowerCase();
+  return SEDAN_CARS.some((name) => v.includes(name));
+}
+
 // Pickup between 12:00 AM and 5:59 AM.
 const OVERNIGHT_FEE = 10;
 
@@ -419,7 +437,7 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
   const setCard = numOrNull(ov.cardFee);
   const anySet = setFare !== null || setToll !== null || setCard !== null;
   const agreed = setFare;
-  const isSedan = (vehicle || '').trim().toLowerCase() === 'sedan';
+  const isSedan = pricesAsSedan(vehicle);
   const overnight = isOvernightPickup(dateTime) ? OVERNIGHT_FEE : 0;
   const overnightNote = overnight ? ` + $${overnight} overnight` : '';
 
@@ -659,6 +677,7 @@ module.exports = {
   HOURLY_MINIMUM_HOURS,
   SUV_FEE,
   SUV_FEE_NY,
+  pricesAsSedan,
   OVERNIGHT_FEE,
   TOLLS,
 };
