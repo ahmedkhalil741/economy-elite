@@ -669,7 +669,7 @@
     }catch(e){ /* no autocomplete is worse than none of the page */ }
   }
 
-  const BUILD = '18 Oct 2026, 11:00pm';
+  const BUILD = '22 Oct 2026, 7:05pm';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -2305,7 +2305,7 @@
   // the rest of the page sends, so a customer never gets two different
   // versions of the same promise.
   // ------------------------------------------------------------------
-  const PICKS = ['Welcome', 'Birthday', 'We miss you', 'You have credit', 'Rewards explained', 'Write my own'];
+  const PICKS = ['Welcome', 'How did we do?', 'Birthday', 'We miss you', 'You have credit', 'Rewards explained', 'Write my own'];
 
   function paxMsg(p, kind){
     const first = String(p.name || '').trim().split(/\s+/)[0];
@@ -2333,6 +2333,23 @@
         '$' + (rules ? rules.referral : 10) + ' for referring a new customer\n' +
         '$' + (rules ? rules.birthday : 15) + ' birthday reward\n\n' +
         'We look forward to a long relationship with you, built on trust, reliability and comfort.' };
+    }
+    // THE SURVEY, SENDABLE TO ANYONE, ANY TIME.
+    //
+    // The after-the-ride message carries this link on a first ride and never
+    // again - deliberately, so a thank-you does not turn into a survey every
+    // trip. But that left no way to ask a particular person, and the page
+    // itself had no door into it from here, which is why it kept getting
+    // lost. This is that door.
+    //
+    // The Google ask is NOT in this message. It lives on the thank-you screen
+    // the customer sees after answering, where they have just written down
+    // what they thought and the words are already in their head. Asking for
+    // both at once gets neither.
+    if (kind === 'How did we do?') {
+      return { kind:'completed', body: hi + 'Hany here, from The Standard. If you have a minute, ' +
+        'I\u2019d like to know how the ride went \u2014 it takes about thirty seconds and it comes ' +
+        'straight to me.\n\n' + feedbackLink(p) };
     }
     if (kind === 'Birthday') {
       return { kind:'birthday', body: hi + 'Hany here, from The Standard. Happy birthday from us \u2014 ' +
