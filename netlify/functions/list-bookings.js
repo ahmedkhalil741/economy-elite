@@ -181,6 +181,9 @@ exports.handler = async function (event) {
           name: c.name || c.phone, phone: c.phone || '', email: c.email || '',
           status, activity, points, completedRides, creditOwed,
           birthday: c.birthday || '',
+          // So the edit box opens with the right box ticked, and so the
+          // booking form knows which card rate to quote - see _first-ride.js.
+          cardOnFile: /^(yes|y|true|1)$/i.test(String(c.card_on_file || '').trim()),
           lastRide: c.last_ride || '',
           next: L.nextMilestone(points),
         });

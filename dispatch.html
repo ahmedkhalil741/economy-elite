@@ -130,6 +130,11 @@
   .ride.completed{border-color:#3d5a3d}
   .status-row .undo-hint{opacity:.55; font-style:italic;}
 
+  .cust-box{margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:10px;
+            display:flex;flex-direction:column;gap:12px}
+  .cust-check{display:flex;gap:10px;align-items:center;cursor:pointer;font-size:.92rem;color:var(--dim)}
+  .cust-check input{width:18px;height:18px;flex:none;accent-color:var(--accent);cursor:pointer}
+
   /* Fixing the details. Wider boxes than the price grid, because an address
      is long and a half-shown address is how the wrong one gets saved. */
   .det-box{margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:8px;
@@ -677,7 +682,7 @@
     }catch(e){ /* no autocomplete is worse than none of the page */ }
   }
 
-  const BUILD = '25 Oct 2026, 9:40am';
+  const BUILD = '25 Oct 2026, 11:20am';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -1810,6 +1815,74 @@
     // an address typed wrong is a car outside the wrong house. So this writes
     // the sheet and the calendar entry together, and it never moves the price
     // on its own - it asks.
+    // ---- CORRECTING WHAT WE HOLD ABOUT SOMEBODY ----
+    //
+    // Chiefly the birthday. Typed into the sheet it becomes a date serial -
+    // 46235 instead of 08-01 - and the birthday reward then never fires for
+    // that customer, silently. Saved through here it goes in as text and
+    // stays readable.
+    const custOpen = e.target.closest('.pedit');
+    if(custOpen){
+      const row = custOpen.closest('.pax');
+      const p = (data.people || [])[Number(row.dataset.p)] ||
+                (document.getElementById('pList')._rows || [])[Number(row.dataset.p)];
+      const box = row.querySelector('.cust-box');
+      row.querySelector('.msg-box').hidden = true;
+      box.hidden = !box.hidden;
+      if(!box.hidden && p){
+        box.querySelector('.c-bday').value  = p.birthday || '';
+        box.querySelector('.c-email').value = p.email || '';
+        box.querySelector('.c-onfile').checked = Boolean(p.cardOnFile);
+        box.querySelector('.custres').className = 'result custres';
+        box.querySelector('.c-bday').focus();
+      }
+      return;
+    }
+
+    const custCancel = e.target.closest('.cust-cancel');
+    if(custCancel){ custCancel.closest('.cust-box').hidden = true; return; }
+
+    const custSave = e.target.closest('.cust-save');
+    if(custSave){
+      const row = custSave.closest('.pax');
+      const p = (data.people || [])[Number(row.dataset.p)] ||
+                (document.getElementById('pList')._rows || [])[Number(row.dataset.p)];
+      const box = custSave.closest('.cust-box');
+      const out = box.querySelector('.custres');
+      if(!p || !p.phone){
+        out.className = 'result custres show';
+        out.innerHTML = '<span class="bad">No phone number on this customer.</span>';
+        return;
+      }
+      custSave.disabled = true;
+      out.className = 'result custres show';
+      out.textContent = 'Saving\u2026';
+      try{
+        const res = await fetch('/.netlify/functions/update-customer', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ token, phone: p.phone,
+                                 birthday: box.querySelector('.c-bday').value,
+                                 email: box.querySelector('.c-email').value,
+                                 cardOnFile: box.querySelector('.c-onfile').checked })
+        });
+        const j = await res.json();
+        if(!res.ok || j.error) throw new Error(j.error || ('Error ' + res.status));
+        if(j.customer){
+          p.birthday = j.customer.birthday || '';
+          p.email = j.customer.email || '';
+          p.cardOnFile = j.customer.cardOnFile;
+        }
+        out.innerHTML = '<span class="good">' + esc(j.note || 'Saved') + '</span>' +
+          (j.missing ? ' <span class="bad">' + esc(j.missing) + '</span>' : '');
+        setTimeout(() => { box.hidden = true; renderPeople(); }, 1400);
+      }catch(err){
+        out.innerHTML = '<span class="bad">' + esc(err.message) + '</span>';
+      }finally{
+        custSave.disabled = false;
+      }
+      return;
+    }
+
     const detOpen = e.target.closest('.det-edit');
     if(detOpen){
       const card = detOpen.closest('.ride');
@@ -2422,8 +2495,27 @@
         '<div class="pax-meta">' + bits.join(' &middot; ') + '</div>' +
         '<div class="pax-pick">' +
           PICKS.map(k => '<button class="why ppick">' + k + '</button>').join('') +
+          '<button class="why pedit">Edit details</button>' +
         '</div>' +
         '<div class="msg-box" hidden></div>' +
+        '<div class="cust-box" hidden>' +
+          '<div class="det-grid">' +
+            '<label><span class="lbl">Birthday</span>' +
+              '<input class="c-bday" type="text" placeholder="09-20" autocomplete="off"></label>' +
+            '<label><span class="lbl">Email</span>' +
+              '<input class="c-email" type="email" autocomplete="off"></label>' +
+          '</div>' +
+          '<label class="cust-check"><input class="c-onfile" type="checkbox">' +
+            '<span>Their card is saved in Square</span></label>' +
+          '<div class="det-note">Month and day only &mdash; 09-20 is the 20th of September. ' +
+            'The year is never kept. A saved card is charged at 3.5% + 15\u00a2 instead of 2.6%, ' +
+            'from the next booking on.</div>' +
+          '<div class="det-acts">' +
+            '<button class="btn cust-save">Save</button>' +
+            '<button class="btn-line cust-cancel">Cancel</button>' +
+            '<span class="result custres"></span>' +
+          '</div>' +
+        '</div>' +
       '</div>';
     }).join('');
     wrap._rows = rows;
