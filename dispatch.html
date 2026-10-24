@@ -430,7 +430,15 @@
       <select id="a-source">
         <option value="Phone">Phone call</option>
         <option value="Text">Text message</option>
+        <option value="Web">Website</option>
         <option value="Email">Email</option>
+        <option value="Nextdoor">Nextdoor</option>
+        <option value="Yelp">Yelp</option>
+        <option value="Facebook">Facebook</option>
+        <option value="Google">Google</option>
+        <option value="Referral">Referred by someone</option>
+        <option value="Flyer">Flyer or card</option>
+        <option value="Repeat">Repeat customer</option>
       </select>
     </div>
 
@@ -669,7 +677,7 @@
     }catch(e){ /* no autocomplete is worse than none of the page */ }
   }
 
-  const BUILD = '24 Oct 2026, 8:30pm';
+  const BUILD = '25 Oct 2026, 9:40am';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -2552,9 +2560,17 @@
           if(!edited.toll)    document.getElementById('a-toll').value = j.parts.toll || 0;
           if(!edited.cardFee) document.getElementById('a-cardfee').value = (j.parts.cardFee || 0).toFixed(2);
         }
+        // THE RATE AND THE MONEY TOGETHER.
+        //
+        // "Card fee" on its own left Ahmed working out whether the number in
+        // the box was the tapped rate or the saved-card one. The label now
+        // says which, so a figure he is about to read to a customer is never
+        // one he has to take on trust.
         document.getElementById('cardLabel').textContent =
           NO_FEE.indexOf(selectedPay) !== -1 ? 'Card fee (none for ' + selectedPay + ')'
-          : (cardOnFileAdmin && selectedPay === 'Card') ? 'Card fee (saved card \u2014 keyed rate)'
+          : (cardOnFileAdmin && selectedPay === 'Card')
+            ? 'Card fee \u00b7 saved card, 3.5% + 15\u00a2'
+          : selectedPay === 'Card' ? 'Card fee \u00b7 tapped, 2.6% + 15\u00a2'
           : selectedPay + ' fee';
 
         const tipLine = document.getElementById('tipLine');
