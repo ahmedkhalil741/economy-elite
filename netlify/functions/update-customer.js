@@ -19,24 +19,12 @@
 
 const { google } = require('googleapis');
 const { readTab, buildRow, rowToObject } = require('./_sheet');
+const { monthDay, birthdayCell } = require('./_format');
 
 const CUSTOMERS_TAB = 'Customers';
 
 const tenDigits = (v) => String(v || '').replace(/\D/g, '').slice(-10);
 const clean = (v) => String(v === null || v === undefined ? '' : v).trim();
-
-// Accepts 09-20, 9/20, 2026-09-20, 30 Aug — anything with a month and a day in
-// it — and gives back "09-20". The YEAR IS DROPPED ON PURPOSE: a car service
-// has no business holding a customer's age, and _loyalty.js never reads it.
-function monthDay(raw) {
-  const nums = String(raw || '').match(/\d+/g);
-  if (!nums || nums.length < 2) return null;
-  let m, d;
-  if (nums[0].length === 4 && nums.length >= 3) { m = +nums[1]; d = +nums[2]; }
-  else { m = +nums[0]; d = +nums[1]; }
-  if (!m || !d || m > 12 || d > 31) return null;
-  return String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-}
 
 exports.handler = async function (event) {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
@@ -75,10 +63,10 @@ exports.handler = async function (event) {
       if (clean(birthday) !== '' && !md) {
         return { statusCode: 400, body: JSON.stringify({ error: `Couldn't read "${birthday}" as a date. Try 09-20.` }) };
       }
-      // THE APOSTROPHE IS THE ENTIRE POINT. Without it USER_ENTERED hands
-      // "08-01" to Sheets, which stores a date serial and the month and day
-      // are gone. With it the cell holds the two numbers we actually need.
-      cells.birthday = md ? "'" + md : '';
+      // birthdayCell adds the leading apostrophe. Without it USER_ENTERED
+      // hands "08-01" to Sheets, which stores a date serial and the month and
+      // day are gone — which is the whole reason this screen exists.
+      cells.birthday = birthdayCell(birthday);
       if (md) notes_.push(`birthday ${md}`);
     }
 

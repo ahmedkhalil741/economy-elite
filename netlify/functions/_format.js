@@ -122,4 +122,59 @@ function easternToInstant(dateTimeLocal) {
   return instant;
 }
 
-module.exports = { easternOffsetMinutes, easternToInstant, formatRequestedDateTime, parseRequestedDateTime, formatTimestamp, shiftLocalDateTime, easternToday };
+
+// ---- A BIRTHDAY THE SHEET CANNOT TURN INTO A NUMBER ----
+//
+// The booking form asks for a birthday and says "e.g. March 14", so people
+// type March 14, 3/14, 09-20, or their whole date of birth. Whatever arrives
+// used to go into the cell as typed, and Google Sheets did what Google Sheets
+// does: it read a date and stored a day-count from 1899. Two customers ended
+// up with 46235 and 33480 in that column - perfectly correct as dates, and
+// unreadable to the code that has to find a month and a day in them. The
+// birthday reward then never fires for those people, and nothing says so.
+//
+// So the value is normalised to MM-DD and written with a LEADING APOSTROPHE,
+// which is what tells Sheets to leave a cell alone. The apostrophe never
+// shows; the two numbers stay two numbers.
+//
+// THE YEAR IS THROWN AWAY ON PURPOSE. A car service has no business holding a
+// customer's age, nothing in this codebase reads it, and a birth year sitting
+// in a spreadsheet is a liability rather than a feature.
+// MONTHS is already declared at the top of this file, three-letter and
+// capitalised. Reused here rather than shadowed.
+function monthDay(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return null;
+
+  // "March 14", "14 March", "Mar 14th"
+  const named = MONTHS.findIndex((m) => new RegExp('\\b' + m, 'i').test(text));
+  if (named !== -1) {
+    // No \b after the digits: "Mar 14th" has no word boundary between the
+    // 4 and the t, and "14th" is exactly how people write it.
+    const day = (text.match(/(\d{1,2})/) || [])[1];
+    if (day && +day >= 1 && +day <= 31) {
+      return String(named + 1).padStart(2, '0') + '-' + String(+day).padStart(2, '0');
+    }
+    return null;
+  }
+
+  const nums = text.match(/\d+/g);
+  if (!nums || nums.length < 2) return null;
+  let m, d;
+  if (nums[0].length === 4 && nums.length >= 3) { m = +nums[1]; d = +nums[2]; }  // 1991-08-30
+  else { m = +nums[0]; d = +nums[1]; }                                           // 9/20, 8-30-1991
+  // Day first, the way much of the world writes it. There is no month 30, so
+  // "30-09" can only mean the 30th of September and guessing is safe here.
+  if (m > 12 && d <= 12) { const t = m; m = d; d = t; }
+  if (!m || !d || m > 12 || d > 31) return null;
+  return String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+}
+
+// What actually goes in the cell. Empty in, empty out; unreadable in, empty
+// out - a birthday we cannot read is worse than none, because it looks filled.
+function birthdayCell(raw) {
+  const md = monthDay(raw);
+  return md ? "'" + md : '';
+}
+
+module.exports = { monthDay, birthdayCell, easternOffsetMinutes, easternToInstant, formatRequestedDateTime, parseRequestedDateTime, formatTimestamp, shiftLocalDateTime, easternToday };

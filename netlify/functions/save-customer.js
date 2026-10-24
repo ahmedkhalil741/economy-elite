@@ -53,7 +53,7 @@
 
 const { google } = require('googleapis');
 const { readTab, buildRow, rowToObject } = require('./_sheet');
-const { easternToday } = require('./_format');
+const { easternToday, birthdayCell, monthDay } = require('./_format');
 const { sendOwnerEmail } = require('./_email');
 const L = require('./_loyalty');
 
@@ -158,7 +158,10 @@ exports.handler = async function (event) {
       // changed their birthday, they just didn't retype it. daily-reminders.js
       // reads this column; _loyalty.js uses the month and day and throws the
       // year away even if one is given.
-      birthday: birthday || existing.birthday || '',
+      // Normalised and written as text - see birthdayCell in _format.js.
+      // An existing value is kept as it is: it may already be a good MM-DD,
+      // and re-reading one that Sheets already mangled would not recover it.
+      birthday: birthday ? birthdayCell(birthday) : (existing.birthday || ''),
       car_type: vehicle || existing.car_type || '',
       // Only ever set once, on the profile's first booking — a regular
       // customer mentioning a friend later doesn't rewrite who sent them.
