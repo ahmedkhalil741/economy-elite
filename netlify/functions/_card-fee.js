@@ -29,11 +29,25 @@
 //    card acceptance — so it's worth confirming directly with them. To
 //    stop surcharging a method, set its entry below to null.
 //
-// The fee is worked out on the fare and then added, which leaves a few
-// cents of the processor's cut uncovered (the processor also takes its
-// percentage of the fee itself). That's deliberate: a surcharge must never
-// exceed the actual cost of accepting the card, so erring low is the safe
-// side.
+// ---- WHY THE FEE IS DIVIDED BY (1 - rate) ----
+//
+// Square charges its percentage on the WHOLE amount swiped, and the surcharge
+// is part of that amount. Work the fee out on the fare alone and Square then
+// takes a percentage of the fee as well, so the fare arrives short: 5c on a
+// $75 Newark run, 25c on a Philadelphia one. Small, and it was left that way
+// on purpose, because a surcharge must never exceed the real cost of
+// accepting the card and erring low is the safe side of that line.
+//
+// Ahmed's call, 23 October: cover it exactly instead. Dividing by (1 - rate)
+// lands the fee precisely on the cost rather than under it — on the line, not
+// over it, which is what the rule asks. Checked at every rate and amount on
+// the card: what Square deducts and what the customer paid come out equal to
+// the cent, and the fare lands whole.
+//
+// THE TIP IS NOT IN THIS. It cannot be - the price is quoted before the
+// customer has decided anything - and it should not be: charging somebody a
+// card fee on the gratuity they chose to leave is the kind of thing people
+// notice. The tip carries its own processing, as it does everywhere.
 
 const CARD_FEES = {
   cash: null,
@@ -78,7 +92,7 @@ function cardFeeFor(payMethod, fareAmount) {
   if (!plan) return null;
   if (typeof fareAmount !== 'number' || !isFinite(fareAmount) || fareAmount <= 0) return null;
 
-  const amount = Math.round((fareAmount * plan.rate + plan.fixed) * 100) / 100;
+  const amount = Math.round(((fareAmount * plan.rate + plan.fixed) / (1 - plan.rate)) * 100) / 100;
   return { amount, label: plan.label, rate: plan.rate, fixed: plan.fixed };
 }
 

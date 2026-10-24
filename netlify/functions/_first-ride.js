@@ -84,4 +84,44 @@ async function firstRideOff(phone, overrides, existingSheets) {
   };
 }
 
-module.exports = { firstRideOff, FIRST_RIDE_CREDIT };
+// IS THIS CUSTOMER'S CARD SAVED IN SQUARE?
+//
+// A saved card is card-not-present, and Square charges 3.5% + 15c for it
+// instead of 2.6% + 15c. Until now everybody was quoted the tapped price and
+// Ahmed absorbed the difference - about $2.20 on a $245 ride. His call,
+// 23 October: the customer pays the real cost of the method they chose.
+//
+// IT HAS TO BE KNOWN AT BOOKING TIME, which is the whole reason this reads
+// the sheet rather than waiting for the car. Every message we send promises
+// a flat price with nothing added at the end, and a fee that changes once the
+// reader comes out would make that a lie for two dollars.
+//
+// So a NEW customer is always quoted the tapped rate: they carry no flag yet,
+// and this returns false. The flag is set the first time Ahmed marks a ride
+// "On file" on the dispatch - a button he already presses - and from the next
+// booking on, the price is right from the start.
+async function cardOnFile(phone, existingSheets) {
+  const digits = tenDigits(phone);
+  if (digits.length !== 10) return false;
+  try {
+    const sheets = existingSheets || (await sheetsClient());
+    const { keys, rows } = await readTab(sheets, process.env.GOOGLE_SHEET_ID, CUSTOMERS_TAB);
+    if (!keys.includes('card_on_file')) return false;
+    const them = rows
+      .map((r) => rowToObject(keys, r))
+      .find((c) => tenDigits(c.phone) === digits);
+    return Boolean(them && /^(yes|y|true|1)$/i.test(String(them.card_on_file || '').trim()));
+  } catch (err) {
+    // The cheaper rate is the safe wrong answer: overcharging somebody by
+    // $2 is a refund and an apology, undercharging is 90 cents of our own.
+    return false;
+  }
+}
+
+// What to price with. "Card on file" is a real entry in _card-fee.js with the
+// keyed rate against it; everything else is left exactly as it arrived.
+function payMethodFor(payMethod, saved) {
+  return (saved && /^card$/i.test(String(payMethod || '').trim())) ? 'Card on file' : payMethod;
+}
+
+module.exports = { firstRideOff, cardOnFile, payMethodFor, FIRST_RIDE_CREDIT };

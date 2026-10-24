@@ -173,10 +173,50 @@ exports.handler = async function (event) {
       bookings.rows[idx] = buildRow(bookings.keys, cells, bookings.rows[idx]);
     }
 
+    // ONE TAP SETS IT, AND IT STAYS SET.
+    //
+    // Marking a ride "On file" says the card is saved in Square, and that
+    // changes what every future booking for this number costs to accept:
+    // 3.5% instead of 2.6%. The price has to know before it is quoted, not
+    // after - every message we send promises nothing is added at the end - so
+    // the answer is written onto the CUSTOMER here, and _first-ride.js reads
+    // it at booking time.
+    //
+    // THIS HAS TO LIVE HERE, not further down with the points. The dispatch
+    // asks "Tapped or on file?" after the ride is already Completed, so that
+    // second call changes no status, takes the early return above, and never
+    // reaches the customer block at the bottom of this function.
+    //
+    // Only ever written true. A customer taking their card out of Square is a
+    // conversation, not something this code can observe, so clearing it is a
+    // hand edit in the sheet - the safer direction to leave manual.
+    let savedCard = null;
+    if (entry === 'On file') {
+      try {
+        const key0 = normalizePhone(phone || row.phone);
+        const cust = await readTab(sheets, spreadsheetId, CUSTOMERS_TAB);
+        const pc = cust.keys.indexOf('phone');
+        if (!cust.keys.includes('card_on_file')) {
+          savedCard = 'the Customers tab has no "card_on_file" column — add one to the header row';
+        } else if (key0 && pc !== -1) {
+          const at = cust.rows.findIndex((r) => normalizePhone(r[pc]) === key0);
+          if (at !== -1 && !/^(yes|y|true|1)$/i.test(String(rowToObject(cust.keys, cust.rows[at]).card_on_file || '').trim())) {
+            await sheets.spreadsheets.values.update({
+              spreadsheetId,
+              range: `${CUSTOMERS_TAB}!A${at + 2}:${cust.lastColumn}${at + 2}`,
+              valueInputOption: 'USER_ENTERED',
+              requestBody: { values: [buildRow(cust.keys, { card_on_file: 'Yes' }, cust.rows[at])] },
+            });
+            savedCard = 'card on file — future bookings use the keyed rate';
+          }
+        }
+      } catch (err) { savedCard = `not recorded: ${err.message}`; }
+    }
+
     if (before.toLowerCase() === wanted.toLowerCase()) {
       return { statusCode: 200, body: JSON.stringify({
         success: true, unchanged: !(reasonChanged || entryChanged), status: wanted,
-        reason: reasonText, cardEntry: entry,
+        reason: reasonText, cardEntry: entry, savedCard,
         entryNote: (entry && !hasEntryCol)
           ? 'The Bookings tab has no "card_entry" column, so that was not saved. Add one to the header row.'
           : undefined,

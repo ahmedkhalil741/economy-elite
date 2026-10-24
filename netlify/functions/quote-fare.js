@@ -29,7 +29,8 @@ exports.handler = async function (event) {
   if (!expected) return { statusCode: 503, body: JSON.stringify({ error: 'ADMIN_TOKEN is not set in Netlify.' }) };
 
   try {
-    const { token, pickup, dropoff, vehicle, dateTime, payMethod, overrides, hours, firstRide } = JSON.parse(event.body || '{}');
+    const { token, pickup, dropoff, vehicle, dateTime, payMethod, overrides, hours, firstRide,
+            cardOnFile } = JSON.parse(event.body || '{}');
     if (token !== expected) return { statusCode: 401, body: JSON.stringify({ error: 'Wrong passcode.' }) };
 
     if (!pickup || !dropoff) {
@@ -51,7 +52,12 @@ exports.handler = async function (event) {
       ? Object.assign({}, asked, { discount: FIRST_RIDE_CREDIT })
       : asked;
 
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, withCredit);
+    // Same rule as log-booking: a saved card is quoted at the keyed rate, so
+    // the screen Ahmed reads out and the row that gets saved cannot disagree.
+    const payFor = (cardOnFile && /^card$/i.test(String(payMethod || '').trim()))
+      ? 'Card on file' : payMethod;
+
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payFor, withCredit);
 
     // The parts, so a price can be EXPLAINED on the phone rather than just
     // stated. "Seventy-five, plus thirty-five because it's the Suburban."

@@ -669,7 +669,7 @@
     }catch(e){ /* no autocomplete is worse than none of the page */ }
   }
 
-  const BUILD = '22 Oct 2026, 7:05pm';
+  const BUILD = '24 Oct 2026, 8:30pm';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -2526,7 +2526,8 @@
     }
 
     const ov = overrides();
-    const asking = [pickup, dropoff, vehicle, dateTime, selectedPay, isFirstRideAdmin, JSON.stringify(ov)].join('|');
+    const asking = [pickup, dropoff, vehicle, dateTime, selectedPay, isFirstRideAdmin,
+                    cardOnFileAdmin, JSON.stringify(ov)].join('|');
     if(asking === lastAsked) return;
     lastAsked = asking;
 
@@ -2538,6 +2539,7 @@
           body: JSON.stringify({ token, pickup, dropoff, vehicle, dateTime,
                                  payMethod: selectedPay, overrides: ov,
                                  firstRide: isFirstRideAdmin,
+                                 cardOnFile: cardOnFileAdmin,
                                  hours: hoursValue() })
         });
         const j = await r.json();
@@ -2551,7 +2553,9 @@
           if(!edited.cardFee) document.getElementById('a-cardfee').value = (j.parts.cardFee || 0).toFixed(2);
         }
         document.getElementById('cardLabel').textContent =
-          NO_FEE.indexOf(selectedPay) !== -1 ? 'Card fee (none for ' + selectedPay + ')' : selectedPay + ' fee';
+          NO_FEE.indexOf(selectedPay) !== -1 ? 'Card fee (none for ' + selectedPay + ')'
+          : (cardOnFileAdmin && selectedPay === 'Card') ? 'Card fee (saved card \u2014 keyed rate)'
+          : selectedPay + ' fee';
 
         const tipLine = document.getElementById('tipLine');
         if(j.matched && j.tip){
@@ -2650,6 +2654,9 @@
   // we have actually looked them up — guessing it onto a blank form would put a
   // discount on screen that the booking might not honour.
   let isFirstRideAdmin = false;
+  // Their card is saved in Square, so Square charges us the keyed rate and
+  // the quote has to say so before the price leaves this page.
+  let cardOnFileAdmin = false;
 
   function lookupCustomerAdmin(){
     const digits = document.getElementById('a-phone').value.replace(/\D/g, '');
@@ -2665,8 +2672,10 @@
           // no completed rides, gets the $10 — and the quote has to show it,
           // because the price on this screen is the price Ahmed reads out.
           const wasFirst = isFirstRideAdmin;
+          const wasSaved = cardOnFileAdmin;
           isFirstRideAdmin = !data || !data.found || !(parseInt(data.completedRides, 10) > 0);
-          if(wasFirst !== isFirstRideAdmin){ lastAsked = ''; askForQuote(); }
+          cardOnFileAdmin = Boolean(data && data.cardOnFile);
+          if(wasFirst !== isFirstRideAdmin || wasSaved !== cardOnFileAdmin){ lastAsked = ''; askForQuote(); }
 
           if(!data || !data.found) return;
           const nameField = document.getElementById('a-name');
@@ -2844,8 +2853,10 @@
 
     document.getElementById('bookForm').reset();
     document.getElementById('a-contact15').checked = true;
-    // A fresh form knows nobody, so it offers nobody the new-customer ten.
+    // A fresh form knows nobody, so it offers nobody the new-customer ten
+    // and assumes nobody's card is saved.
     isFirstRideAdmin = false;
+    cardOnFileAdmin = false;
     document.querySelectorAll('.pay-chip').forEach(c => c.classList.remove('active'));
     document.getElementById('payOptions').firstElementChild.classList.add('active');
     document.getElementById('a-vehicle').value = 'SUV';

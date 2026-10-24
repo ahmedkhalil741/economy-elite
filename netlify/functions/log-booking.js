@@ -56,7 +56,7 @@ const { google } = require('googleapis');
 const { estimateFare, pricesAsSedan } = require('./_fare-calc');
 const { formatTimestamp, formatRequestedDateTime } = require('./_format');
 const { readTab, buildRow, orNA, orZero } = require('./_sheet');
-const { firstRideOff } = require('./_first-ride');
+const { firstRideOff, cardOnFile, payMethodFor } = require('./_first-ride');
 
 // The tab bookings are appended to.
 const SHEET_TAB = 'Bookings';
@@ -102,8 +102,12 @@ exports.handler = async function (event) {
     // is their first ride is part of the price.
     const sheets = await getSheetsClient();
     const first = await firstRideOff(phone, overrides, sheets);
+    // A saved card costs more to accept, so it has to be known before the
+    // price is quoted - see cardOnFile in _first-ride.js.
+    const saved = await cardOnFile(phone, sheets);
+    const payFor = payMethodFor(payMethod, saved);
 
-    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod,
+    const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payFor,
                               withHours(first.overrides, hours));
     const isSedan = pricesAsSedan(vehicle);
 

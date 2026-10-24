@@ -118,6 +118,8 @@ exports.handler = async function (event) {
         carType: customer.car_type || '',
         totalRides: customer.total_rides || '0',
         completedRides: customer.completed_rides || '0',
+        // Drives which card rate the quote uses - see _first-ride.js.
+        cardOnFile: /^(yes|y|true|1)$/i.test(String(customer.card_on_file || '').trim()),
         status: customer.status || '',
         // What they are owed. The booking page uses this to fill the discount
         // box in by itself, which is the whole reason credits stopped being a

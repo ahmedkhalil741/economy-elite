@@ -132,6 +132,26 @@ const TOWN_FARES = [
   { town: 'Convent Station',  names: ['convent station'],                        ewr: 90,  manh: 150, lgajfk: 200 },
   { town: 'Dunellen',         names: ['dunellen'],                               ewr: 85,  manh: 145, lgajfk: 195 },
   { town: 'East Hanover',     names: ['east hanover'],                           ewr: 85,  manh: 150, lgajfk: 195 },
+  // ---- WESTCHESTER, added 23 Oct. Priced in the JFK band rather than by
+  // distance: it is under thirty miles but every mile of it crosses the city
+  // and a bridge, which is where the time actually goes. A Pelham job was
+  // once hand-priced at $408 and the customer walked.
+  // ONE NUMBER IN ALL THREE COLUMNS, and that is not laziness.
+  //
+  // Westchester is forty miles and an hour from New Providence before the
+  // customer is even in the car, and that hour is the same whether they are
+  // going to Newark, Manhattan or JFK. The deadhead is the job; the leg the
+  // passenger rides is the short part. Pricing the columns apart would be
+  // pricing a difference that isn't there.
+  //
+  // `nyPickup` makes the Suburban cost $50 more rather than $35, the same as
+  // any other run that crosses the city — see SUV_FEE_NY.
+  { town: 'Pelham',           names: ['pelham'],           ewr: 185, manh: 185, lgajfk: 185, nyPickup: true },
+  { town: 'New Rochelle',     names: ['new rochelle'],     ewr: 185, manh: 185, lgajfk: 185, nyPickup: true },
+  { town: 'Mount Vernon',     names: ['mount vernon'],     ewr: 185, manh: 185, lgajfk: 185, nyPickup: true },
+  { town: 'Yonkers',          names: ['yonkers'],          ewr: 185, manh: 185, lgajfk: 185, nyPickup: true },
+  // Thin once the deadhead north is counted - see the note in the pricing doc.
+  { town: 'East Rutherford',  names: ['east rutherford'],  ewr: 90,  manh: 120, lgajfk: 170 },
   { town: 'Edison',           names: ['edison'],                                 ewr: 75,  manh: 130, lgajfk: 180 },
   { town: 'Far Hills',        names: ['far hills'],                              ewr: 115, manh: 165, lgajfk: 225 },
   { town: 'Flanders',         names: ['flanders'],                               ewr: 125, manh: 185, lgajfk: 235 },
@@ -174,7 +194,9 @@ const TOWN_FARES = [
   { town: 'Phillipsburg',     names: ['phillipsburg', 'philipsburg'],            ewr: 180, manh: 240, lgajfk: 290 },
   { town: 'Piscataway',       names: ['piscataway'],                             ewr: 100, manh: 160, lgajfk: 210 },
   { town: 'Princeton',        names: ['princeton'],                              ewr: 155, manh: 215, lgajfk: 265 },
-  { town: 'Sayreville',       names: ['sayreville'],                             ewr: 90,  manh: 150, lgajfk: 195 },
+  // Parlin is a section of Sayreville, not a town of its own - same drive,
+  // same price, and a customer who types their own address gets a number.
+  { town: 'Sayreville',       names: ['sayreville', 'parlin'],                             ewr: 90,  manh: 150, lgajfk: 195 },
   { town: 'Scotch Plains',    names: ['scotch plains', 'scotch plain'],          ewr: 80,  manh: 140, lgajfk: 190 },
   { town: 'Seaside Heights',  names: ['seaside heights', 'seaside hghts'],       ewr: 185, manh: 245, lgajfk: 295 },
   { town: 'Short Hills',      names: ['short hills'],                            ewr: 85,  manh: 145, lgajfk: 195 },
@@ -486,7 +508,14 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
     // for weeks before anyone noticed. Tolls and the card fee stay on their
     // own lines because Ahmed does not set them — those are pass-throughs.
     const base = town[dest.key];
-    const vehicleFee = isSedan ? 0 : (dest.ny ? SUV_FEE_NY : SUV_FEE);
+    // EITHER END IN NEW YORK, not just the destination.
+    //
+    // The bigger Suburban surcharge is there because the run crosses the city
+    // and its bridges. A Pelham pickup heading to Newark crosses exactly the
+    // same ground as a Newark pickup heading to Pelham, so reading only the
+    // destination charged the Westchester towns $35 for a $50 drive.
+    const crossesNY = dest.ny || town.nyPickup;
+    const vehicleFee = isSedan ? 0 : (crossesNY ? SUV_FEE_NY : SUV_FEE);
 
     const toll = destToll;
 
