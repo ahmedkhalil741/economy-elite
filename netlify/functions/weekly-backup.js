@@ -21,7 +21,9 @@ const { sendEmail, sendOwnerEmail } = require('./_email');
 
 // Every tab worth keeping. A tab that isn't there yet is skipped, not fatal —
 // the sheet grows over time and a missing name should not cost you the rest.
-const TABS = ['Bookings', 'Customers', 'Credits', 'Drivers'];
+// Credits is gone - the reason a credit was given is a column on the
+// customer now, so it backs up with Customers.
+const TABS = ['Bookings', 'Customers', 'Drivers'];
 
 async function sheetsClient() {
   const auth = new google.auth.JWT(

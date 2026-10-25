@@ -20,8 +20,6 @@ const L = require('./_loyalty');
 
 const BOOKINGS_TAB = 'Bookings';
 const CUSTOMERS_TAB = 'Customers';
-// Every credit event, one per row. See logCredit below for why.
-const CREDITS_TAB = 'Credits';
 
 const COMPLETED = 'Completed';
 const CANCELLED = 'Cancelled';
@@ -63,34 +61,31 @@ async function sheetsClient() {
   return cachedSheets;
 }
 
-// Appends one row to the Credits tab.
+// WHY THE CREDITS TAB IS GONE — Ahmed's call, 2026-10-25.
 //
-// WHY THIS EXISTS: credits used to be squashed into a single credit_history
-// cell that grew forever — "2026-09-18 +$5 (first completed ride) · 2026-10-02
-// +$10 (referred Dana) · …". Readable for a week, useless by December: you
-// cannot sort it, filter it, total it, or answer "how much did I give away
-// this year" without reading every cell by eye.
+// It was a separate tab with one row per credit event, and for three weeks it
+// sat completely empty, because the first event a customer ever generates is
+// the $15 at ten rides. He asked about it three times. A tab that will look
+// broken until somebody's tenth ride is a tab that costs more in doubt than
+// it returns in tidiness, and he does not want to open a second sheet to find
+// out why a balance is what it is.
 //
-// One row per event fixes all of that. The running balance still lives on the
-// customer, so nothing has to be recomputed to know what is owed.
+// So the reason now lives on the CUSTOMER, in credit_history, next to the
+// balance it explains - and the morning email already prints that cell beside
+// the amount owed, which is where he actually reads it.
 //
-// A missing Credits tab is not an error — the credit itself has already been
-// recorded on the customer. The ledger is the nice-to-have.
-async function logCredit(sheets, spreadsheetId, entry) {
-  try {
-    const { keys, lastColumn } = await readTab(sheets, spreadsheetId, CREDITS_TAB);
-    if (!keys.length) return 'the Credits tab has no header row';
-    await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: `${CREDITS_TAB}!A:${lastColumn}`,
-      valueInputOption: 'USER_ENTERED',
-      insertDataOption: 'INSERT_ROWS',
-      requestBody: { values: [buildRow(keys, entry)] },
-    });
-    return 'logged';
-  } catch (err) {
-    return `not logged: ${err.message}`;
-  }
+// The objection to this before was that the cell grew without limit. It did,
+// because the old version wrote a line for every single ride. Credits are
+// rare - ten rides apart, a birthday, a referral - so at this size the cell
+// holds a couple of entries a year, and KEEP_ENTRIES caps it regardless.
+const KEEP_ENTRIES = 8;
+
+function addNote(existing, date, amount, reason) {
+  const sign = amount < 0 ? '-' : '+';
+  const line = `${date} ${sign}$${Math.abs(amount)} (${reason})`;
+  const kept = String(existing || '').split(' \u00b7 ').map((x) => x.trim()).filter(Boolean);
+  kept.push(line);
+  return kept.slice(-KEEP_ENTRIES).join(' \u00b7 ');
 }
 
 exports.handler = async function (event) {
@@ -361,10 +356,17 @@ exports.handler = async function (event) {
         - spent
         + refunded) * 100) / 100);
 
-    // The one-cell history is no longer appended to — it grew without limit
-    // and could not be analysed. Whatever is already in it is left alone so
-    // nothing is lost; new events go to the Credits tab as rows.
-    const creditNote = c.credit_history || '';
+    // Every event that moved the balance, written beside the balance. Two
+    // things can happen on one ride - a credit earned AND a discount spent -
+    // and both get their own entry, because a balance you cannot explain is
+    // the thing this is here to prevent.
+    let creditNote = c.credit_history || '';
+    if (credit)   creditNote = addNote(creditNote, today.date,  credit.amount,   credit.reason);
+    if (reversed) creditNote = addNote(creditNote, today.date, -reversed.amount, `ride marked ${wanted.toLowerCase()}`);
+    if (spent)    creditNote = addNote(creditNote, today.date, -spent,
+                                       row.discount_reason && row.discount_reason !== 'N/A'
+                                         ? String(row.discount_reason) : 'discount on a ride');
+    if (refunded) creditNote = addNote(creditNote, today.date,  refunded, 'discount put back');
 
     await sheets.spreadsheets.values.update({
       spreadsheetId,
@@ -401,45 +403,6 @@ exports.handler = async function (event) {
       } catch (err) { /* the balance is already right; this is the audit trail */ }
     }
 
-    // ---- the ledger ----
-    let ledger = null;
-    if (credit) {
-      ledger = await logCredit(sheets, spreadsheetId, {
-        date: today.date, phone: phoneCell(key), name: c.name || name || '',
-        type: 'Earned', amount: credit.amount, reason: credit.reason,
-        balance_after: creditOwed, points_after: points,
-      });
-    } else if (reversed) {
-      ledger = await logCredit(sheets, spreadsheetId, {
-        date: today.date, phone: phoneCell(key), name: c.name || name || '',
-        type: 'Reversed', amount: -reversed.amount,
-        reason: `ride marked ${wanted.toLowerCase()}`,
-        balance_after: creditOwed, points_after: points,
-      });
-    }
-
-    // Spending is its own row, always, even on a ride that also earned. Two
-    // things happened and the ledger should show two things — that is the
-    // difference between a balance you can explain and one you can't.
-    let spendLedger = null;
-    if (spent) {
-      spendLedger = await logCredit(sheets, spreadsheetId, {
-        date: today.date, phone: phoneCell(key), name: c.name || name || '',
-        type: 'Spent', amount: -spent,
-        reason: row.discount_reason && row.discount_reason !== 'N/A'
-          ? `${row.discount_reason} — ${pickup} to ${dropoff}`
-          : `discount on ${pickup} to ${dropoff}`,
-        balance_after: creditOwed, points_after: points,
-      });
-    } else if (refunded) {
-      spendLedger = await logCredit(sheets, spreadsheetId, {
-        date: today.date, phone: phoneCell(key), name: c.name || name || '',
-        type: 'Spend reversed', amount: refunded,
-        reason: `ride marked ${wanted.toLowerCase()} — discount put back`,
-        balance_after: creditOwed, points_after: points,
-      });
-    }
-
     // ---- the referral ----
     // Paid to the REFERRER, once, when the person they sent completes their
     // first ride. Only on the first: a referral is worth one credit however
@@ -458,8 +421,8 @@ exports.handler = async function (event) {
       if (refIdx !== -1 && refIdx !== cIdx) {
         const ref = rowToObject(customers.keys, customers.rows[refIdx]);
         const refOwed = (parseFloat(ref.credit_owed) || 0) + L.REFERRAL_CREDIT;
-        const refNote = [ref.credit_history, `${today.date} +$${L.REFERRAL_CREDIT} (referred ${c.name || key})`]
-          .filter(Boolean).join(' · ');
+        const refNote = addNote(ref.credit_history, today.date, L.REFERRAL_CREDIT,
+                                `referred ${c.name || key}`);
         try {
           await sheets.spreadsheets.values.update({
             spreadsheetId,
@@ -468,12 +431,6 @@ exports.handler = async function (event) {
             requestBody: { values: [buildRow(customers.keys, { credit_owed: refOwed, credit_history: refNote }, customers.rows[refIdx])] },
           });
           referral = { name: ref.name || refKey, phone: refKey, amount: L.REFERRAL_CREDIT, owed: refOwed };
-          await logCredit(sheets, spreadsheetId, {
-            date: today.date, phone: phoneCell(refKey), name: ref.name || refKey,
-            type: 'Referral', amount: L.REFERRAL_CREDIT,
-            reason: `referred ${c.name || key}`,
-            balance_after: refOwed, points_after: parseInt(ref.lifetime_points, 10) || 0,
-          });
         } catch (err) {
           referral = { error: err.message };
         }
@@ -527,8 +484,6 @@ exports.handler = async function (event) {
           standing: L.standingLine({ name: who, status: status_, activity, points, completedRides }),
         },
         referral,
-        ledger,
-        spendLedger,
         emailed,
       }),
     };

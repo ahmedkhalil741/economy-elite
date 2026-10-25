@@ -86,10 +86,9 @@ exports.handler = async function (event) {
     // allSettled, not all: only Bookings is load-bearing. A missing Customers,
     // Credits or Drivers tab must still leave the rides on screen, which is
     // what the individual try/catches used to guarantee one at a time.
-    const [bk, cu, cr, dr] = await Promise.allSettled([
+    const [bk, cu, dr] = await Promise.allSettled([
       readTab(sheets, id, SHEET_TAB),
       readTab(sheets, id, CUSTOMERS_TAB),
-      readTab(sheets, id, 'Credits'),
       readTab(sheets, id, 'Drivers'),
     ]);
 
@@ -335,10 +334,6 @@ exports.handler = async function (event) {
       return (t > 0 && t <= cutoff) ? n + 1 : n;
     }, 0);
 
-    // Is there somewhere to keep the credit ledger?
-    let creditsTab = 'missing';
-    if (cr.status === 'fulfilled') creditsTab = cr.value.keys.length ? 'ok' : 'no header row';
-
     let drivers = [];
     let driversError = null;
     let driversSource = 'none';
@@ -383,7 +378,6 @@ exports.handler = async function (event) {
         // dispatch card points at a missing column rather than a mystery
         sheetColumns: headers,
         customerColumns,
-        creditsTab,
         // Where the dropdown's names came from, so an empty dropdown points at
         // a missing tab rather than looking like a bug.
         driversFrom: driversSource,

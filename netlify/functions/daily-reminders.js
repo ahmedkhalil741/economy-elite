@@ -48,6 +48,13 @@ exports.handler = async function () {
     const wentQuiet = [];
     const birthdays = [];
     const owed = [];
+    // POINTS, which this email never mentioned. Ahmed's ask, 2026-10-25.
+    //
+    // A balance already owed is on the list below. What was missing is the one
+    // that is worth knowing BEFORE it happens: somebody one ride away from a
+    // reward. That is the ride to say something on - "next one puts you at
+    // ten" - and the only way he could see it coming was by reading the sheet.
+    const nearly = [];
 
     for (const row of rows) {
       const c = rowToObject(keys, row);
@@ -73,25 +80,36 @@ exports.handler = async function () {
         birthdays.push(`<strong>${name}</strong>${star} — ${c.phone || ''} · birthday ${c.birthday} · $${L.BIRTHDAY_CREDIT} — the dispatch page will put it on and write the text`);
       }
 
+      // One ride short of a milestone - 9, 19, 29 points.
+      if (points > 0 && points % L.LOYAL_POINTS === L.LOYAL_POINTS - 1) {
+        const next = L.nextMilestone(points);
+        nearly.push(`<strong>${name}</strong>${star} — ${c.phone || ''} · ${points} points · ` +
+          `their next ride is number ${points + 1}` +
+          (next.becomesLoyal ? ` and makes them <strong>Loyal</strong>` : '') +
+          ` · <strong>$${next.amount}</strong> earned when it is marked Completed`);
+      }
+
       const balance = parseFloat(c.credit_owed) || 0;
       if (balance > 0) {
         owed.push(`<strong>${name}</strong>${star} — ${c.phone || ''} · <strong>$${balance}</strong> owed${c.credit_history ? ` · ${c.credit_history}` : ''}`);
       }
     }
 
-    if (!wentQuiet.length && !birthdays.length && !owed.length) {
+    if (!wentQuiet.length && !birthdays.length && !owed.length && !nearly.length) {
       return { statusCode: 200, body: JSON.stringify({ sent: false, reason: 'nothing to report today' }) };
     }
 
     const parts = [];
     if (wentQuiet.length) parts.push(`<h3 style="margin:22px 0 8px;font-size:16px">Gone quiet — worth a note</h3>${table(wentQuiet)}`);
     if (birthdays.length) parts.push(`<h3 style="margin:22px 0 8px;font-size:16px">Birthdays in the next ${BIRTHDAY_LOOKAHEAD_DAYS} days</h3>${table(birthdays)}`);
+    if (nearly.length) parts.push(`<h3 style="margin:22px 0 8px;font-size:16px">One ride away from a reward</h3>${table(nearly)}`);
     if (owed.length) parts.push(`<h3 style="margin:22px 0 8px;font-size:16px">Credits earned and not yet sent</h3>${table(owed)}`);
 
     const subject = [
       wentQuiet.length ? `${wentQuiet.length} gone quiet` : null,
       birthdays.length ? `${birthdays.length} birthday${birthdays.length === 1 ? '' : 's'}` : null,
-      owed.length ? `$${owed.length} credit${owed.length === 1 ? '' : 's'} to send` : null,
+      nearly.length ? `${nearly.length} one ride away` : null,
+      owed.length ? `${owed.length} credit${owed.length === 1 ? '' : 's'} to send` : null,
     ].filter(Boolean).join(' · ');
 
     await sendOwnerEmail(`The Standard — ${subject}`, `

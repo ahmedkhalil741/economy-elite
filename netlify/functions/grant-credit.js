@@ -26,7 +26,16 @@ const { easternToday } = require('./_format');
 const L = require('./_loyalty');
 
 const CUSTOMERS_TAB = 'Customers';
-const CREDITS_TAB = 'Credits';
+// The reason a credit was given now lives on the customer, beside the
+// balance it explains, instead of in a separate Credits tab - see the long
+// note in set-ride-status.js. Capped, because a cell cannot grow forever.
+const KEEP_ENTRIES = 8;
+function addNote(existing, date, amount, reason) {
+  const line = `${date} ${amount < 0 ? '-' : '+'}$${Math.abs(amount)} (${reason})`;
+  const kept = String(existing || '').split(' \u00b7 ').map((x) => x.trim()).filter(Boolean);
+  kept.push(line);
+  return kept.slice(-KEEP_ENTRIES).join(' \u00b7 ');
+}
 
 // Authorised once per warm container, not once per tap.
 //
@@ -102,9 +111,11 @@ exports.handler = async function (event) {
 
     const balanceBefore = parseFloat(c.credit_owed) || 0;
     const creditOwed = Math.round((balanceBefore + rule.amount) * 100) / 100;
-    const points = parseInt(c.lifetime_points, 10) || 0;
 
-    const cells = { credit_owed: creditOwed };
+    const cells = {
+      credit_owed: creditOwed,
+      credit_history: addNote(c.credit_history, today.date, rule.amount, rule.reason),
+    };
     // Only written when the column exists; a missing column must not silently
     // swallow the marker and leave the birthday repeating.
     if (body.kind === 'birthday') cells.birthday_offered = String(today.date).slice(0, 4);
@@ -116,32 +127,12 @@ exports.handler = async function (event) {
       requestBody: { values: [buildRow(customers.keys, cells, customers.rows[idx])] },
     });
 
-    let ledger = 'not logged';
-    try {
-      const credits = await readTab(sheets, spreadsheetId, CREDITS_TAB);
-      if (credits.keys.length) {
-        await sheets.spreadsheets.values.append({
-          spreadsheetId,
-          range: `${CREDITS_TAB}!A:${credits.lastColumn}`,
-          valueInputOption: 'USER_ENTERED',
-          insertDataOption: 'INSERT_ROWS',
-          requestBody: { values: [buildRow(credits.keys, {
-            date: today.date, phone: key, name: c.name || '',
-            type: 'Offered', amount: rule.amount, reason: rule.reason,
-            balance_after: creditOwed, points_after: points,
-          })] },
-        });
-        ledger = 'logged';
-      }
-    } catch (err) { ledger = `not logged: ${err.message}`; }
-
     const markerMissing = body.kind === 'birthday' && !customers.keys.includes('birthday_offered');
 
     return { statusCode: 200, body: JSON.stringify({
       success: true,
       amount: rule.amount,
       creditOwed,
-      ledger,
       // Said out loud rather than failing quietly: the credit is on the
       // account either way, but without the column the same birthday will come
       // back round tomorrow morning.
