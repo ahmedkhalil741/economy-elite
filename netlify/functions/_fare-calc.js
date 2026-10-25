@@ -285,6 +285,31 @@ function placeParts(text) {
   return places.length ? places : kept;
 }
 
+// THE NAME OF A PLACE WE DO NOT HAVE A PRICE FOR.
+//
+// "Other" was the zone on every ride that was not an airport run or a local
+// hop - Ahmed's New Providence to Neptune City run among them - and it is the
+// one zone that tells him nothing. He gets a lot of these. Grouping them all
+// under one label makes the revenue split by zone useless exactly where it
+// would be most interesting: the routes outside the rate card.
+//
+// placeParts has already thrown away the state, the ZIP, the county and the
+// street line, so what is left is the town. The LAST of them is the most
+// town-like - "Shop Rite, Neptune City" names the shop first.
+//
+// Nothing here invents a price. The price is still whatever Ahmed agreed; this
+// only gives the row a name he can add up by.
+function placeName(text) {
+  const parts = placeParts(text);
+  if (!parts.length) return null;
+  const name = parts[parts.length - 1].trim();
+  if (!name || name.length > 40) return null;
+  // Title-case it so "neptune city" typed in a hurry groups with "Neptune
+  // City" typed properly - a zone that splits on capitals is two zones.
+  return name.replace(/\s+/g, ' ')
+             .replace(/\b[a-z]/g, (ch) => ch.toUpperCase());
+}
+
 function findTown(text) {
   const parts = placeParts(text);
   if (!parts.length) return null;
@@ -592,9 +617,21 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
 
   // Nothing matched at all, but a price was agreed — no destination, so no
   // toll to add.
-  if (anySet) return agreedResult(agreed !== null ? agreed : 0, setToll !== null ? setToll : 0, payMethod, 'Agreed by phone', setCard, 'Other');
+  //
+  // The zone is the end we have NO price for, because that is the thing worth
+  // counting. Neptune City to New Providence filed under "New Providence"
+  // would hide the shore run inside a town we already serve.
+  const fromName = placeName(pickup);
+  const toName = placeName(dropoff);
+  const offCard = (!townA && fromName) ? fromName : (!townB && toName) ? toName : null;
+  const zoneName = offCard || toName || fromName || 'Other';
+  const routeLabel = (fromName && toName)
+    ? `Agreed — ${fromName} to ${toName}`
+    : 'Agreed by phone';
 
-  return noMatch(overnight, `No listed price for this route. Quote it by hand, or $${HOURLY_RATE}/hr (no minimum) if it isn't a straight A-to-B trip.${overnightNote}`);
+  if (anySet) return agreedResult(agreed !== null ? agreed : 0, setToll !== null ? setToll : 0, payMethod, routeLabel, setCard, zoneName);
+
+  return noMatch(overnight, `No listed price for this route. Quote it by hand, or $${HOURLY_RATE}/hr (no minimum) if it isn't a straight A-to-B trip.${overnightNote}`, zoneName);
 }
 
 // ---- DISCOUNTS ----
