@@ -683,7 +683,7 @@
     }catch(e){ /* no autocomplete is worse than none of the page */ }
   }
 
-  const BUILD = '25 Oct 2026, 7:30pm';
+  const BUILD = '25 Oct 2026, 8:10pm';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -1379,6 +1379,17 @@
             ' &middot; ' + c.points + ' point' + (c.points === 1 ? '' : 's') +
             ' &middot; ' + c.completedRides + ' completed' +
             (c.creditOwed > 0 ? ' &middot; <span class="owed">$' + c.creditOwed + ' credit owed</span>' : '') +
+            // THE RIDE THAT EARNS SOMETHING, said on the ride itself.
+            //
+            // The morning email names anyone one ride away, but the moment
+            // that matters is this one: the card is open, the ride is about to
+            // be marked Completed, and this is the trip to say "that's ten"
+            // on. Only shown when it IS this ride - a note about five rides
+            // away is noise on every other card.
+            (c.next && c.next.ridesAway === 1
+              ? ' &middot; <span class="owed">this ride earns $' + c.next.amount +
+                (c.next.becomesLoyal ? ' and makes them Loyal' : '') + '</span>'
+              : '') +
           '</div>'
         : '<div class="standing">New &middot; no profile yet</div>';
 
