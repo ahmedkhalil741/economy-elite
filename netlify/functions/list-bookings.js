@@ -100,7 +100,13 @@ exports.handler = async function (event) {
     const showAll = String(daysParam).toLowerCase() === 'all';
     const daysAhead = /^\d+$/.test(daysParam) ? Number(daysParam) : DEFAULT_DAYS_AHEAD;
 
-    const cutoff = Date.now() - LOOK_BACK_HOURS * 3600 * 1000;
+    // "Everything" has to mean everything. This used to widen only the far
+    // end of the window, so a ride that happened the day before yesterday was
+    // off the page with no setting that brought it back and no count saying it
+    // existed - Bryan's completed Newark run simply was not there any more.
+    // Now Everything drops the look-back as well, and `behind` below tells the
+    // page how many are back there whatever window is chosen.
+    const cutoff = showAll ? 0 : Date.now() - LOOK_BACK_HOURS * 3600 * 1000;
     // Measured to the END of the last day, not to this moment plus N days.
     // "Today" asked at 10am must still include tonight's 9pm airport run,
     // which "now + 24 hours" would happen to catch and "now + 1 day" at 11pm
@@ -317,6 +323,18 @@ exports.handler = async function (event) {
       return (t >= horizon) ? n + 1 : n;
     }, 0);
 
+    // And how many have already been and gone. Counted even when the window is
+    // the default, because "it has disappeared" is the wrong thing for the
+    // page to imply about a ride that is sitting in the sheet.
+    const behind = showAll ? 0 : rows.reduce((n, row) => {
+      const r = rowToObject(keys, row);
+      if (!r.pickup || !r.dropoff) return n;
+      const dt = parseRequestedDateTime(r.requested_datetime);
+      if (!dt) return n;
+      const t = (easternToInstant(dt) || new Date(0)).getTime();
+      return (t > 0 && t <= cutoff) ? n + 1 : n;
+    }, 0);
+
     // Is there somewhere to keep the credit ledger?
     let creditsTab = 'missing';
     if (cr.status === 'fulfilled') creditsTab = cr.value.keys.length ? 'ok' : 'no header row';
@@ -340,6 +358,7 @@ exports.handler = async function (event) {
       body: JSON.stringify({
         rides,
         beyond,
+        behind,
         toText,
         people,
         // Every figure the dispatch page quotes to a customer comes from here,

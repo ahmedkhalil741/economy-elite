@@ -683,7 +683,7 @@
     }catch(e){ /* no autocomplete is worse than none of the page */ }
   }
 
-  const BUILD = '25 Oct 2026, 4:40pm';
+  const BUILD = '25 Oct 2026, 6:05pm';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -1294,6 +1294,12 @@
       ).join('') +
       (data.beyond > 0
         ? '<span class="count">' + data.beyond + ' further out</span>'
+        : '') +
+      // A ride that has already happened is still in the sheet, and saying so
+      // is the difference between "further back than this window" and the
+      // thing it used to look like, which was "gone".
+      (data.behind > 0
+        ? '<span class="count">' + data.behind + ' already been and gone \u2014 tap Everything</span>'
         : '');
     bar.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
       windowDays = b.dataset.days;

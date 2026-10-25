@@ -203,20 +203,25 @@ function birthdayCell(raw) {
 // leading apostrophe, the one thing that tells Sheets to leave a cell alone.
 // Matching is unaffected either way: every lookup in this codebase strips the
 // number down to its last ten digits before comparing.
+// AHMED'S CHOICE, 2026-10-25: ten plain digits, 9084949256, the way he types
+// them. So this does not reformat anything - it only stops the spreadsheet
+// turning the cell into something the code cannot read.
+//
+// The leading apostrophe is the whole trick. It makes the cell TEXT, which
+// means: no formula (a number typed with + in front is read as one and
+// becomes #ERROR!), and no scientific notation (a 10-digit number in a column
+// Sheets has decided is numeric can render as 9.08E+09). The apostrophe never
+// shows on screen; the cell reads 9084949256, exactly as typed.
 function phoneCell(raw) {
   const text = String(raw == null ? '' : raw).trim();
   if (!text) return '';
   const digits = text.replace(/\D/g, '');
-  if (digits.length === 10) {
-    return '(' + digits.slice(0, 3) + ') ' + digits.slice(3, 6) + '-' + digits.slice(6);
-  }
-  // 1-203-506-1637 is the same number with the country code on the front.
-  if (digits.length === 11 && digits[0] === '1') {
-    return '(' + digits.slice(1, 4) + ') ' + digits.slice(4, 7) + '-' + digits.slice(7);
-  }
-  // An extension, an international number, a note - keep it exactly as typed
-  // and just stop the spreadsheet reading it as arithmetic.
-  return /^[=+\-@]/.test(text) ? "'" + text : text;
+  // Ten digits, or eleven starting with the country code - same number.
+  if (digits.length === 10) return "'" + digits;
+  if (digits.length === 11 && digits[0] === '1') return "'" + digits.slice(1);
+  // An extension, an international number, a note - keep every character and
+  // just stop the spreadsheet reading it as arithmetic.
+  return "'" + text;
 }
 
 module.exports = { monthDay, birthdayCell, phoneCell, easternOffsetMinutes, easternToInstant, formatRequestedDateTime, parseRequestedDateTime, formatTimestamp, shiftLocalDateTime, easternToday };
