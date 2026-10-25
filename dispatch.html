@@ -75,6 +75,7 @@
   .pax-meta{font-size:0.8rem;color:var(--steel);line-height:1.65}
   .pax-meta a{color:var(--dim)}
   .pax-meta .owed{color:var(--accent)}
+  .pax-meta .broken{color:#a05;font-weight:600}
   .pax-pick{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
   .pax .msg-box{margin-top:12px}
 
@@ -682,7 +683,7 @@
     }catch(e){ /* no autocomplete is worse than none of the page */ }
   }
 
-  const BUILD = '25 Oct 2026, 11:20am';
+  const BUILD = '25 Oct 2026, 4:40pm';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -2485,7 +2486,15 @@
     wrap.innerHTML = rows.map((p, i) => {
       const star = p.status === 'Loyal' ? ' <span class="loyal">&#9733;</span>' : '';
       const bits = [];
-      if (p.phone) bits.push('<a href="tel:' + esc(p.phone) + '">' + esc(p.phone) + '</a>');
+      // A customer whose phone cell the sheet turned into an error cannot be
+      // texted, counted or credited by anything in this system. Said out loud
+      // here, with the row number, because the fix is one cell in the sheet.
+      if (p.phoneBroken) {
+        bits.push('<span class="broken">phone needs fixing \u2014 row ' + p.rowNumber +
+                  ' of Customers says ' + esc(p.phoneBroken) + '</span>');
+      } else if (p.phone) {
+        bits.push('<a href="tel:' + esc(p.phone) + '">' + esc(p.phone) + '</a>');
+      }
       bits.push(p.email ? '<a href="mailto:' + esc(p.email) + '">' + esc(p.email) + '</a>' : 'no email');
       bits.push(p.completedRides + ' ride' + (p.completedRides === 1 ? '' : 's'));
       if (p.creditOwed > 0) bits.push('<span class="owed">$' + p.creditOwed + ' credit</span>');

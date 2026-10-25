@@ -177,4 +177,46 @@ function birthdayCell(raw) {
   return md ? "'" + md : '';
 }
 
-module.exports = { monthDay, birthdayCell, easternOffsetMinutes, easternToInstant, formatRequestedDateTime, parseRequestedDateTime, formatTimestamp, shiftLocalDateTime, easternToday };
+// ---- A PHONE NUMBER THE SHEET CANNOT TURN INTO AN ERROR ----
+//
+// THE BUG THIS FIXES, 2026-10-25. Two rows in the Customers tab had #ERROR!
+// in the phone column, and that one broken cell quietly switched the whole
+// loyalty programme off for those two people:
+//
+//   * list-bookings skips any customer whose phone has no digits in it, so
+//     they vanished from the Messages tab - no name to write to at all.
+//   * set-ride-status looks the customer up by phone, found nobody, and
+//     returned "No customer profile for that number yet", so marking the ride
+//     Completed awarded no point, moved no counter and wrote no credit row.
+//   * save-customer could not match them either, so the next booking would
+//     have started a SECOND row for the same person.
+//
+// The cause is Google Sheets, not the number. A cell written with
+// USER_ENTERED that begins with = + - or @ is a FORMULA, and "+1 203 506
+// 1637" is not one it can parse, so the cell becomes #ERROR!. Typing a
+// number with the country code in front - the ordinary way to write it - was
+// enough to do it, whether from the booking form or by hand in the sheet.
+//
+// So nothing is ever written raw again. Ten digits come out as
+// (203) 506-1637, which is readable, sorts the same, and starts with a
+// bracket rather than a plus. Anything else keeps its characters but gets a
+// leading apostrophe, the one thing that tells Sheets to leave a cell alone.
+// Matching is unaffected either way: every lookup in this codebase strips the
+// number down to its last ten digits before comparing.
+function phoneCell(raw) {
+  const text = String(raw == null ? '' : raw).trim();
+  if (!text) return '';
+  const digits = text.replace(/\D/g, '');
+  if (digits.length === 10) {
+    return '(' + digits.slice(0, 3) + ') ' + digits.slice(3, 6) + '-' + digits.slice(6);
+  }
+  // 1-203-506-1637 is the same number with the country code on the front.
+  if (digits.length === 11 && digits[0] === '1') {
+    return '(' + digits.slice(1, 4) + ') ' + digits.slice(4, 7) + '-' + digits.slice(7);
+  }
+  // An extension, an international number, a note - keep it exactly as typed
+  // and just stop the spreadsheet reading it as arithmetic.
+  return /^[=+\-@]/.test(text) ? "'" + text : text;
+}
+
+module.exports = { monthDay, birthdayCell, phoneCell, easternOffsetMinutes, easternToInstant, formatRequestedDateTime, parseRequestedDateTime, formatTimestamp, shiftLocalDateTime, easternToday };

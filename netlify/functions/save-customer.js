@@ -53,7 +53,7 @@
 
 const { google } = require('googleapis');
 const { readTab, buildRow, rowToObject } = require('./_sheet');
-const { easternToday, birthdayCell, monthDay } = require('./_format');
+const { easternToday, birthdayCell, monthDay, phoneCell } = require('./_format');
 const { sendOwnerEmail } = require('./_email');
 const L = require('./_loyalty');
 
@@ -141,7 +141,10 @@ exports.handler = async function (event) {
     const status = isNewCustomer ? L.STATUS_NEW : L.statusFor(points, existing.status);
 
     const cells = {
-      phone: phone || existing.phone || '',
+      // Never raw - a number typed with the country code in front turns
+      // the cell into #ERROR! and the customer disappears from the system.
+      // See phoneCell in _format.js.
+      phone: phoneCell(phone) || existing.phone || '',
       email: email || existing.email || '',
       name: name || existing.name || '',
       cabin_temp: temp || existing.cabin_temp || '',

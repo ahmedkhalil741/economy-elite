@@ -54,7 +54,7 @@
 
 const { google } = require('googleapis');
 const { estimateFare, pricesAsSedan } = require('./_fare-calc');
-const { formatTimestamp, formatRequestedDateTime } = require('./_format');
+const { formatTimestamp, formatRequestedDateTime, phoneCell } = require('./_format');
 const { readTab, buildRow, orNA, orZero } = require('./_sheet');
 const { firstRideOff, cardOnFile, payMethodFor } = require('./_first-ride');
 
@@ -136,7 +136,7 @@ exports.handler = async function (event) {
       pickup,
       dropoff,
       name: orNA(name),
-      phone: orNA(phone),
+      phone: orNA(phoneCell(phone)),
       email: orNA(email),
       referred_by: orNA(referredBy),
       passengers: orNA(passengers),

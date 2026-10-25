@@ -23,7 +23,7 @@
 const { google } = require('googleapis');
 const { readTab, buildRow, rowToObject } = require('./_sheet');
 const { findRideEvent } = require('./_calendar');
-const { shiftLocalDateTime, formatRequestedDateTime } = require('./_format');
+const { shiftLocalDateTime, formatRequestedDateTime, phoneCell } = require('./_format');
 const { estimateFare } = require('./_fare-calc');
 
 const BOOKINGS_TAB = 'Bookings';
@@ -91,7 +91,7 @@ exports.handler = async function (event) {
     if (next.dropoff !== existing.dropoff) cells.dropoff = next.dropoff;
     if (next.vehicle) { cells.vehicle = next.vehicle; cells.car_type = next.vehicle; cells.sedan = /sedan/i.test(next.vehicle) ? 'Yes' : 'No'; }
     if (next.passengers) cells.passengers = next.passengers;
-    if (next.phone) cells.phone = next.phone;
+    if (next.phone) cells.phone = phoneCell(next.phone);
     if (next.flight) cells.flight = next.flight;
     if (next.notes) cells.notes = next.notes;
     if (next.dateTime) {

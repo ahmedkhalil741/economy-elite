@@ -14,7 +14,7 @@
 
 const { google } = require('googleapis');
 const { readTab, buildRow, rowToObject, orNA } = require('./_sheet');
-const { easternToday } = require('./_format');
+const { easternToday, phoneCell } = require('./_format');
 const { sendOwnerEmail } = require('./_email');
 const L = require('./_loyalty');
 
@@ -266,7 +266,25 @@ exports.handler = async function (event) {
     }
     const cIdx = customers.rows.findIndex((r) => normalizePhone(r[phoneCol]) === key);
     if (cIdx === -1) {
-      return { statusCode: 200, body: JSON.stringify({ success: true, status: wanted, pointsChanged: false, note: 'No customer profile for that number yet.' }) };
+      // SAY WHICH WAY IT FAILED. "No customer profile" used to cover two very
+      // different problems: a genuinely new number, and a profile that exists
+      // but whose phone cell the sheet has turned into #ERROR! - which looks
+      // identical from here and costs the customer their point, their credit
+      // and their place in the Messages tab. If any row in the Customers tab
+      // has an unreadable phone, name it, because that is almost certainly
+      // the one and it is one cell to fix.
+      const broken = customers.rows
+        .map((r, i) => ({ row: i + 2, cell: String(r[phoneCol] == null ? '' : r[phoneCol]).trim(),
+                          name: rowToObject(customers.keys, r).name }))
+        .filter((x) => x.cell && !/\d/.test(x.cell));
+      const note = broken.length
+        ? `No customer matched ${key}, and ${broken.length === 1 ? 'one row has' : broken.length + ' rows have'} ` +
+          `an unreadable phone number: ` +
+          broken.map((x) => `row ${x.row} (${x.name || 'no name'}) says ${x.cell}`).join(', ') +
+          `. Retype the number in that cell as (201) 555-0123 — a leading + makes Sheets read it as a formula. ` +
+          `Then set this ride back to Confirmed and to Completed again, so the point is awarded.`
+        : `No customer profile for ${key} yet, so no point was awarded.`;
+      return { statusCode: 200, body: JSON.stringify({ success: true, status: wanted, pointsChanged: false, note }) };
     }
 
     const c = rowToObject(customers.keys, customers.rows[cIdx]);
@@ -387,13 +405,13 @@ exports.handler = async function (event) {
     let ledger = null;
     if (credit) {
       ledger = await logCredit(sheets, spreadsheetId, {
-        date: today.date, phone: key, name: c.name || name || '',
+        date: today.date, phone: phoneCell(key), name: c.name || name || '',
         type: 'Earned', amount: credit.amount, reason: credit.reason,
         balance_after: creditOwed, points_after: points,
       });
     } else if (reversed) {
       ledger = await logCredit(sheets, spreadsheetId, {
-        date: today.date, phone: key, name: c.name || name || '',
+        date: today.date, phone: phoneCell(key), name: c.name || name || '',
         type: 'Reversed', amount: -reversed.amount,
         reason: `ride marked ${wanted.toLowerCase()}`,
         balance_after: creditOwed, points_after: points,
@@ -406,7 +424,7 @@ exports.handler = async function (event) {
     let spendLedger = null;
     if (spent) {
       spendLedger = await logCredit(sheets, spreadsheetId, {
-        date: today.date, phone: key, name: c.name || name || '',
+        date: today.date, phone: phoneCell(key), name: c.name || name || '',
         type: 'Spent', amount: -spent,
         reason: row.discount_reason && row.discount_reason !== 'N/A'
           ? `${row.discount_reason} — ${pickup} to ${dropoff}`
@@ -415,7 +433,7 @@ exports.handler = async function (event) {
       });
     } else if (refunded) {
       spendLedger = await logCredit(sheets, spreadsheetId, {
-        date: today.date, phone: key, name: c.name || name || '',
+        date: today.date, phone: phoneCell(key), name: c.name || name || '',
         type: 'Spend reversed', amount: refunded,
         reason: `ride marked ${wanted.toLowerCase()} — discount put back`,
         balance_after: creditOwed, points_after: points,
@@ -451,7 +469,7 @@ exports.handler = async function (event) {
           });
           referral = { name: ref.name || refKey, phone: refKey, amount: L.REFERRAL_CREDIT, owed: refOwed };
           await logCredit(sheets, spreadsheetId, {
-            date: today.date, phone: refKey, name: ref.name || refKey,
+            date: today.date, phone: phoneCell(refKey), name: ref.name || refKey,
             type: 'Referral', amount: L.REFERRAL_CREDIT,
             reason: `referred ${c.name || key}`,
             balance_after: refOwed, points_after: parseInt(ref.lifetime_points, 10) || 0,

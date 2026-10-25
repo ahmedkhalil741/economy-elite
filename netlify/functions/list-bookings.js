@@ -149,7 +149,37 @@ exports.handler = async function (event) {
         const row = cust.rows[ri];
         const c = rowToObject(cust.keys, row);
         const key = digits(c.phone);
-        if (!key) continue;
+
+        // A BROKEN PHONE CELL USED TO DELETE SOMEBODY FROM THE SYSTEM.
+        //
+        // This line was `if (!key) continue;`. Two rows in the Customers tab
+        // had #ERROR! where the phone should be - Sheets reading "+1 203 506
+        // 1637" as a formula - and because that cell has no digits in it the
+        // customer was dropped here without a word. They were not in the
+        // Messages tab, so there was nobody to write to; set-ride-status
+        // could not find them either, so completing their ride awarded no
+        // point and wrote no credit row; and the sheet looked fine, because
+        // the ride itself said Completed.
+        //
+        // Now the name is listed with the problem on it. Nothing can be sent
+        // to a number we do not have - no texting, no credit granting, and
+        // no standing to show - but a name in the list with "phone needs
+        // fixing" beside it is a thing Ahmed can act on, and silence is not.
+        if (!key) {
+          if (c.name || c.email) {
+            people.push({
+              rowNumber: ri + 2,
+              name: c.name || c.email, phone: '', email: c.email || '',
+              status: L.STATUS_NEW, activity: '\u2014', points: 0,
+              completedRides: parseInt(c.completed_rides, 10) || 0,
+              creditOwed: parseFloat(c.credit_owed) || 0,
+              birthday: c.birthday || '', cardOnFile: false, lastRide: '',
+              next: L.nextMilestone(0),
+              phoneBroken: String(c.phone || '').trim() || 'empty',
+            });
+          }
+          continue;
+        }
         const points = parseInt(c.lifetime_points, 10) || 0;
         const completedRides = parseInt(c.completed_rides, 10) || 0;
         const status = L.statusFor(points, c.status);
