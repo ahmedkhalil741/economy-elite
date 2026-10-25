@@ -31,94 +31,6 @@
   }
 }
 </script>
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [
-    {
-      "@type": "Question",
-      "name": "Do you charge a flat rate, or is it metered?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Flat. We agree the whole price before you book — the fare, the tolls, and the card fee if you are paying by card. No surge, no meter, and nothing added at the end you have not already seen."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "How much is a car to Newark Airport?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "From New Providence it is $110, and Newark trips cross no tolls at all. Nearby towns are a little more or less depending on the distance. The booking form above quotes your exact price before you book, or call or text (908) 666-3777."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Do you go to JFK and LaGuardia?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Yes, both — and to Philadelphia and the cruise ports. From New Providence, JFK or LaGuardia is $235 plus $50 in tolls, quoted up front so you know the whole number before the car is booked."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Do you drive into Manhattan?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Yes. $185 from New Providence plus $29 in tolls — one price in, one price back, and we will quote the return at the same time if you want it."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Do you track my flight?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Yes, whenever you give us the flight number. Domestic arrivals get 35 minutes of free waiting and international 45. And if your flight runs late for reasons outside your control, we cover the extra wait ourselves — you are never charged more because the airline was behind."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "What happens if I need to cancel?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "More than 2 hours before pickup, no charge. Between 2 hours and 1 hour, $25. Under an hour, or once your driver has already set off, $50. If your airline cancels your flight and your driver has not left yet, there is nothing to pay at all."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "How do I pay, and is there a fee?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Cash, Zelle, Venmo or card. Only card carries a processing fee, and you see it before you book — it is exactly what the card company charges us, not a markup. A tip is suggested at 20% of the fare and is never added automatically."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "How many people and how much luggage can you take?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Up to 10 passengers, with room for luggage. Child seats are available at no charge — just tell us when you book, and say how old they are so we bring the right one."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Can I book you by the hour, or for several stops?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Yes. $60 an hour with no minimum — a car and a driver held for you, as many stops as you like. Useful for a night out, a few appointments in one morning, or a wedding."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "How far ahead should I book?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "As far ahead as you can for early-morning airport runs, because those fill first. Same-day is accepted whenever we have a car free. Book above, or call or text (908) 666-3777 — Hany answers."
-      }
-    }
-  ]
-}
-</script>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B0A08">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1000,22 +912,6 @@
   .q-total span{color:var(--ink);}
   .q-total b{font-family:var(--display); font-size:1.25rem;}
   .q-note{font-size:0.78rem; color:var(--steel); line-height:1.6; margin-top:12px;}
-  .faq-list{max-width:760px; margin:0 auto; display:grid; gap:12px;}
-  .faq-item{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:0;}
-  .faq-item summary{
-    cursor:pointer; list-style:none; padding:20px 46px 20px 22px; position:relative;
-    font-family:var(--display); font-size:1.02rem; font-weight:600; color:var(--ink);
-  }
-  .faq-item summary::-webkit-details-marker{display:none;}
-  .faq-item summary::after{
-    content:''; position:absolute; right:22px; top:50%; width:9px; height:9px;
-    margin-top:-6px; border-right:2px solid var(--steel); border-bottom:2px solid var(--steel);
-    transform:rotate(45deg); transition:transform .18s ease;
-  }
-  .faq-item[open] summary::after{transform:rotate(225deg); margin-top:-2px;}
-  .faq-item summary:focus-visible{outline:2px solid var(--steel); outline-offset:-2px; border-radius:var(--radius);}
-  .faq-item p{padding:0 22px 22px; color:var(--ink-dim); max-width:62ch;}
-  @media (prefers-reduced-motion: reduce){ .faq-item summary::after{transition:none;} }
   .lite-link{text-align:center; margin-top:28px;}
   .lite-link a{
     font-family:var(--mono); font-size:0.76rem; letter-spacing:0.08em; text-transform:uppercase;
@@ -1530,66 +1426,6 @@
       </div>
     </div>
     <div class="lite-link"><a href="policy.html">Read the full policy →</a></div>
-  </div>
-</section>
-
-<!-- THE FAQ, AND WHY IT IS ON THE SITE RATHER THAN ON GOOGLE.
-     Google shut down Business Profile Q&A at the end of 2025; by early 2026
-     most listings had lost it. Ask Maps answers those questions itself now,
-     and it builds its answers out of the profile, the reviews, the photos and
-     THIS PAGE. So the ten questions customers actually ask live here, with
-     FAQPage structured data below, which is what Google reads. Every answer
-     matches policy.html word for word - a public answer that contradicts our
-     own terms is worse than no answer at all. -->
-<section class="faq" id="faq">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">Questions</div>
-      <h2>The things people ask before they book</h2>
-    </div>
-    <div class="faq-list">
-      <details class="faq-item">
-        <summary>Do you charge a flat rate, or is it metered?</summary>
-        <p>Flat. We agree the whole price before you book — the fare, the tolls, and the card fee if you are paying by card. No surge, no meter, and nothing added at the end you have not already seen.</p>
-      </details>
-      <details class="faq-item">
-        <summary>How much is a car to Newark Airport?</summary>
-        <p>From New Providence it is $110, and Newark trips cross no tolls at all. Nearby towns are a little more or less depending on the distance. The booking form above quotes your exact price before you book, or call or text (908) 666-3777.</p>
-      </details>
-      <details class="faq-item">
-        <summary>Do you go to JFK and LaGuardia?</summary>
-        <p>Yes, both — and to Philadelphia and the cruise ports. From New Providence, JFK or LaGuardia is $235 plus $50 in tolls, quoted up front so you know the whole number before the car is booked.</p>
-      </details>
-      <details class="faq-item">
-        <summary>Do you drive into Manhattan?</summary>
-        <p>Yes. $185 from New Providence plus $29 in tolls — one price in, one price back, and we will quote the return at the same time if you want it.</p>
-      </details>
-      <details class="faq-item">
-        <summary>Do you track my flight?</summary>
-        <p>Yes, whenever you give us the flight number. Domestic arrivals get 35 minutes of free waiting and international 45. And if your flight runs late for reasons outside your control, we cover the extra wait ourselves — you are never charged more because the airline was behind.</p>
-      </details>
-      <details class="faq-item">
-        <summary>What happens if I need to cancel?</summary>
-        <p>More than 2 hours before pickup, no charge. Between 2 hours and 1 hour, $25. Under an hour, or once your driver has already set off, $50. If your airline cancels your flight and your driver has not left yet, there is nothing to pay at all.</p>
-      </details>
-      <details class="faq-item">
-        <summary>How do I pay, and is there a fee?</summary>
-        <p>Cash, Zelle, Venmo or card. Only card carries a processing fee, and you see it before you book — it is exactly what the card company charges us, not a markup. A tip is suggested at 20% of the fare and is never added automatically.</p>
-      </details>
-      <details class="faq-item">
-        <summary>How many people and how much luggage can you take?</summary>
-        <p>Up to 10 passengers, with room for luggage. Child seats are available at no charge — just tell us when you book, and say how old they are so we bring the right one.</p>
-      </details>
-      <details class="faq-item">
-        <summary>Can I book you by the hour, or for several stops?</summary>
-        <p>Yes. $60 an hour with no minimum — a car and a driver held for you, as many stops as you like. Useful for a night out, a few appointments in one morning, or a wedding.</p>
-      </details>
-      <details class="faq-item">
-        <summary>How far ahead should I book?</summary>
-        <p>As far ahead as you can for early-morning airport runs, because those fill first. Same-day is accepted whenever we have a car free. Book above, or call or text (908) 666-3777 — Hany answers.</p>
-      </details>
-    </div>
-    <div class="lite-link"><a href="policy.html">Read the full policy &rarr;</a></div>
   </div>
 </section>
 
