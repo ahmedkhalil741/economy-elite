@@ -39,7 +39,8 @@ exports.handler = async function (event) {
 
   try {
     const { token, pickup, dropoff, vehicle, dateTime, payMethod, overrides, hours, firstRide,
-            cardOnFile, phone, stops } = JSON.parse(event.body || '{}');
+            cardOnFile, phone, stops,
+            returnDateTime, returnPickup, returnDropoff } = JSON.parse(event.body || '{}');
     if (token !== expected) return { statusCode: 401, body: JSON.stringify({ error: 'Wrong passcode.' }) };
 
     if (!pickup || !dropoff) {
@@ -78,6 +79,31 @@ exports.handler = async function (event) {
 
     const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payFor, withCredit);
 
+    // ---- THE RETURN LEG ----
+    //
+    // Ahmed's rule, 30 October: "same price for both ways if same address; if
+    // the round trip address is different just add the normal prices we have."
+    // So each leg is priced on its own merits and the two are added. Nothing
+    // clever, and nothing to explain to a customer beyond "there and back".
+    //
+    // THE TOLL IS CHARGED ONCE, which is his instruction too - "we already
+    // charge the customer both ways for the tolls so no need for any
+    // additional". The $29 to Manhattan has always covered the car going in
+    // and coming back out; charging it on both legs would bill the same four
+    // crossings twice. So leg two is priced with toll: 0.
+    //
+    // The $10 first ride is not re-applied either: it belongs to the first
+    // booking, and firstRideAvailable() above has already decided whether this
+    // customer still has it.
+    let back = null;
+    if (returnDateTime) {
+      const bPick = (returnPickup || '').trim() || dropoff;
+      const bDrop = (returnDropoff || '').trim() || pickup;
+      back = estimateFare(bPick, bDrop, vehicle, returnDateTime, payFor, { toll: 0 });
+      back.from = bPick;
+      back.to = bDrop;
+    }
+
     // The parts, so a price can be EXPLAINED on the phone rather than just
     // stated. "Seventy-five, plus thirty-five because it's the Suburban."
     const lines = [];
@@ -102,6 +128,23 @@ exports.handler = async function (event) {
       body: JSON.stringify({
         ready: true,
         matched: fare.matched,
+        // Both legs, and what the pair comes to. Null on a one-way, so the
+        // page can simply test for it.
+        roundTrip: back ? {
+          matched: back.matched,
+          from: back.from,
+          to: back.to,
+          label: back.label || null,
+          fare: back.fare,
+          cardFee: back.cardFee || 0,
+          total: back.total,
+          totalDisplay: back.totalDisplay || null,
+          tip: back.tipSuggested || 0,
+          bothTotal: (fare.total !== null && back.total !== null)
+            ? Math.round((fare.total + back.total) * 100) / 100
+            : null,
+          bothTip: (fare.tipSuggested || 0) + (back.tipSuggested || 0),
+        } : null,
         label: fare.label || null,
         zone: fare.zone || null,
         total: fare.totalDisplay || null,

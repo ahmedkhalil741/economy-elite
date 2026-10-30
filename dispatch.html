@@ -107,6 +107,9 @@
     border-radius:8px;width:34px;height:34px;flex:none;cursor:pointer;font-size:1rem;line-height:1}
   .stop-row .drop-stop:hover{border-color:var(--accent);color:var(--accent)}
   #addStop{padding:7px 14px;font-size:0.82rem;cursor:pointer}
+  .rt-check{display:flex;gap:10px;align-items:center;cursor:pointer}
+  .rt-check input{width:auto;flex:none}
+  #returnBlock{border-left:2px solid var(--line);padding-left:14px;margin-bottom:4px}
   /* The three things we ever say to a customer. Each one opens the text so it
      can be read - and edited - before it goes anywhere. */
   .msg-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line);margin-top:14px}
@@ -500,6 +503,33 @@
       <button type="button" class="btn-line" id="addStop">+ Add a stop</button>
     </div>
 
+    <!-- ROUND TRIP. Two rides, not one: each leg gets its own row, its own
+         driver and its own Completed button, because that is what actually
+         happens on the road. Leg two is priced at its own listed fare with
+         the TOLL SET TO ZERO - the toll we charge already covers the car
+         going and coming back, so billing it twice would bill the same four
+         crossings twice. Ahmed's rule, 30 October. -->
+    <div class="field">
+      <label class="rt-check"><input type="checkbox" id="a-roundtrip">
+        <span>Round trip &mdash; bring them back as well</span></label>
+    </div>
+    <div id="returnBlock" hidden>
+      <div class="row">
+        <div class="field">
+          <label for="a-returndate">Return date &amp; time</label>
+          <input type="datetime-local" id="a-returndate">
+        </div>
+        <div class="field">
+          <label for="a-returnpickup">Return pickup <span class="hint-inline">&mdash; blank means the drop-off above</span></label>
+          <input type="text" id="a-returnpickup" placeholder="Same as the drop-off">
+        </div>
+      </div>
+      <div class="field">
+        <label for="a-returndropoff">Return drop-off <span class="hint-inline">&mdash; blank means the pickup above</span></label>
+        <input type="text" id="a-returndropoff" placeholder="Same as the pickup">
+      </div>
+    </div>
+
     <div class="row">
       <div class="field">
         <label for="a-hours">Hours (leave blank unless it's an hourly job)</label>
@@ -737,6 +767,29 @@
     placesOn(input);
     input.focus();
   }
+  // ---- ROUND TRIP ----
+  function roundTrip(){
+    const on = document.getElementById('a-roundtrip');
+    return Boolean(on && on.checked && document.getElementById('a-returndate').value);
+  }
+  function returnDetails(){
+    if (!roundTrip()) return null;
+    return {
+      returnDateTime: document.getElementById('a-returndate').value,
+      returnPickup: document.getElementById('a-returnpickup').value.trim(),
+      returnDropoff: document.getElementById('a-returndropoff').value.trim(),
+    };
+  }
+  function clearReturn(){
+    const box = document.getElementById('a-roundtrip');
+    if (box) box.checked = false;
+    ['a-returndate','a-returnpickup','a-returndropoff'].forEach((id) => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    const blk = document.getElementById('returnBlock');
+    if (blk) blk.hidden = true;
+  }
+
   function clearStops(){
     const list = document.getElementById('stopList');
     if (list) list.innerHTML = '';
@@ -744,6 +797,20 @@
 
   document.addEventListener('click', (e) => {
     if (e.target && e.target.id === 'addStop') addStopRow('');
+  });
+
+  document.addEventListener('change', (e) => {
+    if (!e.target) return;
+    if (e.target.id === 'a-roundtrip') {
+      const blk = document.getElementById('returnBlock');
+      blk.hidden = !e.target.checked;
+      if (e.target.checked) {
+        placesOn(document.getElementById('a-returnpickup'));
+        placesOn(document.getElementById('a-returndropoff'));
+      }
+      askForQuote();
+    }
+    if (['a-returndate','a-returnpickup','a-returndropoff'].indexOf(e.target.id) !== -1) askForQuote();
   });
 
   function placesOn(input){
@@ -755,7 +822,7 @@
     }catch(e){ /* no autocomplete is worse than none of the page */ }
   }
 
-  const BUILD = '30 Oct 2026, 10:05am';
+  const BUILD = '30 Oct 2026, 1:40pm';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -2712,8 +2779,10 @@
     const ov = overrides();
     const phone = document.getElementById('a-phone').value.trim();
     const stops = stopValues();
+    const back = returnDetails();
     const asking = [pickup, dropoff, vehicle, dateTime, selectedPay, isFirstRideAdmin,
-                    cardOnFileAdmin, phone, stops.join('>'), JSON.stringify(ov)].join('|');
+                    cardOnFileAdmin, phone, stops.join('>'), JSON.stringify(back),
+                    JSON.stringify(ov)].join('|');
     if(asking === lastAsked) return;
     lastAsked = asking;
 
@@ -2728,6 +2797,9 @@
                                  // only matters before a phone number is typed.
                                  phone,
                                  stops,
+                                 returnDateTime: back ? back.returnDateTime : '',
+                                 returnPickup: back ? back.returnPickup : '',
+                                 returnDropoff: back ? back.returnDropoff : '',
                                  firstRide: isFirstRideAdmin,
                                  cardOnFile: cardOnFileAdmin,
                                  hours: hoursValue() })
@@ -2756,8 +2828,9 @@
           : selectedPay + ' fee';
 
         const tipLine = document.getElementById('tipLine');
-        if(j.matched && j.tip){
-          document.getElementById('tipValue').textContent = '$' + j.tip;
+        const bothTip = (j.roundTrip && j.roundTrip.matched) ? j.roundTrip.bothTip : null;
+        if(j.matched && (bothTip || j.tip)){
+          document.getElementById('tipValue').textContent = '$' + (bothTip || j.tip);
           // Short form, Ahmed's wording: the percentage means nothing without the
           // number it was taken from, and the rest was noise.
           const tipBase = j.parts && j.parts.fare;
@@ -2770,11 +2843,30 @@
 
         if(j.matched){
           amount.className = 'quote-amount';
-          amount.textContent = j.total || j.display;
+          // THE BIG NUMBER IS WHAT THEY PAY. On a round trip that is both legs
+          // together, because "$292.76" next to a booking that is really
+          // $534.19 is the number Ahmed would read down the phone.
+          const rt = j.roundTrip;
+          const bothKnown = rt && rt.matched && rt.bothTotal !== null;
+          amount.textContent = bothKnown
+            ? '$' + rt.bothTotal.toFixed(2).replace(/\.00$/, '')
+            : (j.total || j.display);
           const bits = [];
           if(j.label) bits.push(j.label);
           if(j.discount) bits.push('<span class="tip">$' + j.discount + ' came off the fare' +
             (j.discountUnused ? ' \u2014 ' + j.discountNote : '') + '</span>');
+          if(rt){
+            if(bothKnown){
+              const outTotal = (rt.bothTotal - rt.total).toFixed(2).replace(/\.00$/, '');
+              bits.push('<span class="tip">Round trip \u2014 out $' + outTotal +
+                ', back $' + rt.total.toFixed(2).replace(/\.00$/, '') +
+                '. Tolls charged once, on the way out.</span>');
+              if(rt.label) bits.push('<span class="tip">Return: ' + esc(rt.label) + '</span>');
+            }else{
+              bits.push('<span class="tip">Return leg is not on the rate card \u2014 ' +
+                'save this one, then add the return by hand.</span>');
+            }
+          }
           detail.innerHTML = bits.join('<br>');
         }else{
           amount.className = 'quote-amount none';
@@ -2948,6 +3040,7 @@
       vehicle: document.getElementById('a-vehicle').value,
       overrides: overrides(),
       stops: stopValues(),
+      roundTrip: returnDetails(),
       hours: hoursValue(),
       discountReason: document.getElementById('a-discount-reason').value,
       payMethod: selectedPay,
@@ -2998,6 +3091,16 @@
       row('When', prettyWhen(p.dateTime)) +
       row('Pickup', p.pickup) +
       row('Drop-off', p.dropoff) +
+      (p.stops && p.stops.length
+        ? row('Stops', p.stops.join(' \u00b7 ') + '  (+$' + (p.stops.length * 15) + ')') : '') +
+      // Said here as well as in the quote, because this panel is the last
+      // thing read before two rides get created instead of one.
+      (p.roundTrip
+        ? row('Return', prettyWhen(p.roundTrip.returnDateTime) + ' \u00b7 ' +
+            (p.roundTrip.returnPickup || p.dropoff) + ' \u2192 ' +
+            (p.roundTrip.returnDropoff || p.pickup) +
+            '  \u2014 saved as a second ride, tolls charged once')
+        : '') +
       row('Car', p.vehicle + (p.passengers ? ' \u00b7 ' + p.passengers + ' passenger' + (p.passengers === '1' ? '' : 's') : '')) +
       row('Car seats', seats) +
       row('Elderly assistance', yes(p.elderly)) +
@@ -3038,14 +3141,49 @@
     btn.textContent = 'Saving\u2026';
 
     const endpoints = ['send-booking-notification', 'add-to-calendar', 'log-booking', 'save-customer'];
-    await Promise.all(endpoints.map(fn =>
+    const sendOne = (body) => Promise.all(endpoints.map(fn =>
       fetch('/.netlify/functions/' + fn, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(pending)
+        body: JSON.stringify(body)
       }).catch(() => {})
     ));
 
-    msg.textContent = 'Saved \u2014 ' + pending.name + ', ' + pending.pickup + ' \u2192 ' + pending.dropoff + '.';
+    await sendOne(pending);
+
+    // ---- THE RETURN LEG, SAVED SECOND AND ON PURPOSE ----
+    //
+    // Two rows, not one. Each leg is a separate journey with its own time,
+    // its own driver and its own Completed button, which is what actually
+    // happens on the road - and it is the only shape that lets Ahmed cancel
+    // one half without touching the other.
+    //
+    // SEQUENTIAL, NOT PARALLEL, and that is the whole reason this is awaited.
+    // firstRideAvailable() answers by reading the Bookings tab for a row
+    // carrying "First ride". Fire both legs at once and the second reads the
+    // sheet before the first has finished writing to it, so both come back
+    // eligible and the ten goes out twice - the exact bug we had just fixed
+    // in the quote.
+    //
+    // Leg two carries toll: 0. The toll we charge already covers the car
+    // going and coming back; billing it on both legs would bill the same
+    // crossings twice. Ahmed's rule, 30 October.
+    const rt = pending.roundTrip;
+    if (rt) {
+      const back = Object.assign({}, pending, {
+        pickup: rt.returnPickup || pending.dropoff,
+        dropoff: rt.returnDropoff || pending.pickup,
+        dateTime: rt.returnDateTime,
+        overrides: Object.assign({}, pending.overrides || {}, { toll: 0 }),
+        // Stops belong to the leg they were typed on.
+        stops: [],
+        roundTrip: null,
+        notes: [pending.notes, 'Return leg of a round trip'].filter(Boolean).join(' \u00b7 '),
+      });
+      await sendOne(back);
+    }
+
+    msg.textContent = 'Saved \u2014 ' + pending.name + ', ' + pending.pickup + ' \u2192 ' + pending.dropoff +
+      (rt ? ' and the return on ' + prettyWhen(rt.returnDateTime) + '.' : '.');
     // The ride now exists; the list behind this view is out of date.
     if (typeof window.refreshRides === 'function') window.refreshRides();
     msg.style.color = 'var(--teal)';
@@ -3055,6 +3193,7 @@
     // next booking would inherit the last one's stops and quietly charge $15
     // for a detour nobody asked for.
     clearStops();
+    clearReturn();
     document.getElementById('a-contact15').checked = true;
     // A fresh form knows nobody, so it offers nobody the new-customer ten
     // and assumes nobody's card is saved.
