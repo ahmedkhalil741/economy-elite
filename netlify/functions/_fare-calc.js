@@ -389,9 +389,22 @@ function noMatch(overnight, note, zone) {
 // is given, because the routes you most often agree by phone are precisely the
 // ones with no listed price — so it has to work when the town is unknown, not
 // only when it is known.
-function agreedResult(agreed, toll, payMethod, label, setCard, zone) {
+// ---- THE CARD FEE COVERS THE TIP TOO, WHEN THE TIP IS KNOWN ----
+//
+// Ahmed's instruction, 30 October: "Square takes his percentage from the
+// total so you add the card fee on the total." He is right about the
+// mechanics - Square's cut is taken from the whole amount swiped, tip
+// included - so a fee worked out on fare and tolls alone leaves his own
+// money covering Square's cut of the gratuity.
+//
+// But a tip that has not been left yet cannot be charged a fee. So `tip` is
+// an OVERRIDE, not an assumption: the booking page quotes fare and tolls as
+// it always did, because at that moment the customer has decided nothing,
+// and the dispatch passes the real figure once there is one. Give it a tip
+// and the fee covers the tip; give it none and nothing changes.
+function agreedResult(agreed, toll, payMethod, label, setCard, zone, tip) {
   const rideFare = agreed + toll;
-  const auto = cardFeeFor(payMethod, rideFare);
+  const auto = cardFeeFor(payMethod, rideFare + (tip || 0));
   // A hand-set card fee wins, including a deliberate zero — waiving it is a
   // real decision and has to be expressible.
   const cardAmount = setCard !== null && setCard !== undefined ? setCard : (auto ? auto.amount : null);
@@ -438,11 +451,11 @@ function agreedResult(agreed, toll, payMethod, label, setCard, zone) {
 //
 // The tolls still apply if one end is New York — the bridge does not care how
 // the fare was worked out — so the destination is still read, only for that.
-function hourlyResult(hours, dest, payMethod, setCard) {
+function hourlyResult(hours, dest, payMethod, setCard, tip) {
   const driving = Math.round(HOURLY_RATE * hours * 100) / 100;
   const toll = dest ? ((TOLLS[dest.key] || {}).standard || 0) : 0;
   const rideFare = driving + toll;
-  const auto = cardFeeFor(payMethod, rideFare);
+  const auto = cardFeeFor(payMethod, rideFare + (tip || 0));
   const cardAmount = (setCard !== null && setCard !== undefined) ? setCard : (auto ? auto.amount : null);
   const total = Math.round((rideFare + (cardAmount || 0)) * 100) / 100;
 
@@ -482,6 +495,8 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
   const setFare = numOrNull(ov.fare);
   const setToll = numOrNull(ov.toll);
   const setCard = numOrNull(ov.cardFee);
+  // Only set once a real tip exists - see the note above agreedResult.
+  const setTip = numOrNull(ov.tip);
   const anySet = setFare !== null || setToll !== null || setCard !== null;
   const agreed = setFare;
   const isSedan = pricesAsSedan(vehicle);
@@ -495,7 +510,7 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
   // buying a trip to an airport even if the airport is one of the stops.
   const hours = numOrNull(ov.hours);
   if (hours && hours > 0 && setFare === null) {
-    return hourlyResult(hours, destAtDropoff || destAtPickup, payMethod, setCard);
+    return hourlyResult(hours, destAtDropoff || destAtPickup, payMethod, setCard, setTip);
   }
 
   // Exactly one end should be an airport or Manhattan. Both ends being
@@ -513,7 +528,7 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
     if (!town) {
       // No listed price — but if one was agreed on the phone, that IS the
       // price, and the toll for this destination still applies.
-      if (anySet) return agreedResult(agreed !== null ? agreed : 0, setToll !== null ? setToll : destToll, payMethod, `Agreed — ${dest.label}`, setCard, dest.zone);
+      if (anySet) return agreedResult(agreed !== null ? agreed : 0, setToll !== null ? setToll : destToll, payMethod, `Agreed — ${dest.label}`, setCard, dest.zone, setTip);
       return noMatch(overnight, `${dest.label} — no listed price for that town. Quote it by hand, then tell Claude the number and it gets added.${overnightNote}`, dest.zone);
     }
 
@@ -544,14 +559,14 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
 
     const toll = destToll;
 
-    if (anySet) return agreedResult(agreed !== null ? agreed : (base + vehicleFee + overnight), setToll !== null ? setToll : toll, payMethod, `Agreed — ${town.town} to ${dest.label}`, setCard, dest.zone);
+    if (anySet) return agreedResult(agreed !== null ? agreed : (base + vehicleFee + overnight), setToll !== null ? setToll : toll, payMethod, `Agreed — ${town.town} to ${dest.label}`, setCard, dest.zone, setTip);
     const driving = base + vehicleFee + overnight;
 
     // The card fee is worked out on everything going through the card,
     // INCLUDING the toll — Square takes its percentage of the whole amount
     // swiped, so leaving the toll out would quietly under-recover the fee.
     const rideFare = driving + toll;
-    const card = cardFeeFor(payMethod, rideFare);
+    const card = cardFeeFor(payMethod, rideFare + (setTip || 0));
     const total = Math.round((rideFare + (card ? card.amount : 0)) * 100) / 100;
 
     // The tip is on the DRIVING, not on the toll and not on the processor's
@@ -588,7 +603,7 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
   const townB = findTown(dropoff);
   if (townA && townB && anySet) {
     return agreedResult(agreed !== null ? agreed : 0, setToll !== null ? setToll : 0, payMethod,
-                        `Agreed — ${townA.town} to ${townB.town}`, setCard, 'Local');
+                        `Agreed — ${townA.town} to ${townB.town}`, setCard, 'Local', setTip);
   }
   if (townA && townB) {
     const [lo, hi] = LOCAL_RANGE;
@@ -629,7 +644,7 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
     ? `Agreed — ${fromName} to ${toName}`
     : 'Agreed by phone';
 
-  if (anySet) return agreedResult(agreed !== null ? agreed : 0, setToll !== null ? setToll : 0, payMethod, routeLabel, setCard, zoneName);
+  if (anySet) return agreedResult(agreed !== null ? agreed : 0, setToll !== null ? setToll : 0, payMethod, routeLabel, setCard, zoneName, setTip);
 
   return noMatch(overnight, `No listed price for this route. Quote it by hand, or $${HOURLY_RATE}/hr (no minimum) if it isn't a straight A-to-B trip.${overnightNote}`, zoneName);
 }
@@ -657,7 +672,7 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
 // fare, and that is the one the driver and the calendar see, because a driver
 // reading "$15 discount" next to a number he has to collect is a question he
 // should never have to ask.
-function applyDiscount(result, discountRaw, payMethod, setCard) {
+function applyDiscount(result, discountRaw, payMethod, setCard, tip) {
   const asked = numOrNull(discountRaw);
   if (!asked) return result;
 
@@ -680,7 +695,7 @@ function applyDiscount(result, discountRaw, payMethod, setCard) {
   const newDriving = Math.round((driving - applied) * 100) / 100;
   const rideFare = Math.round((newDriving + toll) * 100) / 100;
 
-  const auto = cardFeeFor(payMethod, rideFare);
+  const auto = cardFeeFor(payMethod, rideFare + (tip || 0));
   // A hand-set card fee survives the discount. Waiving the fee is a separate
   // decision and the discount has no business undoing it.
   const cardAmount = (setCard !== null && setCard !== undefined)
@@ -727,7 +742,7 @@ function estimateFare(pickup, dropoff, vehicle, dateTime, payMethod, overrides) 
   // Anything that never had a discount still needs driverDisplay, or the
   // calendar has nothing to print.
   const base = Object.assign({ discount: 0, discountApplied: 0, driverDisplay: priced.display }, priced);
-  return applyDiscount(base, ov.discount, payMethod, numOrNull(ov.cardFee));
+  return applyDiscount(base, ov.discount, payMethod, numOrNull(ov.cardFee), numOrNull(ov.tip));
 }
 
 module.exports = {

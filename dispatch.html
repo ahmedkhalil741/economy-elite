@@ -593,6 +593,18 @@
         <span class="qd">$</span>
         <input type="number" id="a-toll" min="0" step="1" class="qin">
       </div>
+      <!-- THE TIP SITS ABOVE THE CARD FEE because the fee is worked out
+           from it. Square's cut comes off the whole amount swiped, tip
+           included, so a fee calculated on fare and tolls alone leaves Ahmed
+           covering Square's share of the gratuity out of his own money.
+           Leave it empty and nothing changes - a tip that has not been left
+           yet cannot be charged a fee, so this is only filled in once there
+           is a real number. -->
+      <div class="qline">
+        <span class="qk">Tip (if on the card)</span>
+        <span class="qd">$</span>
+        <input type="number" id="a-tip" min="0" step="1" class="qin">
+      </div>
       <div class="qline" id="cardLine">
         <span class="qk" id="cardLabel">Card fee</span>
         <span class="qd">$</span>
@@ -683,7 +695,7 @@
     }catch(e){ /* no autocomplete is worse than none of the page */ }
   }
 
-  const BUILD = '30 Oct 2026, 9:15am';
+  const BUILD = '30 Oct 2026, 10:05am';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -2580,8 +2592,8 @@
   // YOURS - marked, and left alone by every later recalculation, because the
   // software overwriting a number a person just typed is the most annoying
   // thing a form can do. "Back to the calculated price" hands them all back.
-  const PRICE_FIELDS = { fare:'a-fare', discount:'a-discount', toll:'a-toll', cardFee:'a-cardfee' };
-  const edited = { fare:false, discount:false, toll:false, cardFee:false };
+  const PRICE_FIELDS = { fare:'a-fare', discount:'a-discount', toll:'a-toll', tip:'a-tip', cardFee:'a-cardfee' };
+  const edited = { fare:false, discount:false, toll:false, tip:false, cardFee:false };
 
   // The "why" box only matters once there is something to explain.
   function syncWhy(){

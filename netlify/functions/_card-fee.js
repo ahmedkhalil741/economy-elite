@@ -44,10 +44,21 @@
 // the card: what Square deducts and what the customer paid come out equal to
 // the cent, and the fare lands whole.
 //
-// THE TIP IS NOT IN THIS. It cannot be - the price is quoted before the
-// customer has decided anything - and it should not be: charging somebody a
-// card fee on the gratuity they chose to leave is the kind of thing people
-// notice. The tip carries its own processing, as it does everywhere.
+// ---- THE TIP, AND WHEN IT COUNTS ----
+//
+// It was left out of this entirely until 30 October, on the reasoning that a
+// price quoted before the customer has decided anything cannot include a
+// gratuity. That half still holds, and the booking page still quotes fare and
+// tolls alone.
+//
+// What was wrong was the other half. Square's percentage comes off the WHOLE
+// amount swiped, tip included, so on a $110 ride with a $22 tip the fee
+// collected on $110 leaves about 60c of Square's cut being paid by Ahmed
+// rather than recovered. His call, and the arithmetic is on his side.
+//
+// So the fee base takes an optional tip - see _fare-calc.js. It is an
+// override, never an assumption: the dispatch fills it in once there is a
+// real figure to charge, and everything else carries on as before.
 
 const CARD_FEES = {
   cash: null,
