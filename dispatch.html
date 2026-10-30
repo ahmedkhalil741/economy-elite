@@ -742,6 +742,20 @@
   // created - the same call the pickup and drop-off get. Reading them is a
   // filter over the inputs rather than a counter kept alongside, because a
   // counter and the boxes on screen are two things that can disagree.
+  // THE BUG THIS EXISTS TO STOP, and it is the second time in this file.
+  //
+  // askForQuote lives in the other <script> block, inside the booking view.
+  // Writing `input.addEventListener('input', askForQuote)` here dereferences
+  // it THE MOMENT the row is built, throws ReferenceError, and kills
+  // addStopRow before the row is ever added to the page - so "+ Add a stop"
+  // did nothing at all and only the console said why. Exactly how the address
+  // autocomplete died in October.
+  //
+  // Called through window, late, and tolerant of not being there yet.
+  function requote(){
+    if (typeof window.askForQuote === 'function') window.askForQuote();
+  }
+
   function stopValues(){
     return Array.from(document.querySelectorAll('#stopList .stop-addr'))
       .map((i) => i.value.trim())
@@ -762,8 +776,8 @@
     drop.className = 'drop-stop';
     drop.textContent = '\u00d7';
     drop.title = 'Remove this stop';
-    drop.addEventListener('click', () => { row.remove(); askForQuote(); });
-    input.addEventListener('input', askForQuote);
+    drop.addEventListener('click', () => { row.remove(); requote(); });
+    input.addEventListener('input', requote);
     row.appendChild(input);
     row.appendChild(drop);
     list.appendChild(row);
@@ -811,9 +825,9 @@
         placesOn(document.getElementById('a-returnpickup'));
         placesOn(document.getElementById('a-returndropoff'));
       }
-      askForQuote();
+      requote();
     }
-    if (['a-returndate','a-returnpickup','a-returndropoff'].indexOf(e.target.id) !== -1) askForQuote();
+    if (['a-returndate','a-returnpickup','a-returndropoff'].indexOf(e.target.id) !== -1) requote();
   });
 
   function placesOn(input){
@@ -825,7 +839,7 @@
     }catch(e){ /* no autocomplete is worse than none of the page */ }
   }
 
-  const BUILD = '30 Oct 2026, 3:20pm';
+  const BUILD = '30 Oct 2026, 5:10pm';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -2764,6 +2778,9 @@
   let quoteTimer = null;
   let lastAsked = '';
 
+  // PUBLISHED, because the stop rows and the round-trip toggle live in the
+  // other <script> block and have to be able to re-run the quote. See the
+  // note on requote() over there for what happens when they cannot.
   function askForQuote(){
     const pickup  = document.getElementById('a-pickup').value.trim();
     const dropoff = document.getElementById('a-dropoff').value.trim();
@@ -2883,6 +2900,8 @@
       }
     }, 450);
   }
+
+  window.askForQuote = askForQuote;
 
   ['a-pickup','a-dropoff','a-vehicle','a-date','a-hours'].forEach(id => {
     const el = document.getElementById(id);
