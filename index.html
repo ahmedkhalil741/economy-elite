@@ -354,6 +354,9 @@
     border-radius:100px; padding:8px 16px; font-family:var(--body); font-size:0.85rem;
     font-weight:500; cursor:pointer;}
   .stop-add:hover{border-color:var(--teal); color:var(--teal);}
+  .rt-label{display:flex; gap:10px; align-items:center; cursor:pointer;}
+  .rt-label input{width:auto; flex:none;}
+  #b-returnBlock{margin-top:14px; border-left:2px solid var(--line); padding-left:14px;}
   .book-panel .field{margin-bottom:16px;}
   .book-panel textarea{
     width:100%; background:var(--bg-raised); border:1px solid var(--line); color:var(--ink);
@@ -1198,6 +1201,32 @@
           <div class="stops-hint">A quick stop to collect someone or drop something off.
             For a longer detour, call or text us and we'll price it properly.</div>
         </div>
+
+        <!-- ROUND TRIP. Two journeys, booked together and priced together.
+             The toll is charged once because the figure already covers the
+             car going and coming back. -->
+        <div class="field stops-field">
+          <label class="rt-label"><input type="checkbox" id="b-roundtrip">
+            <span>I need a ride back as well</span></label>
+          <div id="b-returnBlock" hidden>
+            <div class="book-row">
+              <div class="field">
+                <label for="b-returndate">Coming back &mdash; date &amp; time</label>
+                <input type="datetime-local" id="b-returndate">
+              </div>
+              <div class="field">
+                <label for="b-returnpickup">Picking up from</label>
+                <input type="text" id="b-returnpickup" placeholder="Same place we dropped you">
+              </div>
+            </div>
+            <div class="field">
+              <label for="b-returndropoff">Taking you to</label>
+              <input type="text" id="b-returndropoff" placeholder="Back where we collected you">
+            </div>
+            <div class="stops-hint">Leave the addresses blank and we'll simply reverse
+              the trip. Tolls are charged once, not twice.</div>
+          </div>
+        </div>
         <div class="book-row">
           <div class="field">
             <label for="b-date">Date &amp; time</label>
@@ -1540,6 +1569,38 @@
     if (e.target && e.target.id === 'b-addStop') addStopRow();
   });
 
+  // ---- ROUND TRIP ----
+  function returnDetails(){
+    const on = document.getElementById('b-roundtrip');
+    const when = document.getElementById('b-returndate');
+    if (!on || !on.checked || !when || !when.value) return null;
+    return {
+      returnDateTime: when.value,
+      returnPickup: document.getElementById('b-returnpickup').value.trim(),
+      returnDropoff: document.getElementById('b-returndropoff').value.trim(),
+    };
+  }
+
+  document.addEventListener('change', (e) => {
+    if (!e.target) return;
+    if (e.target.id === 'b-roundtrip') {
+      document.getElementById('b-returnBlock').hidden = !e.target.checked;
+      if (e.target.checked && autocompletesReady && window.google && google.maps && google.maps.places) {
+        ['b-returnpickup','b-returndropoff'].forEach((id) => {
+          const el = document.getElementById(id);
+          if (el && !el.dataset.places) {
+            try {
+              new google.maps.places.Autocomplete(el, { fields: ['formatted_address'] });
+              el.dataset.places = 'on';
+            } catch (err) { /* typing it by hand still works */ }
+          }
+        });
+      }
+      refreshQuote();
+    }
+    if (['b-returndate','b-returnpickup','b-returndropoff'].indexOf(e.target.id) !== -1) refreshQuote();
+  });
+
   function wireAutocomplete(pickupId, dropoffId){
     const pickup = document.getElementById(pickupId);
     const dropoff = document.getElementById(dropoffId);
@@ -1594,13 +1655,22 @@
       return head + `<div class="q-note">This route isn&rsquo;t on our standard rate card, so Hany
         works the price out himself and texts it to you before anything is agreed.</div>`;
     }
-    const rows = [`<div class="q-row"><span>Fare</span><b>${money(q.fare)}</b></div>`];
-    if (q.toll)    rows.push(`<div class="q-row"><span>Tolls <i>at cost</i></span><b>${money(q.toll)}</b></div>`);
-    if (q.cardFee) rows.push(`<div class="q-row"><span>${q.cardFeeLabel || 'Card'} fee</span><b>${money(q.cardFee)}</b></div>`);
-    rows.push(`<div class="q-row q-total"><span>Estimated total</span><b>${money(q.total)}</b></div>`);
+    const rt = q.roundTrip;
+    const both = rt && rt.matched;
+    const rows = [`<div class="q-row"><span>${both ? 'Fare there' : 'Fare'}</span><b>${money(q.fare)}</b></div>`];
+    if (both) rows.push(`<div class="q-row"><span>Fare back</span><b>${money(rt.fare)}</b></div>`);
+    // Named as covering both directions, because that is the question a
+    // customer asks when they see one toll line on a two-way trip.
+    if (q.toll)    rows.push(`<div class="q-row"><span>Tolls <i>${both ? 'both ways, at cost' : 'at cost'}</i></span><b>${money(q.toll)}</b></div>`);
+    const fees = both ? (q.cardFee || 0) + (rt.cardFee || 0) : q.cardFee;
+    if (fees) rows.push(`<div class="q-row"><span>${q.cardFeeLabel || 'Card'} fee</span><b>${money(fees)}</b></div>`);
+    if (q.stopFee) rows.push(`<div class="q-row"><span>${q.stops} stop${q.stops === 1 ? '' : 's'} on the way</span><b>included</b></div>`);
+    rows.push(`<div class="q-row q-total"><span>Estimated total</span><b>${money(both ? rt.bothTotal : q.total)}</b></div>`);
     return head + rows.join('') +
-      (q.tipSuggested ? `<div class="q-note">A tip is separate and never added for you &mdash; 20% of
-        the fare is usual, about ${money(q.tipSuggested)} on this trip.</div>` : '') +
+      ((both ? rt.bothTip : q.tipSuggested) ? `<div class="q-note">A tip is separate and never added for you &mdash; 20% of
+        the fare is usual, about ${money(both ? rt.bothTip : q.tipSuggested)} on this trip.</div>` : '') +
+      (rt && !rt.matched ? `<div class="q-note">We price the way back by hand &mdash; Hany will
+        text you that figure before anything is agreed.</div>` : '') +
       (q.toll ? `<div class="q-note">The toll is what the road costs us and is passed straight
         through &mdash; we don&rsquo;t mark it up. It is in the total above, so there is nothing
         further to pay at the airport or the tunnel.</div>` : '') +
@@ -1633,6 +1703,7 @@
       hours: hourly ? parseFloat(document.getElementById('b-hours').value) || null : null,
       firstRide: isFirstRide,
       stops: stopValues(),
+      ...(returnDetails() || {}),
     };
 
     const mine = ++quoteSeq;
@@ -1969,6 +2040,39 @@
       quote = bookJson && bookJson.quote ? bookJson.quote : null;
     } catch (err) { quote = null; }
 
+    // ---- THE WAY BACK, SAVED SECOND AND ON PURPOSE ----
+    //
+    // Two rides, not one: each leg has its own time and its own driver, and
+    // either half can be cancelled without disturbing the other.
+    //
+    // AFTER the first, never alongside it. log-booking decides the $10 first
+    // ride by reading the Bookings tab for a row carrying "First ride". Send
+    // both at once and the second reads the sheet before the first has
+    // written to it, so both qualify and the ten goes out twice.
+    //
+    // toll: 0 on the return - the toll already charged covers the car going
+    // and coming back, so billing it again would bill the same crossings
+    // twice.
+    const backLeg = returnDetails();
+    if (backLeg) {
+      const backPayload = Object.assign({}, payload, {
+        pickup: backLeg.returnPickup || payload.dropoff,
+        dropoff: backLeg.returnDropoff || payload.pickup,
+        dateTime: backLeg.returnDateTime,
+        overrides: { toll: 0 },
+        stops: [],
+        returnDateTime: undefined, returnPickup: undefined, returnDropoff: undefined,
+        notes: [payload.notes, 'Return leg of a round trip'].filter(Boolean).join(' \u00b7 '),
+      });
+      ['send-booking-notification', 'add-to-calendar', 'log-booking'].forEach((fn) => {
+        fetch('/.netlify/functions/' + fn, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(backPayload)
+        }).catch(() => {});
+      });
+    }
+
     // Save/update this customer's profile (name + preferences) so we
     // recognize them and prefill their usual info next time they book.
     fetch('/.netlify/functions/save-customer', {
@@ -1977,7 +2081,9 @@
       body: JSON.stringify(payload)
     }).catch(() => {});
 
-    const lead = `Reservation received — ${pickup} to ${dropoff}.`;
+    const lead = backLeg
+      ? `Reservation received — ${pickup} to ${dropoff}, and the ride back.`
+      : `Reservation received — ${pickup} to ${dropoff}.`;
     const tail = selectedPay === 'Card'
       ? `Hany will text you to confirm your driver and your total. You'll tap your card in the car at the end of the trip.`
       : `Hany will text you to confirm your driver, your total, and ${selectedPay} payment details.`;

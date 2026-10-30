@@ -33,8 +33,8 @@ exports.handler = async function (event) {
   }
 
   try {
-    const { pickup, dropoff, dateTime, vehicle, payMethod, hours, firstRide, stops } =
-      JSON.parse(event.body || '{}');
+    const { pickup, dropoff, dateTime, vehicle, payMethod, hours, firstRide, stops,
+            returnDateTime, returnPickup, returnDropoff } = JSON.parse(event.body || '{}');
 
     if (!pickup || !dropoff) {
       return { statusCode: 200, body: JSON.stringify({ matched: false, reason: 'need both ends' }) };
@@ -51,6 +51,26 @@ exports.handler = async function (event) {
     const asked = withHours(firstRideOff, hours);
     const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod,
                               cleanStops.length ? Object.assign({}, asked || {}, { stops: cleanStops }) : asked);
+
+    // The way back, priced on its own merits and added. The toll is set to
+    // zero because the figure we charge already covers the car going and
+    // coming back - see the same note in quote-fare.js. The $10 first ride
+    // is not re-applied: it belongs to the booking that claimed it.
+    let back = null;
+    if (returnDateTime) {
+      const bPick = String(returnPickup || '').trim() || dropoff;
+      const bDrop = String(returnDropoff || '').trim() || pickup;
+      const r = estimateFare(bPick, bDrop, vehicle, returnDateTime, payMethod, { toll: 0 });
+      if (r && r.matched) {
+        back = {
+          matched: true, from: bPick, to: bDrop,
+          fare: r.fare, cardFee: r.cardFee || 0, total: r.total,
+          tipSuggested: r.tipSuggested || 0,
+        };
+      } else {
+        back = { matched: false };
+      }
+    }
 
     // Only the figures a quote is made of. Nothing about zones, nothing about
     // how the table decides - the customer is owed their price, not ours.
@@ -69,6 +89,13 @@ exports.handler = async function (event) {
         total: fare.total,
         tipSuggested: fare.tipSuggested || null,
         firstRideOff: fare.discountApplied || 0,
+        stops: cleanStops.length || 0,
+        stopFee: fare.stopFee || 0,
+        // Null on a one-way. bothTotal is what the customer actually pays.
+        roundTrip: back ? Object.assign({}, back, back.matched ? {
+          bothTotal: Math.round((fare.total + back.total) * 100) / 100,
+          bothTip: (fare.tipSuggested || 0) + (back.tipSuggested || 0),
+        } : {}) : null,
       }),
     };
   } catch (err) {
