@@ -495,7 +495,8 @@
          card fee both count it - see STOP_FEE in _fare-calc.js. A long
          detour is not a stop: price that as its own leg by hand. -->
     <div class="field" id="stopsField">
-      <label>Stops on the way <span class="hint-inline">&mdash; $15 each</span></label>
+      <label>Stops on the way
+        <span class="hint-inline">&mdash; free in the same town, $10 in another</span></label>
       <div id="stopList"></div>
       <button type="button" class="btn-line" id="addStop">+ Add a stop</button>
     </div>
@@ -824,7 +825,7 @@
     }catch(e){ /* no autocomplete is worse than none of the page */ }
   }
 
-  const BUILD = '30 Oct 2026, 2:30pm';
+  const BUILD = '30 Oct 2026, 3:20pm';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });

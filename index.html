@@ -343,8 +343,6 @@
   }
   .book-row{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
   /* Stops on the way. Deliberately quiet - most trips have none. */
-  .stops-note{font-weight:400; color:var(--ink-dim); font-size:0.85rem;}
-  .stops-hint{margin-top:8px; font-size:0.82rem; color:var(--steel); line-height:1.5;}
   .stop-row{display:flex; gap:8px; align-items:center; margin-bottom:8px;}
   .stop-row input{flex:1; min-width:0;}
   .stop-row .stop-drop{background:transparent; border:1px solid var(--line); color:var(--ink-dim);
@@ -1191,11 +1189,9 @@
              detour is a different thing and gets priced as its own trip -
              the note says to ask. -->
         <div class="field stops-field">
-          <label>Stopping anywhere on the way? <span class="stops-note">&mdash; $15 a stop</span></label>
+          <label>Stopping anywhere on the way?</label>
           <div id="b-stopList"></div>
           <button type="button" class="stop-add" id="b-addStop">+ Add a stop</button>
-          <div class="stops-hint">A quick stop to collect someone or drop something off.
-            For a longer detour, call or text us and we'll price it properly.</div>
         </div>
         <div class="field">
           <label for="b-dropoff" id="dropoffLabel">Drop-off</label>
@@ -1224,8 +1220,6 @@
               <label for="b-returndropoff">Taking you to</label>
               <input type="text" id="b-returndropoff" placeholder="Back where we collected you">
             </div>
-            <div class="stops-hint">Leave the addresses blank and we'll simply reverse
-              the trip. Tolls are charged once, not twice.</div>
           </div>
         </div>
         <div class="book-row">
@@ -1665,7 +1659,6 @@
     if (q.toll)    rows.push(`<div class="q-row"><span>Tolls <i>${both ? 'both ways, at cost' : 'at cost'}</i></span><b>${money(q.toll)}</b></div>`);
     const fees = both ? (q.cardFee || 0) + (rt.cardFee || 0) : q.cardFee;
     if (fees) rows.push(`<div class="q-row"><span>${q.cardFeeLabel || 'Card'} fee</span><b>${money(fees)}</b></div>`);
-    if (q.stopFee) rows.push(`<div class="q-row"><span>${q.stops} stop${q.stops === 1 ? '' : 's'} on the way</span><b>included</b></div>`);
     rows.push(`<div class="q-row q-total"><span>Estimated total</span><b>${money(both ? rt.bothTotal : q.total)}</b></div>`);
     return head + rows.join('') +
       ((both ? rt.bothTip : q.tipSuggested) ? `<div class="q-note">A tip is separate and never added for you &mdash; 20% of

@@ -114,14 +114,46 @@ const HOURLY_RATE = 60;
 //
 // Hourly trips get no stop fee: the hours already cover the stops, which is
 // what Ahmed meant by "stops inside the waiting time, that's fine".
-const STOP_FEE = 15;
+// Revised 30 October, Ahmed's rule: "if it's a stop in the same town, a quick
+// stop, no additional fee. If it's in another town, make $10 additional fee."
+//
+// Which is the right shape. Pulling in on the way past somebody's house three
+// streets from the pickup costs the driver two minutes; crossing into the next
+// town costs him a leg of a journey. A flat fee for both was charging for the
+// first and undercharging for the second.
+const STOP_FEE = 10;
 
-// Accepts a count, an array of addresses, or nothing. Blank strings in the
-// array are dropped - an empty stop box is not a stop.
-function stopCountFrom(stops) {
-  if (Array.isArray(stops)) return stops.filter((x) => String(x || '').trim()).length;
-  const n = parseInt(stops, 10);
-  return Number.isFinite(n) && n > 0 ? n : 0;
+// What the stops add, and whether we can price them at all.
+//
+// A stop in a town that is not on the rate card is the same situation as a
+// FARE that is not on the rate card, and gets the same answer: we do not
+// invent a number, we say it needs quoting by hand. Ahmed's instruction -
+// "if not listed just make same as we do if the fare not listed". A long
+// detour is really another journey and he prices it himself, by the hour or
+// as its own leg; no address string tells you which.
+function stopsCharge(stops, pickupText) {
+  const list = Array.isArray(stops)
+    ? stops.map((x) => String(x || '').trim()).filter(Boolean)
+    : [];
+  if (!list.length) {
+    const n = parseInt(stops, 10);
+    // A bare count has no address to look up, so it falls back to the old
+    // flat fee. Nothing in the app sends one; this is for safety.
+    return { count: Number.isFinite(n) && n > 0 ? n : 0,
+             fee: (Number.isFinite(n) && n > 0 ? n : 0) * STOP_FEE, unlisted: [] };
+  }
+
+  const home = findTown(pickupText);
+  let fee = 0;
+  const unlisted = [];
+  for (const stop of list) {
+    const town = findTown(stop);
+    if (!town) { unlisted.push(stop); continue; }
+    // Same town as the pickup is a quick stop and costs nothing.
+    if (home && town.town === home.town) continue;
+    fee += STOP_FEE;
+  }
+  return { count: list.length, fee, unlisted };
 }
 const HOURLY_MINIMUM_HOURS = 0;
 
@@ -525,13 +557,28 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
   const setCard = numOrNull(ov.cardFee);
   // Only set once a real tip exists - see the note above agreedResult.
   const setTip = numOrNull(ov.tip);
-  const stops = stopCountFrom(ov.stops);
-  const stopFee = stops * STOP_FEE;
+  const stopCharge = stopsCharge(ov.stops, pickup);
+  const stops = stopCharge.count;
+  const stopFee = stopCharge.fee;
   const anySet = setFare !== null || setToll !== null || setCard !== null;
   const agreed = setFare;
   const isSedan = pricesAsSedan(vehicle);
   const overnight = isOvernightPickup(dateTime) ? OVERNIGHT_FEE : 0;
+
   const overnightNote = overnight ? ` + $${overnight} overnight` : '';
+  // A STOP SOMEWHERE WE DO NOT PRICE IS A FARE WE DO NOT PRICE.
+  //
+  // Ahmed's instruction: "if not listed just make same as we do if the fare
+  // not listed." Guessing $10 for a detour to a town that is not on the card
+  // would be inventing a number, and the same detour might be five minutes or
+  // an hour. So the quote stops and says so, exactly as it does for an unknown
+  // route - unless a price has already been agreed by hand, in which case his
+  // number stands and the stop is inside it.
+  if (stopCharge.unlisted.length && !anySet) {
+    return noMatch(overnight,
+      `${stopCharge.unlisted.join(' and ')} ${stopCharge.unlisted.length === 1 ? 'is' : 'are'} ` +
+      `not on the rate card, so this one is priced by hand.${overnightNote}`);
+  }
 
   const destAtPickup = findDestination(pickup);
   const destAtDropoff = findDestination(dropoff);
