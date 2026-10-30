@@ -29,6 +29,56 @@ async function sheetsClient() {
 
 const tenDigits = (v) => String(v || '').replace(/\D/g, '').slice(-10);
 
+// IS THE TEN STILL AVAILABLE TO THIS NUMBER?
+//
+// Exported, because three places need this answer and the browser is not
+// allowed to be one of them. The dispatch used to work it out for itself from
+// completed_rides alone, which is a different question - see below - and that
+// is how the same customer got ten dollars off their outbound AND their return.
+//
+// ONCE, EVEN ACROSS BOOKINGS THAT HAVE NOT HAPPENED YET.
+//
+// completed_rides answers "have they ridden before". It cannot answer "have
+// they already been given the ten", because a booking made ten minutes ago has
+// completed nothing. Book a new customer's trip out and their trip back in one
+// sitting and both look like a first ride. The promise on the flyer is $10 off
+// their first ride, not $10 off every ride booked before the first one happens.
+//
+// Whichever booking was entered first keeps it: it is in the sheet with "First
+// ride" against it, so the second finds it and pays full price. Cancel the
+// first and the credit is free again, which is right - a ride that never
+// happened was never their first.
+async function firstRideAvailable(phone, existingSheets) {
+  const digits = tenDigits(phone);
+  if (digits.length !== 10) return false;
+
+  try {
+    const sheets = existingSheets || (await sheetsClient());
+    const id = process.env.GOOGLE_SHEET_ID;
+
+    const { keys, rows } = await readTab(sheets, id, CUSTOMERS_TAB);
+    const them = rows
+      .map((r) => rowToObject(keys, r))
+      .find((c) => tenDigits(c.phone) === digits);
+    if (them && (parseInt(them.completed_rides, 10) || 0) > 0) return false;
+
+    const bookings = await readTab(sheets, id, BOOKINGS_TAB);
+    const alreadyGiven = bookings.rows
+      .map((r) => rowToObject(bookings.keys, r))
+      .some((b) => tenDigits(b.phone) === digits &&
+                   !/^(cancelled|no-?show)$/i.test(String(b.ride_status || '').trim()) &&
+                   /first ride/i.test(String(b.discount_reason || '')));
+    if (alreadyGiven) return false;
+  } catch (err) {
+    // No Customers tab yet, or the read failed. Full price is the safe wrong
+    // answer: it takes ten seconds to correct on the dispatch, and a discount
+    // handed to the wrong person cannot be taken back.
+    return false;
+  }
+
+  return true;
+}
+
 // Returns the overrides to price with, and how much was taken off.
 //
 // A discount already set by hand wins outright. Someone redeeming $15 of credit
@@ -39,44 +89,7 @@ async function firstRideOff(phone, overrides, existingSheets) {
   const none = { overrides: base, applied: 0 };
 
   if (base.discount) return none;
-
-  const digits = tenDigits(phone);
-  if (digits.length !== 10) return none;
-
-  try {
-    const sheets = existingSheets || (await sheetsClient());
-    const { keys, rows } = await readTab(sheets, process.env.GOOGLE_SHEET_ID, CUSTOMERS_TAB);
-    const them = rows
-      .map((r) => rowToObject(keys, r))
-      .find((c) => tenDigits(c.phone) === digits);
-    if (them && (parseInt(them.completed_rides, 10) || 0) > 0) return none;
-
-    // ONCE, EVEN ACROSS BOOKINGS THAT HAVE NOT HAPPENED YET.
-    //
-    // completed_rides answers "have they ridden before", which is a different
-    // question from "have they already been given the ten". Book a new
-    // customer's trip out and their trip back in the same sitting and neither
-    // has completed, so both took the credit. The promise on the flyer is $10
-    // off their first ride, not $10 off every ride booked before the first one
-    // happens.
-    //
-    // Whichever booking was entered first keeps it: it is already in the sheet
-    // with "First ride" against it, so the second one finds it and pays full
-    // price. Cancel the first and the credit is free again, which is right —
-    // a ride that never happened was never their first.
-    const bookings = await readTab(sheets, process.env.GOOGLE_SHEET_ID, BOOKINGS_TAB);
-    const alreadyGiven = bookings.rows
-      .map((r) => rowToObject(bookings.keys, r))
-      .some((b) => tenDigits(b.phone) === digits &&
-                   !/^(cancelled|no-?show)$/i.test(String(b.ride_status || '').trim()) &&
-                   /first ride/i.test(String(b.discount_reason || '')));
-    if (alreadyGiven) return none;
-  } catch (err) {
-    // No Customers tab yet, or the read failed. Full price is the safe wrong
-    // answer: it takes ten seconds to correct on the dispatch, and a discount
-    // handed to the wrong person cannot be taken back.
-    return none;
-  }
+  if (!(await firstRideAvailable(phone, existingSheets))) return none;
 
   return {
     overrides: Object.assign({}, base, { discount: FIRST_RIDE_CREDIT }),
@@ -124,4 +137,4 @@ function payMethodFor(payMethod, saved) {
   return (saved && /^card$/i.test(String(payMethod || '').trim())) ? 'Card on file' : payMethod;
 }
 
-module.exports = { firstRideOff, cardOnFile, payMethodFor, FIRST_RIDE_CREDIT };
+module.exports = { firstRideOff, firstRideAvailable, cardOnFile, payMethodFor, FIRST_RIDE_CREDIT };

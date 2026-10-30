@@ -683,7 +683,7 @@
     }catch(e){ /* no autocomplete is worse than none of the page */ }
   }
 
-  const BUILD = '25 Oct 2026, 8:25pm';
+  const BUILD = '30 Oct 2026, 9:15am';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
@@ -2638,8 +2638,9 @@
     }
 
     const ov = overrides();
+    const phone = document.getElementById('a-phone').value.trim();
     const asking = [pickup, dropoff, vehicle, dateTime, selectedPay, isFirstRideAdmin,
-                    cardOnFileAdmin, JSON.stringify(ov)].join('|');
+                    cardOnFileAdmin, phone, JSON.stringify(ov)].join('|');
     if(asking === lastAsked) return;
     lastAsked = asking;
 
@@ -2650,6 +2651,9 @@
           method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ token, pickup, dropoff, vehicle, dateTime,
                                  payMethod: selectedPay, overrides: ov,
+                                 // The server checks the sheet and decides. This
+                                 // only matters before a phone number is typed.
+                                 phone,
                                  firstRide: isFirstRideAdmin,
                                  cardOnFile: cardOnFileAdmin,
                                  hours: hoursValue() })

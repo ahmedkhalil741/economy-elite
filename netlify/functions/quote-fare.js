@@ -14,6 +14,7 @@
 
 const { estimateFare, isOvernightPickup, HOURLY_RATE } = require('./_fare-calc');
 const { FIRST_RIDE_CREDIT } = require('./_loyalty');
+const { firstRideAvailable } = require('./_first-ride');
 
 // Hours are an input to the price, not a correction of one, so they travel
 // alongside the overrides rather than inside the caller's object.
@@ -30,7 +31,7 @@ exports.handler = async function (event) {
 
   try {
     const { token, pickup, dropoff, vehicle, dateTime, payMethod, overrides, hours, firstRide,
-            cardOnFile } = JSON.parse(event.body || '{}');
+            cardOnFile, phone } = JSON.parse(event.body || '{}');
     if (token !== expected) return { statusCode: 401, body: JSON.stringify({ error: 'Wrong passcode.' }) };
 
     if (!pickup || !dropoff) {
@@ -47,8 +48,18 @@ exports.handler = async function (event) {
     //
     // A discount already typed in wins: a loyalty balance being redeemed is
     // not also owed the new-customer ten.
+    //
+    // THE BROWSER NO LONGER DECIDES THIS. The dispatch used to send a
+    // `firstRide` flag it worked out from completed_rides, and completed_rides
+    // is still zero while an earlier booking sits unridden - so a customer's
+    // outbound AND their return both came up ten dollars off, every time Ahmed
+    // entered a round trip. The sheet answers it now, exactly as log-booking
+    // does, so the quote on screen and the row that gets saved cannot disagree.
+    // The flag is still accepted as a fallback for when no phone has been typed
+    // in yet.
     const asked = withHours(overrides, hours);
-    const withCredit = (firstRide && !asked.discount)
+    const earned = phone ? await firstRideAvailable(phone) : Boolean(firstRide);
+    const withCredit = (earned && !asked.discount)
       ? Object.assign({}, asked, { discount: FIRST_RIDE_CREDIT })
       : asked;
 
@@ -92,7 +103,7 @@ exports.handler = async function (event) {
         toll: fare.toll || 0,
         agreedFare: fare.agreedFare ?? null,
         discount: fare.discountApplied || 0,
-        firstRideOff: (firstRide && !asked.discount) ? (fare.discountApplied || 0) : 0,
+        firstRideOff: (earned && !asked.discount) ? (fare.discountApplied || 0) : 0,
         // Asked for more than the fare could take — the rest stays on their
         // balance, and the page says so rather than quietly swallowing it.
         discountUnused: fare.discountUnused || 0,
