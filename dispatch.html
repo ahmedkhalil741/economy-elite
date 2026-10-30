@@ -483,17 +483,14 @@
       </div>
     </div>
 
-    <div class="row">
-      <div class="field">
-        <label for="a-pickup">Pickup</label>
-        <input type="text" id="a-pickup" placeholder="Address or landmark" required>
-      </div>
-      <div class="field">
-        <label for="a-dropoff">Drop-off</label>
-        <input type="text" id="a-dropoff" placeholder="Address or landmark" required>
-      </div>
+    <!-- Pickup, then the stops, then the drop-off: the order the car
+         actually drives it. They used to sit side by side with the stops
+         underneath, which read as an afterthought rather than part of the
+         route. -->
+    <div class="field">
+      <label for="a-pickup">Pickup</label>
+      <input type="text" id="a-pickup" placeholder="Address or landmark" required>
     </div>
-
     <!-- STOPS ON THE WAY. $15 each, added to the fare, and the tip and the
          card fee both count it - see STOP_FEE in _fare-calc.js. A long
          detour is not a stop: price that as its own leg by hand. -->
@@ -502,6 +499,11 @@
       <div id="stopList"></div>
       <button type="button" class="btn-line" id="addStop">+ Add a stop</button>
     </div>
+    <div class="field">
+      <label for="a-dropoff">Drop-off</label>
+      <input type="text" id="a-dropoff" placeholder="Address or landmark" required>
+    </div>
+
 
     <!-- ROUND TRIP. Two rides, not one: each leg gets its own row, its own
          driver and its own Completed button, because that is what actually
@@ -822,7 +824,7 @@
     }catch(e){ /* no autocomplete is worse than none of the page */ }
   }
 
-  const BUILD = '30 Oct 2026, 1:40pm';
+  const BUILD = '30 Oct 2026, 2:30pm';
   (async function checkBuild(){
     try {
       const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });

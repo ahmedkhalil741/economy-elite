@@ -1179,17 +1179,13 @@
         <div class="step-count">Step 1 of 2 — your trip</div>
         <p class="know-hint"><strong>Booked with us before?</strong> Put in the same name and
           phone number you used last time and we'll bring up what we already know.</p>
-        <div class="book-row">
-          <div class="field">
-            <label for="b-pickup">Pickup</label>
-            <input type="text" id="b-pickup" placeholder="Address or landmark">
-          </div>
-          <div class="field">
-            <label for="b-dropoff" id="dropoffLabel">Drop-off</label>
-            <input type="text" id="b-dropoff" placeholder="Address or landmark">
-          </div>
+        <!-- Pickup, stops, drop-off: the order the car drives it. Side by
+             side with the stops underneath read as an afterthought rather
+             than part of the route. -->
+        <div class="field">
+          <label for="b-pickup">Pickup</label>
+          <input type="text" id="b-pickup" placeholder="Address or landmark">
         </div>
-
         <!-- SOMEWHERE ON THE WAY. $15 a stop, and the estimate above updates
              as soon as one is added, so nobody finds out at the end. A long
              detour is a different thing and gets priced as its own trip -
@@ -1201,6 +1197,11 @@
           <div class="stops-hint">A quick stop to collect someone or drop something off.
             For a longer detour, call or text us and we'll price it properly.</div>
         </div>
+        <div class="field">
+          <label for="b-dropoff" id="dropoffLabel">Drop-off</label>
+          <input type="text" id="b-dropoff" placeholder="Address or landmark">
+        </div>
+
 
         <!-- ROUND TRIP. Two journeys, booked together and priced together.
              The toll is charged once because the figure already covers the
