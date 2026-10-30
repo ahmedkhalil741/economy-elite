@@ -342,6 +342,18 @@
     max-width:640px; margin:0 auto;
   }
   .book-row{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  /* Stops on the way. Deliberately quiet - most trips have none. */
+  .stops-note{font-weight:400; color:var(--ink-dim); font-size:0.85rem;}
+  .stops-hint{margin-top:8px; font-size:0.82rem; color:var(--steel); line-height:1.5;}
+  .stop-row{display:flex; gap:8px; align-items:center; margin-bottom:8px;}
+  .stop-row input{flex:1; min-width:0;}
+  .stop-row .stop-drop{background:transparent; border:1px solid var(--line); color:var(--ink-dim);
+    border-radius:8px; width:38px; height:38px; flex:none; cursor:pointer; font-size:1.05rem; line-height:1;}
+  .stop-row .stop-drop:hover{border-color:var(--teal); color:var(--teal);}
+  .stop-add{background:transparent; border:1px solid var(--line); color:var(--ink-dim);
+    border-radius:100px; padding:8px 16px; font-family:var(--body); font-size:0.85rem;
+    font-weight:500; cursor:pointer;}
+  .stop-add:hover{border-color:var(--teal); color:var(--teal);}
   .book-panel .field{margin-bottom:16px;}
   .book-panel textarea{
     width:100%; background:var(--bg-raised); border:1px solid var(--line); color:var(--ink);
@@ -1174,6 +1186,18 @@
             <input type="text" id="b-dropoff" placeholder="Address or landmark">
           </div>
         </div>
+
+        <!-- SOMEWHERE ON THE WAY. $15 a stop, and the estimate above updates
+             as soon as one is added, so nobody finds out at the end. A long
+             detour is a different thing and gets priced as its own trip -
+             the note says to ask. -->
+        <div class="field stops-field">
+          <label>Stopping anywhere on the way? <span class="stops-note">&mdash; $15 a stop</span></label>
+          <div id="b-stopList"></div>
+          <button type="button" class="stop-add" id="b-addStop">+ Add a stop</button>
+          <div class="stops-hint">A quick stop to collect someone or drop something off.
+            For a longer detour, call or text us and we'll price it properly.</div>
+        </div>
         <div class="book-row">
           <div class="field">
             <label for="b-date">Date &amp; time</label>
@@ -1462,6 +1486,60 @@
   // ---- Address autocomplete only (no live fare calculation) ----
   let autocompletesReady = false;
 
+  // ---- STOPS ON THE WAY ----
+  //
+  // One row per stop, each with Google autocomplete the moment it exists.
+  // Read as a filter over the boxes on screen rather than from a counter kept
+  // beside them, because a counter and the boxes are two things that can
+  // disagree and only one of them is what the customer can see.
+  function stopValues(){
+    return Array.from(document.querySelectorAll('#b-stopList .stop-addr'))
+      .map((i) => i.value.trim())
+      .filter(Boolean);
+  }
+
+  function addStopRow(){
+    const list = document.getElementById('b-stopList');
+    if (!list || list.querySelectorAll('.stop-addr').length >= 5) return;
+    const row = document.createElement('div');
+    row.className = 'stop-row';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'stop-addr';
+    input.placeholder = 'Address or landmark';
+    input.setAttribute('aria-label', 'Stop on the way');
+
+    const drop = document.createElement('button');
+    drop.type = 'button';
+    drop.className = 'stop-drop';
+    drop.textContent = '\u00d7';
+    drop.setAttribute('aria-label', 'Remove this stop');
+    drop.addEventListener('click', () => { row.remove(); refreshQuote(); });
+
+    let settle = null;
+    input.addEventListener('input', () => {
+      clearTimeout(settle);
+      settle = setTimeout(refreshQuote, 500);
+    });
+    input.addEventListener('change', refreshQuote);
+
+    row.appendChild(input);
+    row.appendChild(drop);
+    list.appendChild(row);
+
+    if (autocompletesReady && window.google && google.maps && google.maps.places) {
+      try {
+        new google.maps.places.Autocomplete(input, { fields: ['formatted_address'] });
+      } catch (e) { /* typing the address by hand still works */ }
+    }
+    input.focus();
+  }
+
+  document.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'b-addStop') addStopRow();
+  });
+
   function wireAutocomplete(pickupId, dropoffId){
     const pickup = document.getElementById(pickupId);
     const dropoff = document.getElementById(dropoffId);
@@ -1554,6 +1632,7 @@
       payMethod: selectedPay,
       hours: hourly ? parseFloat(document.getElementById('b-hours').value) || null : null,
       firstRide: isFirstRide,
+      stops: stopValues(),
     };
 
     const mine = ++quoteSeq;
@@ -1852,6 +1931,9 @@
       dateTime, phone, email, referredBy, notes, hours,
       payMethod: selectedPay,
       carSeats, flight, temp, elderly, contact15, vehicle, passengers, birthday,
+      // The same stops the estimate was worked out from, so the row that gets
+      // saved and the number the customer was shown cannot disagree.
+      stops: stopValues(),
       source: 'Web'
     };
 

@@ -99,6 +99,14 @@
   .confirm-row .lbl{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.07em;text-transform:uppercase;color:var(--dim)}
   .confirm-row .conf-go[disabled]{opacity:0.55;cursor:default}
   .confres .hint{display:block;margin-top:8px;font-size:0.78rem;color:var(--dim);line-height:1.6}
+  /* Stops on the way. Each row is an address and a way to take it off again. */
+  .hint-inline{font-weight:400;color:var(--dim);font-size:0.82rem}
+  .stop-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .stop-row input{flex:1;min-width:0}
+  .stop-row .drop-stop{background:transparent;border:1px solid var(--line);color:var(--dim);
+    border-radius:8px;width:34px;height:34px;flex:none;cursor:pointer;font-size:1rem;line-height:1}
+  .stop-row .drop-stop:hover{border-color:var(--accent);color:var(--accent)}
+  #addStop{padding:7px 14px;font-size:0.82rem;cursor:pointer}
   /* The three things we ever say to a customer. Each one opens the text so it
      can be read - and edited - before it goes anywhere. */
   .msg-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line);margin-top:14px}
@@ -483,6 +491,15 @@
       </div>
     </div>
 
+    <!-- STOPS ON THE WAY. $15 each, added to the fare, and the tip and the
+         card fee both count it - see STOP_FEE in _fare-calc.js. A long
+         detour is not a stop: price that as its own leg by hand. -->
+    <div class="field" id="stopsField">
+      <label>Stops on the way <span class="hint-inline">&mdash; $15 each</span></label>
+      <div id="stopList"></div>
+      <button type="button" class="btn-line" id="addStop">+ Add a stop</button>
+    </div>
+
     <div class="row">
       <div class="field">
         <label for="a-hours">Hours (leave blank unless it's an hourly job)</label>
@@ -686,6 +703,49 @@
   // - and this was declared in there and called from out here, which threw and
   // stopped the handler dead at the line that opens the list. Declared here it
   // is visible to both.
+  // ---- STOPS ON THE WAY ----
+  //
+  // One row per stop, each with Google autocomplete on it the moment it is
+  // created - the same call the pickup and drop-off get. Reading them is a
+  // filter over the inputs rather than a counter kept alongside, because a
+  // counter and the boxes on screen are two things that can disagree.
+  function stopValues(){
+    return Array.from(document.querySelectorAll('#stopList .stop-addr'))
+      .map((i) => i.value.trim())
+      .filter(Boolean);
+  }
+  function addStopRow(value){
+    const list = document.getElementById('stopList');
+    if (!list) return;
+    const row = document.createElement('div');
+    row.className = 'stop-row';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'stop-addr';
+    input.placeholder = 'Address or landmark';
+    if (value) input.value = value;
+    const drop = document.createElement('button');
+    drop.type = 'button';
+    drop.className = 'drop-stop';
+    drop.textContent = '\u00d7';
+    drop.title = 'Remove this stop';
+    drop.addEventListener('click', () => { row.remove(); askForQuote(); });
+    input.addEventListener('input', askForQuote);
+    row.appendChild(input);
+    row.appendChild(drop);
+    list.appendChild(row);
+    placesOn(input);
+    input.focus();
+  }
+  function clearStops(){
+    const list = document.getElementById('stopList');
+    if (list) list.innerHTML = '';
+  }
+
+  document.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'addStop') addStopRow('');
+  });
+
   function placesOn(input){
     if(!input || !window.google || !google.maps || !google.maps.places) return;
     if(input.dataset.places === 'on') return;
@@ -2651,8 +2711,9 @@
 
     const ov = overrides();
     const phone = document.getElementById('a-phone').value.trim();
+    const stops = stopValues();
     const asking = [pickup, dropoff, vehicle, dateTime, selectedPay, isFirstRideAdmin,
-                    cardOnFileAdmin, phone, JSON.stringify(ov)].join('|');
+                    cardOnFileAdmin, phone, stops.join('>'), JSON.stringify(ov)].join('|');
     if(asking === lastAsked) return;
     lastAsked = asking;
 
@@ -2666,6 +2727,7 @@
                                  // The server checks the sheet and decides. This
                                  // only matters before a phone number is typed.
                                  phone,
+                                 stops,
                                  firstRide: isFirstRideAdmin,
                                  cardOnFile: cardOnFileAdmin,
                                  hours: hoursValue() })
@@ -2885,6 +2947,7 @@
       notes: document.getElementById('a-notes').value,
       vehicle: document.getElementById('a-vehicle').value,
       overrides: overrides(),
+      stops: stopValues(),
       hours: hoursValue(),
       discountReason: document.getElementById('a-discount-reason').value,
       payMethod: selectedPay,
@@ -2988,6 +3051,10 @@
     msg.style.color = 'var(--teal)';
 
     document.getElementById('bookForm').reset();
+    // reset() empties inputs but cannot remove rows that were added, so the
+    // next booking would inherit the last one's stops and quietly charge $15
+    // for a detour nobody asked for.
+    clearStops();
     document.getElementById('a-contact15').checked = true;
     // A fresh form knows nobody, so it offers nobody the new-customer ten
     // and assumes nobody's card is saved.

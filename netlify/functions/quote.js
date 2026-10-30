@@ -33,7 +33,7 @@ exports.handler = async function (event) {
   }
 
   try {
-    const { pickup, dropoff, dateTime, vehicle, payMethod, hours, firstRide } =
+    const { pickup, dropoff, dateTime, vehicle, payMethod, hours, firstRide, stops } =
       JSON.parse(event.body || '{}');
 
     if (!pickup || !dropoff) {
@@ -45,8 +45,12 @@ exports.handler = async function (event) {
     // page knows they are new because get-customer told it so; log-booking
     // checks the sheet again before it writes anything down.
     const firstRideOff = firstRide ? { discount: FIRST_RIDE_CREDIT } : undefined;
+    const cleanStops = Array.isArray(stops)
+      ? stops.filter((x) => String(x || '').trim()).slice(0, 5)
+      : [];
+    const asked = withHours(firstRideOff, hours);
     const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payMethod,
-                              withHours(firstRideOff, hours));
+                              cleanStops.length ? Object.assign({}, asked || {}, { stops: cleanStops }) : asked);
 
     // Only the figures a quote is made of. Nothing about zones, nothing about
     // how the table decides - the customer is owed their price, not ours.

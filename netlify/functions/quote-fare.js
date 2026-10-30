@@ -23,6 +23,14 @@ function withHours(overrides, hours) {
   return (hours === 0 || hours) ? Object.assign({}, base, { hours }) : base;
 }
 
+// Stops ride alongside the overrides for the same reason hours do: they are a
+// property of the trip, not a price somebody typed over.
+function withStops(overrides, stops) {
+  const base = (typeof overrides === 'object' && overrides !== null) ? overrides : { fare: overrides };
+  const list = Array.isArray(stops) ? stops.filter((x) => String(x || '').trim()) : [];
+  return list.length ? Object.assign({}, base, { stops: list }) : base;
+}
+
 exports.handler = async function (event) {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
@@ -31,7 +39,7 @@ exports.handler = async function (event) {
 
   try {
     const { token, pickup, dropoff, vehicle, dateTime, payMethod, overrides, hours, firstRide,
-            cardOnFile, phone } = JSON.parse(event.body || '{}');
+            cardOnFile, phone, stops } = JSON.parse(event.body || '{}');
     if (token !== expected) return { statusCode: 401, body: JSON.stringify({ error: 'Wrong passcode.' }) };
 
     if (!pickup || !dropoff) {
@@ -57,7 +65,7 @@ exports.handler = async function (event) {
     // does, so the quote on screen and the row that gets saved cannot disagree.
     // The flag is still accepted as a fallback for when no phone has been typed
     // in yet.
-    const asked = withHours(overrides, hours);
+    const asked = withStops(withHours(overrides, hours), stops);
     const earned = phone ? await firstRideAvailable(phone) : Boolean(firstRide);
     const withCredit = (earned && !asked.discount)
       ? Object.assign({}, asked, { discount: FIRST_RIDE_CREDIT })

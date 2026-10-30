@@ -15,7 +15,7 @@
 //
 // The values it knows how to fill, by header name:
 //   timestamp, requested_datetime, pickup, dropoff, name, phone,
-//   passengers, car_seats, elderly_assistance, flight, cabin_temp,
+//   passengers, car_seats, elderly_assistance, flight, stops, cabin_temp,
 //   text_before_ride, payment_method, notes, source, zone, base_fare,
 //   card_fee, sedan, vehicle, toll, discount, discount_reason,
 //   discount_spent, tip, hourly_trip, hours, waiting_late_fee, fare_total
@@ -82,6 +82,14 @@ function withHours(overrides, hours) {
   return (hours === 0 || hours) ? Object.assign({}, base, { hours }) : base;
 }
 
+// Stops ride alongside the overrides for the same reason hours do: they are a
+// property of the trip, not a price somebody typed over.
+function withStops(overrides, stops) {
+  const base = (typeof overrides === 'object' && overrides !== null) ? overrides : { fare: overrides };
+  const list = Array.isArray(stops) ? stops.filter((x) => String(x || '').trim()) : [];
+  return list.length ? Object.assign({}, base, { stops: list }) : base;
+}
+
 exports.handler = async function (event) {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
@@ -90,7 +98,7 @@ exports.handler = async function (event) {
   try {
     const {
       name, pickup, dropoff, dateTime, phone, email, notes, payMethod,
-      passengers, carSeats, flight, temp, elderly, contact15, source, vehicle, referredBy, overrides,
+      passengers, carSeats, flight, temp, elderly, contact15, source, vehicle, referredBy, overrides, stops,
       discountReason, hours,
     } = JSON.parse(event.body);
 
@@ -108,7 +116,7 @@ exports.handler = async function (event) {
     const payFor = payMethodFor(payMethod, saved);
 
     const fare = estimateFare(pickup, dropoff, vehicle, dateTime, payFor,
-                              withHours(first.overrides, hours));
+                              withStops(withHours(first.overrides, hours), stops));
     const isSedan = pricesAsSedan(vehicle);
 
     // Local (range) and unmatched routes don't break down into base + SUV,
@@ -143,6 +151,12 @@ exports.handler = async function (event) {
       car_seats: (carSeats && carSeats !== '0') ? carSeats : 'None',
       elderly_assistance: elderly ? 'Yes' : 'No',
       flight: orNA(flight),
+      // THE STOPS, WRITTEN OUT. The driver needs the addresses, not a count -
+      // "2 stops" tells him nothing at 5am. The count and the fee are already
+      // inside base_fare; this is the part a person reads.
+      stops: (Array.isArray(stops) && stops.filter((x) => String(x || '').trim()).length)
+        ? stops.filter((x) => String(x || '').trim()).join(' \u00b7 ')
+        : NA,
       cabin_temp: orNA(temp),
       text_before_ride: contact15 ? 'Yes' : 'No',
       payment_method: orNA(payMethod),
