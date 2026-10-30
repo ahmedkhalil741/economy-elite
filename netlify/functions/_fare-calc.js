@@ -95,6 +95,34 @@ const LOCAL_TOLL = 0;
 // Ahmed's decision (2026-09-17): $60/hr, and no minimum. He'd rather take a
 // short job than turn someone away over a two-hour floor.
 const HOURLY_RATE = 60;
+
+// ---- A STOP ON THE WAY ----
+//
+// Ahmed's rule, 30 October: "$15 for any short stops, but for a long ride
+// just add a normal price as a full ride." So a quick stop - collect somebody,
+// drop a bag, pick up a key - is a flat $15 and the route price is otherwise
+// untouched. A detour that is really another journey (his example: Summit, a
+// stop in Morristown, then on) is not a stop at all; it is priced as its own
+// leg at the listed fare, which is a judgement nobody can make from an address
+// string, so Ahmed makes it when he confirms the booking.
+//
+// It goes on the DRIVING charge rather than beside it, which is deliberate
+// and is the other half of his instruction - "the tip will be for the whole
+// amount". The tip is 20% of driving, so adding the stop fee there means the
+// tip counts it, and the card fee counts it too. A stop that paid no tip
+// would quietly make the driver's hour worth less for the trouble.
+//
+// Hourly trips get no stop fee: the hours already cover the stops, which is
+// what Ahmed meant by "stops inside the waiting time, that's fine".
+const STOP_FEE = 15;
+
+// Accepts a count, an array of addresses, or nothing. Blank strings in the
+// array are dropped - an empty stop box is not a stop.
+function stopCountFrom(stops) {
+  if (Array.isArray(stops)) return stops.filter((x) => String(x || '').trim()).length;
+  const n = parseInt(stops, 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
 const HOURLY_MINIMUM_HOURS = 0;
 
 // The four destinations the table prices. LaGuardia and JFK share a column.
@@ -497,6 +525,8 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
   const setCard = numOrNull(ov.cardFee);
   // Only set once a real tip exists - see the note above agreedResult.
   const setTip = numOrNull(ov.tip);
+  const stops = stopCountFrom(ov.stops);
+  const stopFee = stops * STOP_FEE;
   const anySet = setFare !== null || setToll !== null || setCard !== null;
   const agreed = setFare;
   const isSedan = pricesAsSedan(vehicle);
@@ -560,7 +590,7 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
     const toll = destToll;
 
     if (anySet) return agreedResult(agreed !== null ? agreed : (base + vehicleFee + overnight), setToll !== null ? setToll : toll, payMethod, `Agreed — ${town.town} to ${dest.label}`, setCard, dest.zone, setTip);
-    const driving = base + vehicleFee + overnight;
+    const driving = base + vehicleFee + overnight + stopFee;
 
     // The card fee is worked out on everything going through the card,
     // INCLUDING the toll — Square takes its percentage of the whole amount
@@ -576,6 +606,9 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
     const parts = [`$${driving} fare`];
     if (toll) parts.push(`$${toll} tolls`);
     if (card) parts.push(`$${card.amount.toFixed(2)} ${card.label} fee`);
+    // Said out loud on the bill. A fare that is $30 higher than the rate card
+    // with nothing explaining why is the kind of thing a customer queries.
+    const stopNote = stops ? `includes $${stopFee} for ${stops} stop${stops === 1 ? '' : 's'}` : '';
 
     return {
       matched: true,
@@ -584,6 +617,8 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
       newYork: Boolean(dest.ny),
       agreedFare: agreed,
       fare: driving,
+      stops,
+      stopFee: stopFee || null,
       toll: toll || null,
       tollEstimated: Boolean(toll),
       cardFee: card ? card.amount : null,
@@ -593,8 +628,8 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
       total,
       totalDisplay: `$${total.toFixed(2).replace(/\.00$/, '')}`,
       tipSuggested: Math.round(tippable * 0.2),
-      display: `$${total.toFixed(2).replace(/\.00$/, '')} flat (${parts.join(' + ')})`,
-      driverDisplay: `$${total.toFixed(2).replace(/\.00$/, '')} flat (${parts.join(' + ')})`,
+      display: `$${total.toFixed(2).replace(/\.00$/, '')} flat (${parts.join(' + ')})${stopNote ? `, ${stopNote}` : ''}`,
+      driverDisplay: `$${total.toFixed(2).replace(/\.00$/, '')} flat (${parts.join(' + ')})${stopNote ? `, ${stopNote}` : ''}`,
     };
   }
 
@@ -606,7 +641,9 @@ function priceRide(pickup, dropoff, vehicle, dateTime, payMethod, overrides) {
                         `Agreed — ${townA.town} to ${townB.town}`, setCard, 'Local', setTip);
   }
   if (townA && townB) {
-    const [lo, hi] = LOCAL_RANGE;
+    const [loBase, hiBase] = LOCAL_RANGE;
+    const lo = loBase + stopFee;
+    const hi = hiBase + stopFee;
     return {
       matched: true,
       label: `Local — ${townA.town} to ${townB.town}`,
